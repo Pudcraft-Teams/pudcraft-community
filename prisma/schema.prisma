@@ -1,0 +1,209 @@
+// ============================================
+// Pudcraft Community — 数据库 Schema
+// 使用 Prisma ORM + PostgreSQL
+// ============================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// 用户表 —— 未来用于登录、认领服务器、发送消息等
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime? @map("email_verified")
+  passwordHash  String    @map("password_hash")
+  image         String?
+  bio           String?   @db.Text
+  role          String    @default("user") // user | admin | moderator
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  accounts Account[]
+  sessions Session[]
+  servers  Server[]
+  comments Comment[]
+  favorites Favorite[]
+
+  @@map("users")
+}
+
+/// 服务器表 —— 核心实体，每条记录对应一个 Minecraft 服务器
+model Server {
+  id          String   @id @default(cuid())
+  name        String
+  host        String
+  port        Int      @default(25565)
+  description String?
+  tags        String[] @default([])
+  imageUrl    String?  @map("image_url")
+  iconUrl     String?  @map("icon_url")
+  ownerId     String?  @map("owner_id")
+  owner       User?    @relation(fields: [ownerId], references: [id])
+  isVerified  Boolean  @default(false) @map("is_verified")
+  verifyToken String?  @map("verify_token")
+  verifyExpiresAt DateTime? @map("verify_expires_at")
+  verifiedAt  DateTime? @map("verified_at")
+  favoriteCount Int    @default(0) @map("favorite_count")
+  isOnline    Boolean  @default(false) @map("is_online")
+  playerCount Int      @default(0) @map("player_count")
+  maxPlayers  Int      @default(0) @map("max_players")
+  latency     Int      @default(0)
+  lastPingedAt DateTime? @map("last_pinged_at")
+
+  content     String?  @db.Text  // Markdown 详细介绍
+
+  // 未来扩展字段（认领）：
+  // claimToken  String?  @unique @map("claim_token")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  statuses ServerStatus[]
+  comments Comment[]
+  favorites Favorite[]
+
+  // 未来扩展：
+  // channels Channel[]
+
+  @@unique([host, port])
+  @@map("servers")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+/// 服务器状态记录 —— 由 Worker 定时 ping 后写入
+model ServerStatus {
+  id          String   @id @default(cuid())
+  serverId    String   @map("server_id")
+  online      Boolean  @default(false)
+  playerCount Int?     @map("player_count")
+  maxPlayers  Int?     @map("max_players")
+  motd        String?
+  favicon     String?  @db.Text
+  latencyMs   Int?     @map("latency_ms")
+  version     String?
+  error       String?  @db.Text
+  checkedAt   DateTime @default(now()) @map("checked_at")
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@index([serverId, checkedAt(sort: Desc)])
+  @@map("server_statuses")
+}
+
+/// 服务器评论 —— 支持两层结构（评论 + 回复）
+model Comment {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  serverId String @map("server_id")
+  server   Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  authorId String @map("author_id")
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  parentId String?   @map("parent_id")
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  Comment[] @relation("CommentReplies")
+
+  @@index([serverId, createdAt(sort: Desc)])
+  @@index([parentId])
+  @@map("comments")
+}
+
+/// 服务器收藏关系 —— 用户与服务器多对多映射
+model Favorite {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  serverId String @map("server_id")
+  server   Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, serverId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("favorites")
+}
+
+// ============================================
+// 未来扩展模型（先注释，需要时取消注释并迁移）
+// ============================================
+//
+// /// 频道表 —— 每个服务器可有多个交流频道
+// model Channel {
+//   id        String   @id @default(cuid())
+//   serverId  String   @map("server_id")
+//   name      String
+//   type      String   @default("text") // text | announcement
+//   createdAt DateTime @default(now()) @map("created_at")
+//   updatedAt DateTime @updatedAt @map("updated_at")
+//
+//   server   Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
+//   messages Message[]
+//
+//   @@map("channels")
+// }
+//
+// /// 消息表 —— 频道内的文本消息
+// model Message {
+//   id        String   @id @default(cuid())
+//   channelId String   @map("channel_id")
+//   userId    String   @map("user_id")
+//   content   String   @db.Text
+//   createdAt DateTime @default(now()) @map("created_at")
+//
+//   channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+//   user    User    @relation(fields: [userId], references: [id])
+//
+//   @@index([channelId, createdAt(sort: Desc)])
+//   @@map("messages")
+// }

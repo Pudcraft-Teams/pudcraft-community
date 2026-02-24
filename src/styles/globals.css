@@ -1,0 +1,220 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --m3-bg: #f3f6f8;
+    --m3-surface: #ffffff;
+    --m3-surface-variant: #f8fbfc;
+    --m3-outline: #d6e0e5;
+    --m3-outline-strong: #c5d3da;
+    --m3-text: #1f2937;
+    --m3-text-muted: #64748b;
+    --m3-primary: #0d9488;
+    --m3-primary-hover: #14b8a6;
+    --m3-primary-active: #0f766e;
+    --m3-on-primary: #ffffff;
+    --m3-link: #0d9488;
+    --m3-accent-soft: #e2f4f7;
+  }
+
+  body {
+    background-color: var(--m3-bg);
+    color: var(--m3-text);
+  }
+
+  .prose img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* 自定义滚动条（Webkit 浏览器） */
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-slate-100;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-slate-300 hover:bg-slate-400;
+  }
+}
+
+@layer components {
+  .m3-surface {
+    @apply rounded-xl border;
+    background-color: var(--m3-surface);
+    border-color: var(--m3-outline);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  }
+
+  .m3-surface-soft {
+    @apply rounded-xl border;
+    background-color: var(--m3-surface-variant);
+    border-color: var(--m3-outline);
+  }
+
+  .m3-text-muted {
+    color: var(--m3-text-muted);
+  }
+
+  .m3-link {
+    color: var(--m3-link);
+    transition: color 0.2s ease;
+  }
+
+  .m3-link:hover {
+    color: #0f766e;
+  }
+
+  .m3-input {
+    @apply rounded-xl border px-3 py-2.5 text-sm outline-none transition-all;
+    background-color: var(--m3-surface-variant);
+    border-color: var(--m3-outline);
+    color: var(--m3-text);
+  }
+
+  .m3-input::placeholder {
+    color: #94a3b8;
+  }
+
+  .m3-input:focus {
+    border-color: var(--m3-outline-strong);
+    box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.18);
+  }
+
+  .m3-btn {
+    @apply rounded-xl px-4 py-2 text-sm font-medium transition-all;
+  }
+
+  .m3-btn-primary {
+    background-color: var(--m3-primary);
+    color: var(--m3-on-primary);
+    border: 1px solid var(--m3-primary);
+  }
+
+  .m3-btn-primary:hover {
+    background-color: var(--m3-primary-hover);
+  }
+
+  .m3-btn-primary:active {
+    background-color: var(--m3-primary-active);
+  }
+
+  .m3-btn-tonal {
+    background-color: var(--m3-surface-variant);
+    border: 1px solid var(--m3-outline);
+    color: #334155;
+  }
+
+  .m3-btn-tonal:hover {
+    border-color: var(--m3-outline-strong);
+    background-color: #f1f5f9;
+  }
+
+  .m3-btn-danger {
+    @apply text-white;
+    background-color: #ef4444;
+    border: 1px solid #ef4444;
+  }
+
+  .m3-btn-danger:hover {
+    background-color: #dc2626;
+    border-color: #dc2626;
+  }
+
+  .m3-chip {
+    @apply rounded-full border px-3 py-1 text-xs font-medium transition-colors;
+    border-color: var(--m3-outline);
+    background-color: #f3f4f6;
+    color: #4b5563;
+  }
+
+  .m3-chip:hover {
+    border-color: var(--m3-outline-strong);
+    color: #374151;
+    background-color: #e5e7eb;
+  }
+
+  .m3-chip-active {
+    border-color: #99d9d1;
+    background-color: var(--m3-accent-soft);
+    color: #0f766e;
+  }
+
+  .m3-alert-error {
+    @apply rounded-xl border px-3 py-2 text-sm;
+    border-color: rgb(248 113 113 / 0.35);
+    background-color: rgb(254 242 242);
+    color: #dc2626;
+  }
+
+  .m3-alert-success {
+    @apply rounded-xl border px-3 py-2 text-sm;
+    border-color: #99d9d1;
+    background-color: var(--m3-accent-soft);
+    color: #0f766e;
+  }
+
+  .hljs {
+    color: #1f2937;
+    background: #f8fafc;
+  }
+
+  .hljs-keyword,
+  .hljs-selector-tag,
+  .hljs-literal,
+  .hljs-title,
+  .hljs-section {
+    color: #dc2626;
+  }
+
+  .hljs-string,
+  .hljs-attr,
+  .hljs-template-variable {
+    color: #0f766e;
+  }
+
+  .hljs-number,
+  .hljs-meta,
+  .hljs-symbol,
+  .hljs-built_in {
+    color: #0369a1;
+  }
+
+  .hljs-comment,
+  .hljs-quote {
+    color: #64748b;
+    font-style: italic;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .animate-toast-in {
+    animation: toast-in 220ms ease-out;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
