@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import type { ServerListItem } from "@/lib/types";
 
@@ -21,8 +22,12 @@ export function ServerCard({
   showFavoriteButton = true,
   onFavoriteChange,
 }: ServerCardProps) {
-  const { name, host, port, description, tags, status, isVerified } = server;
+  const { name, host, port, description, tags, status, isVerified, iconUrl } = server;
+  const checkedAtMs = Date.parse(status.checkedAt);
+  const isStale =
+    !Number.isFinite(checkedAtMs) || Date.now() - checkedAtMs > 15 * 60 * 1000;
   const isOnline = status.online;
+  const statusText = isStale ? "状态未知" : isOnline ? "在线" : "离线";
 
   return (
     <Link
@@ -31,18 +36,30 @@ export function ServerCard({
     >
       {/* 1. 名称 + 在线状态 */}
       <div className="mb-3 flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate text-base font-semibold text-slate-900 transition-colors group-hover:text-slate-700">
-            {name}
-          </h3>
-          {isVerified && (
-            <span
-              className="inline-flex items-center rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-medium text-teal-700 ring-1 ring-teal-100"
-              title="已认领 - 管理员已验证"
-            >
-              ✓ 已认领
-            </span>
-          )}
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <span className="inline-flex h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+            <Image
+              src={iconUrl || "/default-server-icon.png"}
+              alt={`${name} 图标`}
+              width={56}
+              height={56}
+              className="h-full w-full object-cover"
+            />
+          </span>
+
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-base font-semibold text-slate-900 transition-colors group-hover:text-slate-700">
+              {name}
+            </h3>
+            {isVerified && (
+              <span
+                className="inline-flex items-center rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-medium text-teal-700 ring-1 ring-teal-100"
+                title="已认领 - 管理员已验证"
+              >
+                ✓ 已认领
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {showFavoriteButton && (
@@ -58,11 +75,23 @@ export function ServerCard({
           <span className="flex items-center gap-1.5 text-xs">
             <span
               className={`inline-block h-2 w-2 rounded-full ${
-                isOnline ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.35)]" : "bg-slate-400"
+                isStale
+                  ? "bg-slate-300"
+                  : isOnline
+                    ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.35)]"
+                    : "bg-slate-400"
               }`}
             />
-            <span className={isOnline ? "text-emerald-600" : "text-slate-500"}>
-              {isOnline ? "在线" : "离线"}
+            <span
+              className={
+                isStale
+                  ? "text-slate-400"
+                  : isOnline
+                    ? "text-emerald-600"
+                    : "text-slate-500"
+              }
+            >
+              {statusText}
             </span>
           </span>
         </div>
@@ -80,7 +109,7 @@ export function ServerCard({
       )}
 
       {/* 4. 在线人数 + 延迟 */}
-      {isOnline && (
+      {!isStale && isOnline && (
         <div className="mb-3 flex items-center gap-3 text-xs">
           <span className="text-slate-600">
             <span className="font-medium text-slate-800">{status.playerCount}</span>

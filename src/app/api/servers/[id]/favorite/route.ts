@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
-import { auth } from "@/lib/auth";
+import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { rateLimit } from "@/lib/rate-limit";
@@ -16,11 +16,11 @@ interface RouteContext {
  */
 export async function GET(_request: Request, { params }: RouteContext) {
   try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    const authResult = await requireActiveUser();
+    if (isActiveUserError(authResult)) {
+      return authResult.response;
     }
+    const userId = authResult.user.id;
 
     const limitResult = await rateLimit(`favorite:${userId}`, 30, 60);
     if (!limitResult.allowed) {
@@ -56,11 +56,11 @@ export async function GET(_request: Request, { params }: RouteContext) {
  */
 export async function POST(_request: Request, { params }: RouteContext) {
   try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    const authResult = await requireActiveUser();
+    if (isActiveUserError(authResult)) {
+      return authResult.response;
     }
+    const userId = authResult.user.id;
 
     const limitResult = await rateLimit(`favorite:${userId}`, 30, 60);
     if (!limitResult.allowed) {
@@ -147,10 +147,15 @@ export async function POST(_request: Request, { params }: RouteContext) {
  */
 export async function DELETE(_request: Request, { params }: RouteContext) {
   try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    const authResult = await requireActiveUser();
+    if (isActiveUserError(authResult)) {
+      return authResult.response;
+    }
+    const userId = authResult.user.id;
+
+    const limitResult = await rateLimit(`favorite:${userId}`, 30, 60);
+    if (!limitResult.allowed) {
+      return NextResponse.json({ error: "请求过于频繁，请稍后再试" }, { status: 429 });
     }
 
     const { id } = await params;

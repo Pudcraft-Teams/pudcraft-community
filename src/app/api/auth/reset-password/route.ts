@@ -49,17 +49,6 @@ export async function POST(request: Request) {
     }
 
     const { email } = parsed.data;
-    const user = await db.user.findUnique({
-      where: { email },
-      select: { id: true },
-    });
-
-    if (!user) {
-      return NextResponse.json({
-        success: true,
-        message: "如果该邮箱已注册，验证码已发送",
-      });
-    }
 
     const sendAllowed = await canSendCode(email, RESET_CODE_PREFIX);
     if (!sendAllowed) {
@@ -74,12 +63,24 @@ export async function POST(request: Request) {
 
     const code = generateCode();
     await storeCode(email, code, RESET_CODE_PREFIX);
-    await sendResetPasswordCode(email, code);
     await setSendCooldown(email, RESET_CODE_PREFIX);
+
+    const user = await db.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+
+    if (user) {
+      try {
+        await sendResetPasswordCode(email, code);
+      } catch (error) {
+        logger.error("[api/auth/reset-password][POST] send mail failed", error);
+      }
+    }
 
     return NextResponse.json({
       success: true,
-      message: "如果该邮箱已注册，验证码已发送",
+      message: "如果该邮箱已注册，你将收到重置邮件",
     });
   } catch (err) {
     logger.error("[api/auth/reset-password][POST] Unexpected error", err);

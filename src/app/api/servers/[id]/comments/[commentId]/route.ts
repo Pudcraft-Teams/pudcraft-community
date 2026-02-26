@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { serverIdSchema } from "@/lib/validation";
@@ -10,15 +10,16 @@ interface RouteContext {
 
 /**
  * DELETE /api/servers/:id/comments/:commentId
- * 删除评论（仅评论作者可删除）。
+ * 删除评论（评论作者或管理员可删除）。
  */
 export async function DELETE(_request: Request, { params }: RouteContext) {
   try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    const authResult = await requireActiveUser();
+    if (isActiveUserError(authResult)) {
+      return authResult.response;
     }
+    const userId = authResult.user.id;
+    const userRole = authResult.user.role;
 
     const { id, commentId } = await params;
     const parsedServerId = serverIdSchema.safeParse(id);
@@ -37,6 +38,7 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
         id: true,
         serverId: true,
         authorId: true,
+        parentId: true,
       },
     });
 
@@ -44,13 +46,30 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "评论不存在" }, { status: 404 });
     }
 
-    if (comment.authorId !== userId) {
+    const isAdmin = userRole === "admin";
+    if (!isAdmin && comment.authorId !== userId) {
       return NextResponse.json({ error: "无权限" }, { status: 403 });
     }
 
-    await prisma.comment.delete({
-      where: { id: comment.id },
+    const relatedCommentIds = await prisma.comment.findMany({
+      where: {
+        OR: [{ id: comment.id }, { parentId: comment.id }],
+      },
+      select: { id: true },
     });
+
+    const targetIds = relatedCommentIds.map((item) => item.id);
+
+    await prisma.$transaction([
+      prisma.notification.deleteMany({
+        where: {
+          commentId: { in: targetIds },
+        },
+      }),
+      prisma.comment.delete({
+        where: { id: comment.id },
+      }),
+    ]);
 
     return NextResponse.json({ success: true });
   } catch (error) {

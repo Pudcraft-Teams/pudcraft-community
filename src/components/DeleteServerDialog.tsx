@@ -75,7 +75,7 @@ export function DeleteServerDialog({
       const payload = toApiPayload(await response.json().catch(() => ({})));
 
       if (response.status === 401) {
-        router.replace(`/login?callbackUrl=${encodeURIComponent(pathname || "/my-servers")}`);
+        router.replace(`/login?callbackUrl=${encodeURIComponent(pathname || "/console")}`);
         return;
       }
 

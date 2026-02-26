@@ -29,6 +29,9 @@ export async function GET(_request: Request, { params }: RouteContext) {
         bio: true,
         createdAt: true,
         servers: {
+          where: {
+            status: "approved",
+          },
           orderBy: { createdAt: "desc" },
         },
       },
@@ -45,6 +48,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
       port: server.port,
       description: server.description,
       tags: server.tags,
+      iconUrl: server.iconUrl,
       favoriteCount: server.favoriteCount,
       isVerified: server.isVerified,
       verifiedAt: server.verifiedAt?.toISOString() ?? null,

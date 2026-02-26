@@ -33,6 +33,7 @@ export async function GET() {
         port: server.port,
         description: server.description,
         tags: server.tags,
+        iconUrl: server.iconUrl,
         favoriteCount: server.favoriteCount,
         isVerified: server.isVerified,
         verifiedAt: server.verifiedAt?.toISOString() ?? null,

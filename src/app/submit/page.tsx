@@ -1,14 +1,20 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { PageLoading } from "@/components/PageLoading";
 import { ServerForm } from "@/components/ServerForm";
+import { useToast } from "@/hooks/useToast";
 import type { ServerFormSubmitResult } from "@/components/ServerForm";
 
 interface ApiResponsePayload {
   error?: string;
+  message?: string;
+  hint?: string;
+  existingServerId?: string;
+  existingServerName?: string;
 }
 
 function toApiPayload(raw: unknown): ApiResponsePayload {
@@ -19,6 +25,11 @@ function toApiPayload(raw: unknown): ApiResponsePayload {
   const payload = raw as Record<string, unknown>;
   return {
     error: typeof payload.error === "string" ? payload.error : undefined,
+    message: typeof payload.message === "string" ? payload.message : undefined,
+    hint: typeof payload.hint === "string" ? payload.hint : undefined,
+    existingServerId: typeof payload.existingServerId === "string" ? payload.existingServerId : undefined,
+    existingServerName:
+      typeof payload.existingServerName === "string" ? payload.existingServerName : undefined,
   };
 }
 
@@ -29,6 +40,12 @@ function toApiPayload(raw: unknown): ApiResponsePayload {
 export default function SubmitServerPage() {
   const router = useRouter();
   const { status } = useSession();
+  const { toast } = useToast();
+  const [duplicateServer, setDuplicateServer] = useState<{
+    id: string;
+    name: string;
+    hint: string;
+  } | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -38,6 +55,8 @@ export default function SubmitServerPage() {
 
   const handleCreateServer = async (formData: FormData): Promise<ServerFormSubmitResult> => {
     try {
+      setDuplicateServer(null);
+
       const response = await fetch("/api/servers", {
         method: "POST",
         body: formData,
@@ -49,6 +68,21 @@ export default function SubmitServerPage() {
         return { success: false, error: "请先登录后再提交服务器" };
       }
 
+      if (response.status === 409) {
+        if (payload.existingServerId) {
+          setDuplicateServer({
+            id: payload.existingServerId,
+            name: payload.existingServerName ?? "该服务器",
+            hint: payload.hint ?? "如果你是这个服务器的管理员，可以去认领它",
+          });
+        }
+
+        return {
+          success: false,
+          error: payload.error ?? "该服务器地址已被收录",
+        };
+      }
+
       if (!response.ok) {
         return {
           success: false,
@@ -56,7 +90,8 @@ export default function SubmitServerPage() {
         };
       }
 
-      router.push("/my-servers");
+      toast.success(payload.message ?? "服务器已提交，等待管理员审核");
+      router.push("/console");
       return { success: true };
     } catch {
       return { success: false, error: "网络异常，请稍后重试" };
@@ -75,8 +110,19 @@ export default function SubmitServerPage() {
     <div className="mx-auto w-full max-w-2xl px-4">
       <div className="m3-surface p-6">
         <h1 className="text-2xl font-semibold text-slate-900">提交服务器</h1>
-        <p className="mt-2 text-sm text-slate-600">提交你自己的 Minecraft 服务器信息</p>
-        <ServerForm mode="create" cancelHref="/my-servers" onSubmit={handleCreateServer} />
+        <p className="mt-2 text-sm text-slate-600">提交你自己的 Minecraft 服务器信息，提交后将由管理员审核</p>
+        {duplicateServer && (
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <p>
+              该服务器地址已被收录为「{duplicateServer.name}」。
+              {duplicateServer.hint}
+            </p>
+            <Link href={`/servers/${duplicateServer.id}/verify`} className="m3-link mt-2 inline-flex text-sm">
+              前往认领
+            </Link>
+          </div>
+        )}
+        <ServerForm mode="create" cancelHref="/console" onSubmit={handleCreateServer} />
       </div>
     </div>
   );

@@ -1,19 +1,52 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Inter } from "next/font/google";
 import { AuthButtons, MobileNavMenu } from "@/components/AuthButtons";
 import { Providers } from "@/components/Providers";
 import "@/styles/globals.css";
 import "cropperjs/dist/cropper.css";
 
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
+
 export const metadata: Metadata = {
-  title: "Pudcraft Community — Minecraft 服务器聚合站",
-  description: "发现和加入国内优质 Minecraft 私人服务器，浏览服务器状态、在线人数与社区信息。",
+  metadataBase: new URL("https://pudcraft.cn"),
+  title: {
+    default: "PudCraft Community - 发现优质 Minecraft 服务器",
+    template: "%s | PudCraft Community",
+  },
+  description:
+    "浏览国内优质 Minecraft 私人服务器，找到适合你的社区。支持 Java 版和基岩版，实时在线状态监控。",
+  keywords: [
+    "Minecraft",
+    "MC服务器",
+    "我的世界",
+    "服务器列表",
+    "MC联机",
+    "我的世界服务器",
+  ],
+  authors: [{ name: "PudCraft" }],
+  openGraph: {
+    type: "website",
+    locale: "zh_CN",
+    siteName: "PudCraft Community",
+    title: "PudCraft Community - 发现优质 Minecraft 服务器",
+    description: "浏览国内优质 Minecraft 私人服务器，找到适合你的社区。",
+    url: "https://pudcraft.cn",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN">
-      <body className="min-h-screen antialiased">
+      <body className={`${inter.variable} min-h-screen antialiased`}>
         <Providers>
           {/* ─── Header ─── */}
           <header className="sticky top-0 z-50 border-b border-slate-200/90 bg-white/90 backdrop-blur-md">

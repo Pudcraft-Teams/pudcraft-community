@@ -1,11 +1,34 @@
 import NextAuth from "next-auth";
+import { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
+import { rateLimit } from "@/lib/rate-limit";
 import { loginSchema } from "@/lib/validation";
 
 const DUMMY_PASSWORD_HASH = "$2b$12$7MsJQQUhISt6L0QkQlym9eQygPzy5Q89vgzW0fvkYl9wH8r2raVGm";
+
+class BannedUserError extends CredentialsSignin {
+  code = "banned";
+}
+
+function getClientIp(request?: Pick<Request, "headers"> | null): string {
+  const forwardedFor = request?.headers.get("x-forwarded-for");
+  if (forwardedFor) {
+    const candidate = forwardedFor.split(",")[0]?.trim();
+    if (candidate) {
+      return candidate;
+    }
+  }
+
+  const realIp = request?.headers.get("x-real-ip")?.trim();
+  if (realIp) {
+    return realIp;
+  }
+
+  return "unknown";
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(db),
@@ -16,7 +39,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: "邮箱", type: "email" },
         password: { label: "密码", type: "password" },
       },
-      authorize: async (credentials) => {
+      authorize: async (credentials, request) => {
+        const clientIp = getClientIp(request);
+        const loginRate = await rateLimit(`login:${clientIp}`, 10, 15 * 60);
+        if (!loginRate.allowed) {
+          const rawPassword = typeof credentials?.password === "string" ? credentials.password : "";
+          await bcrypt.compare(rawPassword, DUMMY_PASSWORD_HASH);
+          return null;
+        }
+
         const parsed = loginSchema.safeParse(credentials);
         if (!parsed.success) {
           return null;
@@ -32,6 +63,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             image: true,
             emailVerified: true,
             passwordHash: true,
+            isBanned: true,
           },
         });
 
@@ -47,6 +79,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!user.emailVerified) {
           return null;
+        }
+
+        if (user.isBanned) {
+          throw new BannedUserError();
         }
 
         return {
@@ -75,6 +111,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               name: true,
               email: true,
               image: true,
+              role: true,
             },
           });
 
@@ -82,6 +119,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             token.name = latestUser.name;
             token.email = latestUser.email;
             token.picture = latestUser.image;
+            token.role = latestUser.role;
           }
 
           token.profileHydrated = true;
@@ -114,6 +152,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         (typeof token.picture === "string" || token.picture === null)
       ) {
         session.user.image = token.picture;
+      }
+      if (session.user) {
+        session.user.role = typeof token.role === "string" ? token.role : "user";
       }
       return session;
     },

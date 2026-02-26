@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { verifyQueue, verifyQueueEvents, type VerifyJobResult } from "@/lib/queue";
@@ -10,7 +10,7 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
-interface OwnedServer {
+interface VerifyServer {
   id: string;
   name: string;
   host: string;
@@ -19,6 +19,7 @@ interface OwnedServer {
   isVerified: boolean;
   verifyToken: string | null;
   verifyExpiresAt: Date | null;
+  verifyUserId: string | null;
   verifiedAt: Date | null;
 }
 
@@ -54,7 +55,7 @@ function parseVerifyJobResult(raw: unknown): VerifyJobResult {
   };
 }
 
-async function findServerById(serverId: string): Promise<OwnedServer | null> {
+async function findServerById(serverId: string): Promise<VerifyServer | null> {
   const server = await prisma.server.findUnique({
     where: { id: serverId },
     select: {
@@ -66,6 +67,7 @@ async function findServerById(serverId: string): Promise<OwnedServer | null> {
       isVerified: true,
       verifyToken: true,
       verifyExpiresAt: true,
+      verifyUserId: true,
       verifiedAt: true,
     },
   });
@@ -76,14 +78,15 @@ async function findServerById(serverId: string): Promise<OwnedServer | null> {
 /**
  * POST /api/servers/:id/verify
  * 发起认领，生成 30 分钟有效期的 MOTD 验证 Token。
+ * 任意登录用户都可发起；验证通过后 owner 会转移到发起者。
  */
 export async function POST(_request: Request, { params }: RouteContext) {
   try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    const authResult = await requireActiveUser();
+    if (isActiveUserError(authResult)) {
+      return authResult.response;
     }
+    const userId = authResult.user.id;
 
     const { id } = await params;
     const parsedServerId = serverIdSchema.safeParse(id);
@@ -95,26 +98,20 @@ export async function POST(_request: Request, { params }: RouteContext) {
     if (!server) {
       return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
     }
-    if (!server.ownerId || server.ownerId !== userId) {
-      return NextResponse.json({ error: "无权限" }, { status: 403 });
-    }
-
-    if (server.isVerified) {
-      return NextResponse.json({
-        isVerified: true,
-        verifiedAt: server.verifiedAt?.toISOString() ?? null,
-        message: "服务器已认领，无需重复验证",
-      });
-    }
 
     const token = generateVerifyToken();
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    const currentOwnerHint =
+      server.ownerId && server.ownerId !== userId
+        ? "该服务器已有管理员，认领成功后所有权将转移给你"
+        : null;
 
     await prisma.server.update({
       where: { id: server.id },
       data: {
         verifyToken: token,
         verifyExpiresAt: expiresAt,
+        verifyUserId: userId,
       },
     });
 
@@ -122,6 +119,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
       token,
       expiresAt: expiresAt.toISOString(),
       instruction: "请将此 Token 添加到服务器 MOTD 中",
+      currentOwner: currentOwnerHint,
     });
   } catch (error) {
     logger.error("[api/servers/[id]/verify] Unexpected POST error", error);
@@ -132,14 +130,15 @@ export async function POST(_request: Request, { params }: RouteContext) {
 /**
  * GET /api/servers/:id/verify
  * 查询当前服务器认领状态与验证码信息。
+ * 仅向验证码发起者返回 verifyToken，避免泄漏。
  */
 export async function GET(_request: Request, { params }: RouteContext) {
   try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    const authResult = await requireActiveUser();
+    if (isActiveUserError(authResult)) {
+      return authResult.response;
     }
+    const userId = authResult.user.id;
 
     const { id } = await params;
     const parsedServerId = serverIdSchema.safeParse(id);
@@ -151,16 +150,27 @@ export async function GET(_request: Request, { params }: RouteContext) {
     if (!server) {
       return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
     }
-    if (!server.ownerId || server.ownerId !== userId) {
-      return NextResponse.json({ error: "无权限" }, { status: 403 });
-    }
+
+    const isCurrentOwner = !!server.ownerId && server.ownerId === userId;
+    const isTokenOwnedByCurrentUser = !!server.verifyUserId && server.verifyUserId === userId;
+    const hasPendingClaimByOtherUser =
+      !!server.verifyToken &&
+      !!server.verifyExpiresAt &&
+      !!server.verifyUserId &&
+      server.verifyExpiresAt.getTime() > Date.now() &&
+      server.verifyUserId !== userId;
 
     return NextResponse.json({
       isVerified: server.isVerified,
-      verifyToken: server.verifyToken,
-      verifyExpiresAt: server.verifyExpiresAt?.toISOString() ?? null,
+      verifyToken: isTokenOwnedByCurrentUser ? server.verifyToken : null,
+      verifyExpiresAt: isTokenOwnedByCurrentUser ? server.verifyExpiresAt?.toISOString() ?? null : null,
       verifiedAt: server.verifiedAt?.toISOString() ?? null,
       serverName: server.name,
+      ownerId: server.ownerId,
+      isCurrentOwner,
+      hasOwner: !!server.ownerId,
+      isTokenOwnedByCurrentUser,
+      hasPendingClaimByOtherUser,
     });
   } catch (error) {
     logger.error("[api/servers/[id]/verify] Unexpected GET error", error);
@@ -174,11 +184,11 @@ export async function GET(_request: Request, { params }: RouteContext) {
  */
 export async function PATCH(_request: Request, { params }: RouteContext) {
   try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    const authResult = await requireActiveUser();
+    if (isActiveUserError(authResult)) {
+      return authResult.response;
     }
+    const userId = authResult.user.id;
 
     const { id } = await params;
     const parsedServerId = serverIdSchema.safeParse(id);
@@ -190,22 +200,18 @@ export async function PATCH(_request: Request, { params }: RouteContext) {
     if (!server) {
       return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
     }
-    if (!server.ownerId || server.ownerId !== userId) {
-      return NextResponse.json({ error: "无权限" }, { status: 403 });
-    }
 
-    if (server.isVerified) {
-      return NextResponse.json({
-        success: true,
-        verified: true,
-        message: "服务器已完成认领",
-      });
-    }
-
-    if (!server.verifyToken || !server.verifyExpiresAt) {
+    if (!server.verifyToken || !server.verifyExpiresAt || !server.verifyUserId) {
       return NextResponse.json(
         { error: "请先获取验证码后再验证" },
         { status: 400 },
+      );
+    }
+
+    if (server.verifyUserId !== userId) {
+      return NextResponse.json(
+        { error: "验证码不是你生成的，请重新获取后再验证" },
+        { status: 403 },
       );
     }
 
@@ -225,7 +231,6 @@ export async function PATCH(_request: Request, { params }: RouteContext) {
         token: server.verifyToken,
       },
       {
-        jobId: `verify-${server.id}`,
         attempts: 3,
         backoff: {
           type: "exponential",
@@ -240,10 +245,13 @@ export async function PATCH(_request: Request, { params }: RouteContext) {
     const result = parseVerifyJobResult(rawResult);
 
     if (result.success) {
+      const ownershipTransferred = !!server.ownerId && server.ownerId !== userId;
       return NextResponse.json({
         success: true,
         verified: true,
-        message: "验证通过！你的服务器已获得认领标识。",
+        message: ownershipTransferred
+          ? "验证通过！你已成为该服务器的新管理员。"
+          : "验证通过！你已成功认领该服务器。",
       });
     }
 

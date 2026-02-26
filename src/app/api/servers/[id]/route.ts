@@ -2,9 +2,16 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import { auth } from "@/lib/auth";
+import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { deleteFile, getObjectKeyFromUrl, uploadServerIcon, validateImageFile } from "@/lib/storage";
+import {
+  deleteFile,
+  getObjectKeyFromUrl,
+  ImageValidationError,
+  uploadServerIcon,
+  validateImageFile,
+} from "@/lib/storage";
 import { buildServerContent, extractServerContentMetadata } from "@/lib/serverContent";
 import { serverIdSchema, updateServerSchema } from "@/lib/validation";
 import type { ServerDetail } from "@/lib/types";
@@ -52,6 +59,7 @@ async function deleteIconIfExists(iconUrl: string | null): Promise<void> {
 
 /**
  * GET /api/servers/:id — 获取单个服务器详情。
+ * 未通过审核的服务器只有 owner 和管理员可访问。
  */
 export async function GET(
   _request: Request,
@@ -77,6 +85,16 @@ export async function GET(
       return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
     }
 
+    // ─── 审核状态访问控制 ───
+    if (server.status !== "approved") {
+      const session = await auth();
+      const isOwner = !!session?.user?.id && session.user.id === server.ownerId;
+      const isAdmin = session?.user?.role === "admin";
+      if (!isOwner && !isAdmin) {
+        return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      }
+    }
+
     const data: ServerDetail = {
       id: server.id,
       name: server.name,
@@ -91,6 +109,8 @@ export async function GET(
       favoriteCount: server.favoriteCount,
       isVerified: server.isVerified,
       verifiedAt: server.verifiedAt?.toISOString() ?? null,
+      reviewStatus: server.status,
+      rejectReason: server.rejectReason,
       createdAt: server.createdAt.toISOString(),
       updatedAt: server.updatedAt.toISOString(),
       status: {
@@ -120,11 +140,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    const authResult = await requireActiveUser();
+    if (isActiveUserError(authResult)) {
+      return authResult.response;
     }
+    const userId = authResult.user.id;
 
     const { id } = await params;
     const parsedId = serverIdSchema.safeParse(id);
@@ -145,6 +165,7 @@ export async function PATCH(
         content: true,
         iconUrl: true,
         maxPlayers: true,
+        status: true,
       },
     });
 
@@ -196,8 +217,12 @@ export async function PATCH(
       try {
         validateImageFile(iconBuffer, iconMimeType);
       } catch (error) {
+        if (error instanceof ImageValidationError) {
+          return NextResponse.json({ error: error.message }, { status: error.status });
+        }
+
         return NextResponse.json(
-          { error: resolveErrorMessage(error, "图标文件格式或大小无效") },
+          { error: "图标文件格式或大小无效" },
           { status: 400 },
         );
       }
@@ -273,6 +298,13 @@ export async function PATCH(
 
     nextData.maxPlayers = nextMaxPlayers;
 
+    // 被拒绝后允许服主编辑并重新进入待审核队列。
+    const needsResubmitForReview = existing.status === "rejected";
+    if (needsResubmitForReview) {
+      nextData.status = "pending";
+      nextData.rejectReason = null;
+    }
+
     let updatedServer;
     try {
       updatedServer = await prisma.server.update({
@@ -287,6 +319,8 @@ export async function PATCH(
           content: true,
           tags: true,
           iconUrl: true,
+          status: true,
+          rejectReason: true,
           updatedAt: true,
         },
       });
@@ -314,6 +348,7 @@ export async function PATCH(
     return NextResponse.json({
       success: true,
       warning,
+      resubmittedForReview: needsResubmitForReview,
       data: updatedServer,
     });
   } catch (err) {
@@ -324,18 +359,19 @@ export async function PATCH(
 
 /**
  * DELETE /api/servers/:id — 删除服务器。
- * 仅服务器 owner 可删除。
+ * 服务器 owner 和管理员可删除。
  */
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    const authResult = await requireActiveUser();
+    if (isActiveUserError(authResult)) {
+      return authResult.response;
     }
+    const userId = authResult.user.id;
+    const userRole = authResult.user.role;
 
     const { id } = await params;
     const parsedId = serverIdSchema.safeParse(id);
@@ -356,13 +392,19 @@ export async function DELETE(
       return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
     }
 
-    if (!existing.ownerId || existing.ownerId !== userId) {
+    const isAdmin = userRole === "admin";
+    if (!isAdmin && (!existing.ownerId || existing.ownerId !== userId)) {
       return NextResponse.json({ error: "无权限" }, { status: 403 });
     }
 
-    await prisma.server.delete({
-      where: { id: existing.id },
-    });
+    await prisma.$transaction([
+      prisma.notification.deleteMany({
+        where: { serverId: existing.id },
+      }),
+      prisma.server.delete({
+        where: { id: existing.id },
+      }),
+    ]);
 
     await deleteIconIfExists(existing.iconUrl);
 

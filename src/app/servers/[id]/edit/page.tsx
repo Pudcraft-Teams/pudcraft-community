@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { PageLoading } from "@/components/PageLoading";
 import { ServerForm } from "@/components/ServerForm";
+import { useToast } from "@/hooks/useToast";
 import type { ServerFormInitialData, ServerFormSubmitResult } from "@/components/ServerForm";
 import { extractServerContentMetadata } from "@/lib/serverContent";
 import type { ServerDetailResponse } from "@/lib/types";
@@ -12,6 +13,7 @@ import type { ServerDetailResponse } from "@/lib/types";
 interface ApiResponsePayload {
   error?: string;
   warning?: string;
+  resubmittedForReview?: boolean;
 }
 
 function toApiPayload(raw: unknown): ApiResponsePayload {
@@ -23,6 +25,10 @@ function toApiPayload(raw: unknown): ApiResponsePayload {
   return {
     error: typeof payload.error === "string" ? payload.error : undefined,
     warning: typeof payload.warning === "string" ? payload.warning : undefined,
+    resubmittedForReview:
+      typeof payload.resubmittedForReview === "boolean"
+        ? payload.resubmittedForReview
+        : undefined,
   };
 }
 
@@ -34,6 +40,7 @@ export default function EditServerPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const { data: session, status } = useSession();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isForbidden, setIsForbidden] = useState(false);
@@ -159,6 +166,7 @@ export default function EditServerPage() {
         };
       }
 
+      toast.success(payload.resubmittedForReview ? "已重新提交审核" : "保存成功");
       router.push(`/servers/${id}`);
       router.refresh();
       return {

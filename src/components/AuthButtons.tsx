@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
+import { NotificationBell } from "@/components/NotificationBell";
 import { UserAvatar } from "@/components/UserAvatar";
 
 /**
@@ -82,6 +83,7 @@ export function AuthButtons() {
       <Link href="/submit" className="m3-btn m3-btn-tonal px-3 py-1.5">
         提交服务器
       </Link>
+      <NotificationBell />
 
       <button
         type="button"
@@ -115,11 +117,11 @@ export function AuthButtons() {
             资料设置
           </Link>
           <Link
-            href="/my-servers"
+            href="/console"
             className="block rounded-lg px-3 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-100"
             onClick={() => setOpen(false)}
           >
-            我的服务器
+            控制台
           </Link>
           <Link
             href="/favorites"
@@ -128,6 +130,15 @@ export function AuthButtons() {
           >
             我的收藏
           </Link>
+          {session.user.role === "admin" && (
+            <Link
+              href="/admin"
+              className="block rounded-lg px-3 py-2 text-sm font-medium text-teal-700 transition-colors hover:bg-teal-50"
+              onClick={() => setOpen(false)}
+            >
+              管理后台
+            </Link>
+          )}
           <button
             type="button"
             onClick={async () => {
@@ -251,11 +262,11 @@ export function MobileNavMenu() {
                     提交服务器
                   </Link>
                   <Link
-                    href="/my-servers"
+                    href="/console"
                     className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
                     onClick={() => setOpen(false)}
                   >
-                    我的服务器
+                    控制台
                   </Link>
                   <Link
                     href="/favorites"
@@ -263,6 +274,13 @@ export function MobileNavMenu() {
                     onClick={() => setOpen(false)}
                   >
                     我的收藏
+                  </Link>
+                  <Link
+                    href="/notifications"
+                    className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                    onClick={() => setOpen(false)}
+                  >
+                    通知中心
                   </Link>
                   <Link
                     href={`/user/${session.user.id}`}
@@ -278,6 +296,15 @@ export function MobileNavMenu() {
                     />
                     <span className="min-w-0 flex-1 truncate">用户信息 · {displayName}</span>
                   </Link>
+                  {session.user.role === "admin" && (
+                    <Link
+                      href="/admin"
+                      className="block rounded-lg px-3 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50"
+                      onClick={() => setOpen(false)}
+                    >
+                      管理后台
+                    </Link>
+                  )}
                   <button
                     type="button"
                     onClick={handleSignOut}

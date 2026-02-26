@@ -84,6 +84,10 @@ export default function LoginPage() {
       });
 
       if (!result || result.error) {
+        if (result?.code === "banned" || result?.error === "banned") {
+          toast.error("账号已被封禁");
+          return;
+        }
         toast.error("邮箱或密码错误");
         return;
       }

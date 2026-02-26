@@ -12,6 +12,11 @@ interface VerifyStatusPayload {
   verifyExpiresAt?: string | null;
   verifiedAt?: string | null;
   serverName?: string;
+  ownerId?: string | null;
+  isCurrentOwner?: boolean;
+  hasOwner?: boolean;
+  isTokenOwnedByCurrentUser?: boolean;
+  hasPendingClaimByOtherUser?: boolean;
   error?: string;
 }
 
@@ -19,6 +24,7 @@ interface VerifyStartPayload {
   token?: string;
   expiresAt?: string;
   instruction?: string;
+  currentOwner?: string | null;
   isVerified?: boolean;
   verifiedAt?: string | null;
   message?: string;
@@ -38,6 +44,11 @@ interface VerifyState {
   verifyToken: string | null;
   verifyExpiresAt: string | null;
   verifiedAt: string | null;
+  ownerId: string | null;
+  isCurrentOwner: boolean;
+  hasOwner: boolean;
+  isTokenOwnedByCurrentUser: boolean;
+  hasPendingClaimByOtherUser: boolean;
 }
 
 function parseVerifyStatusPayload(raw: unknown): VerifyStatusPayload {
@@ -52,6 +63,17 @@ function parseVerifyStatusPayload(raw: unknown): VerifyStatusPayload {
     verifyExpiresAt: typeof payload.verifyExpiresAt === "string" ? payload.verifyExpiresAt : null,
     verifiedAt: typeof payload.verifiedAt === "string" ? payload.verifiedAt : null,
     serverName: typeof payload.serverName === "string" ? payload.serverName : undefined,
+    ownerId: typeof payload.ownerId === "string" ? payload.ownerId : null,
+    isCurrentOwner: typeof payload.isCurrentOwner === "boolean" ? payload.isCurrentOwner : undefined,
+    hasOwner: typeof payload.hasOwner === "boolean" ? payload.hasOwner : undefined,
+    isTokenOwnedByCurrentUser:
+      typeof payload.isTokenOwnedByCurrentUser === "boolean"
+        ? payload.isTokenOwnedByCurrentUser
+        : undefined,
+    hasPendingClaimByOtherUser:
+      typeof payload.hasPendingClaimByOtherUser === "boolean"
+        ? payload.hasPendingClaimByOtherUser
+        : undefined,
     error: typeof payload.error === "string" ? payload.error : undefined,
   };
 }
@@ -66,6 +88,7 @@ function parseVerifyStartPayload(raw: unknown): VerifyStartPayload {
     token: typeof payload.token === "string" ? payload.token : undefined,
     expiresAt: typeof payload.expiresAt === "string" ? payload.expiresAt : undefined,
     instruction: typeof payload.instruction === "string" ? payload.instruction : undefined,
+    currentOwner: typeof payload.currentOwner === "string" ? payload.currentOwner : null,
     isVerified: typeof payload.isVerified === "boolean" ? payload.isVerified : undefined,
     verifiedAt: typeof payload.verifiedAt === "string" ? payload.verifiedAt : null,
     message: typeof payload.message === "string" ? payload.message : undefined,
@@ -117,7 +140,7 @@ function formatVerifiedAt(dateString: string | null): string | null {
 
 /**
  * 服务器认领引导页。
- * Owner 可在此获取验证码并触发 MOTD 验证。
+ * 任意登录用户可在此发起 MOTD 认领，验证通过后获得服务器管理权。
  */
 export default function ServerVerifyPage() {
   const router = useRouter();
@@ -125,7 +148,6 @@ export default function ServerVerifyPage() {
   const { status } = useSession();
 
   const [isLoading, setIsLoading] = useState(true);
-  const [isForbidden, setIsForbidden] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
   const [serverName, setServerName] = useState("该服务器");
   const [verifyState, setVerifyState] = useState<VerifyState>({
@@ -133,6 +155,11 @@ export default function ServerVerifyPage() {
     verifyToken: null,
     verifyExpiresAt: null,
     verifiedAt: null,
+    ownerId: null,
+    isCurrentOwner: false,
+    hasOwner: false,
+    isTokenOwnedByCurrentUser: false,
+    hasPendingClaimByOtherUser: false,
   });
 
   const [isGeneratingToken, setIsGeneratingToken] = useState(false);
@@ -149,12 +176,6 @@ export default function ServerVerifyPage() {
 
     if (response.status === 401) {
       router.replace(`/login?callbackUrl=${encodeURIComponent(`/servers/${id}/verify`)}`);
-      return false;
-    }
-
-    if (response.status === 403) {
-      setIsForbidden(true);
-      setPageError(null);
       return false;
     }
 
@@ -177,6 +198,11 @@ export default function ServerVerifyPage() {
       verifyToken: payload.verifyToken ?? null,
       verifyExpiresAt: payload.verifyExpiresAt ?? null,
       verifiedAt: payload.verifiedAt ?? null,
+      ownerId: payload.ownerId ?? null,
+      isCurrentOwner: payload.isCurrentOwner === true,
+      hasOwner: payload.hasOwner === true,
+      isTokenOwnedByCurrentUser: payload.isTokenOwnedByCurrentUser === true,
+      hasPendingClaimByOtherUser: payload.hasPendingClaimByOtherUser === true,
     });
     return true;
   }, [id, router]);
@@ -208,7 +234,6 @@ export default function ServerVerifyPage() {
     async function loadInitialState() {
       setIsLoading(true);
       setPageError(null);
-      setIsForbidden(false);
 
       try {
         const ok = await fetchVerifyStatus();
@@ -234,7 +259,7 @@ export default function ServerVerifyPage() {
   }, [fetchVerifyStatus, status]);
 
   useEffect(() => {
-    if (!verifyState.verifyExpiresAt || verifyState.isVerified) {
+    if (!verifyState.verifyExpiresAt) {
       return;
     }
 
@@ -245,7 +270,7 @@ export default function ServerVerifyPage() {
     return () => {
       window.clearInterval(timer);
     };
-  }, [verifyState.isVerified, verifyState.verifyExpiresAt]);
+  }, [verifyState.verifyExpiresAt]);
 
   const expiresAtTs = useMemo(() => {
     if (!verifyState.verifyExpiresAt) {
@@ -265,6 +290,8 @@ export default function ServerVerifyPage() {
 
   const isTokenExpired = !!expiresAtTs && remainingMs <= 0;
   const verifiedAtLabel = formatVerifiedAt(verifyState.verifiedAt);
+  const isVerifiedByCurrentUser = verifyState.isVerified && verifyState.isCurrentOwner;
+  const isManagedByAnotherUser = verifyState.hasOwner && !verifyState.isCurrentOwner;
 
   const handleGenerateToken = async () => {
     setIsGeneratingToken(true);
@@ -281,7 +308,7 @@ export default function ServerVerifyPage() {
       }
 
       if (response.status === 403) {
-        setIsForbidden(true);
+        setVerifyFailureReason(payload.error ?? payload.message ?? "无权限操作");
         return;
       }
 
@@ -304,7 +331,10 @@ export default function ServerVerifyPage() {
 
       const statusOk = await fetchVerifyStatus();
       if (statusOk) {
-        setStatusMessage(payload.instruction ?? "验证码已生成，请将其写入 MOTD 后开始验证");
+        const nextMessage = [payload.currentOwner, payload.instruction ?? "验证码已生成，请将其写入 MOTD 后开始验证"]
+          .filter((item): item is string => !!item)
+          .join(" ");
+        setStatusMessage(nextMessage);
       }
     } catch {
       setVerifyFailureReason("网络异常，获取验证码失败");
@@ -338,7 +368,7 @@ export default function ServerVerifyPage() {
       }
 
       if (response.status === 403) {
-        setIsForbidden(true);
+        setVerifyFailureReason(payload.error ?? payload.reason ?? "该验证码不属于当前账号");
         return;
       }
 
@@ -391,14 +421,6 @@ export default function ServerVerifyPage() {
     return <div className="py-12 text-center text-sm text-slate-500">正在跳转到登录页...</div>;
   }
 
-  if (isForbidden) {
-    return (
-      <div className="m3-alert-error mx-auto max-w-2xl px-4 py-3">
-        只有服务器 owner 才能访问认领页面。
-      </div>
-    );
-  }
-
   if (pageError) {
     return (
       <div className="m3-alert-error mx-auto max-w-2xl px-4 py-3">
@@ -418,13 +440,25 @@ export default function ServerVerifyPage() {
       <section className="m3-surface p-6">
         <h1 className="text-2xl font-semibold text-slate-900">认领服务器「{serverName}」</h1>
         <p className="mt-2 text-sm text-slate-600">
-          认领后你的服务器会获得「已认领」标识，提升可信度。
+          认领通过后你将成为该服务器管理员，并获得「已认领」标识。
         </p>
 
-        {verifyState.isVerified ? (
+        {isManagedByAnotherUser && (
+          <div className="m3-alert-error mt-4">
+            ⚠ 该服务器目前由其他用户管理。通过 MOTD 认领后，你将成为新的管理员。
+          </div>
+        )}
+
+        {verifyState.hasPendingClaimByOtherUser && !verifyState.isTokenOwnedByCurrentUser && (
+          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            当前已有其他用户在认领该服务器。你重新获取验证码会覆盖之前的认领流程。
+          </div>
+        )}
+
+        {isVerifiedByCurrentUser ? (
           <div className="mt-6 space-y-4">
             <div className="m3-alert-success">
-              <p className="font-medium">✓ 此服务器已完成认领。</p>
+              <p className="font-medium">✓ 该服务器已由你认领。</p>
               {verifiedAtLabel && <p className="mt-1 text-xs">验证时间：{verifiedAtLabel}</p>}
             </div>
             <Link href={`/servers/${id}`} className="m3-btn m3-btn-primary inline-flex">

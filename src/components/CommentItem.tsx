@@ -134,7 +134,7 @@ export function CommentItem({
   };
 
   return (
-    <div className="border-b border-slate-200 py-4">
+    <div id={`comment-${comment.id}`} className="border-b border-slate-200 py-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <UserAvatar
@@ -234,7 +234,7 @@ export function CommentItem({
       {comment.replies.length > 0 && (
         <div className="ml-8 mt-3 space-y-3 border-l-2 border-slate-200 pl-4">
           {comment.replies.map((reply) => (
-            <div key={reply.id} className="m3-surface-soft p-3">
+            <div id={`comment-${reply.id}`} key={reply.id} className="m3-surface-soft p-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <UserAvatar

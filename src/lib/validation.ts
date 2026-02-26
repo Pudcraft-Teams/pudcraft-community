@@ -145,6 +145,31 @@ export const queryCommentsSchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
 
+/** 通知列表查询参数 */
+export const queryNotificationsSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  unreadOnly: z
+    .union([z.literal("true"), z.literal("false"), z.boolean()])
+    .optional()
+    .transform((value) => value === true || value === "true"),
+});
+
+/** 批量标记通知已读 */
+export const markNotificationsReadSchema = z.union([
+  z.object({
+    all: z.literal(true),
+  }),
+  z.object({
+    ids: z.array(z.string().cuid()).min(1, "至少传入一条通知 ID"),
+  }),
+]);
+
+/** 服务器统计查询参数 */
+export const queryServerStatsSchema = z.object({
+  period: z.enum(["24h", "7d", "30d"]).default("24h"),
+});
+
 /** 资料更新请求体 */
 export const updateProfileSchema = z.object({
   name: z
@@ -170,6 +195,36 @@ export const pingResultSchema = z.object({
   latencyMs: z.number().int().nullable(),
 });
 
+// ─── 管理后台 Schema ────────────────────────────
+
+/** 管理后台服务器列表查询参数 */
+export const adminQueryServersSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  status: z.enum(["all", "pending", "approved", "rejected"]).default("all"),
+  search: z.string().max(100).optional(),
+});
+
+/** 管理后台服务器审核操作 */
+export const adminServerActionSchema = z.object({
+  action: z.enum(["approve", "reject"]),
+  reason: z.string().max(500).optional(),
+});
+
+/** 管理后台用户列表查询参数 */
+export const adminQueryUsersSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  banned: z.enum(["all", "normal", "banned"]).default("all"),
+  search: z.string().max(100).optional(),
+});
+
+/** 管理后台用户封禁/解封操作 */
+export const adminUserActionSchema = z.object({
+  action: z.enum(["ban", "unban"]),
+  reason: z.string().max(500).optional(),
+});
+
 // ─── 类型导出 ────────────────────────────────
 
 export type CreateServerInput = z.infer<typeof createServerSchema>;
@@ -183,4 +238,11 @@ export type SendResetCodeInput = z.infer<typeof sendResetCodeSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type CreateCommentInput = z.infer<typeof createCommentSchema>;
 export type QueryCommentsInput = z.infer<typeof queryCommentsSchema>;
+export type QueryNotificationsInput = z.infer<typeof queryNotificationsSchema>;
+export type MarkNotificationsReadInput = z.infer<typeof markNotificationsReadSchema>;
+export type QueryServerStatsInput = z.infer<typeof queryServerStatsSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+export type AdminQueryServersInput = z.infer<typeof adminQueryServersSchema>;
+export type AdminServerActionInput = z.infer<typeof adminServerActionSchema>;
+export type AdminQueryUsersInput = z.infer<typeof adminQueryUsersSchema>;
+export type AdminUserActionInput = z.infer<typeof adminUserActionSchema>;

@@ -22,6 +22,9 @@ model User {
   image         String?
   bio           String?   @db.Text
   role          String    @default("user") // user | admin | moderator
+  isBanned      Boolean   @default(false) @map("is_banned")
+  banReason     String?   @map("ban_reason")
+  bannedAt      DateTime? @map("banned_at")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
@@ -30,40 +33,44 @@ model User {
   servers  Server[]
   comments Comment[]
   favorites Favorite[]
+  notifications Notification[]
 
   @@map("users")
 }
 
 /// 服务器表 —— 核心实体，每条记录对应一个 Minecraft 服务器
 model Server {
-  id          String   @id @default(cuid())
-  name        String
-  host        String
-  port        Int      @default(25565)
-  description String?
-  tags        String[] @default([])
-  imageUrl    String?  @map("image_url")
-  iconUrl     String?  @map("icon_url")
-  ownerId     String?  @map("owner_id")
-  owner       User?    @relation(fields: [ownerId], references: [id])
-  isVerified  Boolean  @default(false) @map("is_verified")
-  verifyToken String?  @map("verify_token")
+  id              String    @id @default(cuid())
+  name            String
+  host            String
+  port            Int       @default(25565)
+  description     String?
+  tags            String[]  @default([])
+  imageUrl        String?   @map("image_url")
+  iconUrl         String?   @map("icon_url")
+  ownerId         String?   @map("owner_id")
+  owner           User?     @relation(fields: [ownerId], references: [id])
+  isVerified      Boolean   @default(false) @map("is_verified")
+  verifyToken     String?   @map("verify_token")
   verifyExpiresAt DateTime? @map("verify_expires_at")
-  verifiedAt  DateTime? @map("verified_at")
-  favoriteCount Int    @default(0) @map("favorite_count")
-  isOnline    Boolean  @default(false) @map("is_online")
-  playerCount Int      @default(0) @map("player_count")
-  maxPlayers  Int      @default(0) @map("max_players")
-  latency     Int      @default(0)
+  verifyUserId    String?   @map("verify_user_id")
+  verifiedAt      DateTime? @map("verified_at")
+  favoriteCount   Int       @default(0) @map("favorite_count")
+  isOnline        Boolean   @default(false) @map("is_online")
+  playerCount     Int       @default(0) @map("player_count")
+  maxPlayers      Int       @default(0) @map("max_players")
+  latency         Int       @default(0)
   lastPingedAt DateTime? @map("last_pinged_at")
+  status       String    @default("pending") // pending | approved | rejected
+  rejectReason String?   @map("reject_reason")
 
-  content     String?  @db.Text  // Markdown 详细介绍
+  content String? @db.Text // Markdown 详细介绍
 
   // 未来扩展字段（认领）：
   // claimToken  String?  @unique @map("claim_token")
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
   statuses ServerStatus[]
   comments Comment[]
@@ -72,7 +79,7 @@ model Server {
   // 未来扩展：
   // channels Channel[]
 
-  @@unique([host, port])
+  @@unique([host, port], name: "unique_host_port")
   @@map("servers")
 }
 
@@ -172,6 +179,27 @@ model Favorite {
   @@unique([userId, serverId])
   @@index([userId, createdAt(sort: Desc)])
   @@map("favorites")
+}
+
+/// 站内通知 —— 评论回复、服务器上线、审核结果等
+model Notification {
+  id        String    @id @default(cuid())
+  createdAt DateTime  @default(now()) @map("created_at")
+  readAt    DateTime? @map("read_at")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type    String
+  title   String
+  message String
+  link    String?
+
+  serverId  String? @map("server_id")
+  commentId String? @map("comment_id")
+
+  @@index([userId, readAt])
+  @@map("notifications")
 }
 
 // ============================================

@@ -22,10 +22,15 @@ export interface ServerListItem {
   port: number;
   description: string | null;
   tags: string[];
+  iconUrl?: string | null;
   favoriteCount?: number;
   isVerified: boolean;
   verifiedAt: string | null;
   status: ServerStatusResponse;
+  /** 审核状态：pending / approved / rejected */
+  reviewStatus?: string;
+  /** 拒绝原因 */
+  rejectReason?: string | null;
 }
 
 /** 服务器详情（含 content，用于详情页） */
@@ -91,6 +96,45 @@ export interface ServerCommentsResponse {
   totalPages: number;
 }
 
+/** 通知类型 */
+export type NotificationType =
+  | "comment_reply"
+  | "server_online"
+  | "server_approved"
+  | "server_rejected";
+
+/** 单条通知数据 */
+export interface NotificationItem {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  link: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+/** 通知列表 API 响应 */
+export interface NotificationsResponse {
+  notifications: NotificationItem[];
+  total: number;
+  unreadCount: number;
+  page: number;
+  totalPages: number;
+}
+
+/** 未读通知数量 API 响应 */
+export interface NotificationUnreadCountResponse {
+  count: number;
+}
+
+/** 标记通知已读 API 响应 */
+export interface MarkNotificationsReadResponse {
+  success: boolean;
+  unreadCount: number;
+  error?: string;
+}
+
 /** 当前登录用户资料 */
 export interface CurrentUserProfile {
   id: string;
@@ -118,4 +162,47 @@ export interface PublicUserProfile {
 /** 用户公开主页 API 响应 */
 export interface PublicUserProfileResponse {
   data: PublicUserProfile;
+}
+
+// ─── 管理后台类型 ───────────────────────────────
+
+/** 管理后台 - 服务器列表项 */
+export interface AdminServerItem {
+  id: string;
+  name: string;
+  host: string;
+  port: number;
+  iconUrl: string | null;
+  status: string;
+  rejectReason: string | null;
+  isVerified: boolean;
+  ownerId: string | null;
+  ownerName: string | null;
+  ownerEmail: string | null;
+  createdAt: string;
+}
+
+/** 管理后台 - 用户列表项 */
+export interface AdminUserItem {
+  id: string;
+  name: string | null;
+  email: string;
+  image: string | null;
+  role: string;
+  isBanned: boolean;
+  banReason: string | null;
+  bannedAt: string | null;
+  createdAt: string;
+  serverCount: number;
+  commentCount: number;
+}
+
+/** 管理后台 - 数据概览 */
+export interface AdminDashboardStats {
+  userCount: number;
+  serverCount: number;
+  todayCommentCount: number;
+  pendingCount: number;
+  onlineServerCount: number;
+  bannedUserCount: number;
 }

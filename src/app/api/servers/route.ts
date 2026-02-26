@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import { auth } from "@/lib/auth";
+import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { rateLimit } from "@/lib/rate-limit";
-import { uploadServerIcon, validateImageFile } from "@/lib/storage";
+import { ImageValidationError, uploadServerIcon, validateImageFile } from "@/lib/storage";
 import { buildServerContent } from "@/lib/serverContent";
 import { createServerSchema, queryServersSchema } from "@/lib/validation";
 import type { ServerListItem } from "@/lib/types";
@@ -39,6 +40,18 @@ function resolveErrorMessage(error: unknown, fallback: string): string {
 
 function getClientIp(request: Request): string {
   return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+}
+
+function duplicateServerResponse(existing: { id: string; name: string | null }) {
+  return NextResponse.json(
+    {
+      error: "该服务器地址已被收录",
+      existingServerId: existing.id,
+      existingServerName: existing.name,
+      hint: "如果你是这个服务器的管理员，可以去认领它",
+    },
+    { status: 409 },
+  );
 }
 
 /**
@@ -76,6 +89,9 @@ export async function GET(request: Request) {
     const { page, limit, pageSize, tag, search, sort, ownerId } = parsed.data;
     const take = pageSize ?? limit;
 
+    // ─── 获取当前用户 session（用于审核状态过滤） ───
+    const session = await auth();
+
     // ─── 构建 Prisma where 条件 ───
     const where: Prisma.ServerWhereInput = {};
 
@@ -92,6 +108,13 @@ export async function GET(request: Request) {
 
     if (ownerId) {
       where.ownerId = ownerId;
+      // owner 查自己的服务器不限状态
+      if (ownerId !== session?.user?.id) {
+        where.status = "approved";
+      }
+    } else {
+      // 普通访问只显示已通过审核的服务器
+      where.status = "approved";
     }
 
     const orderBy: Prisma.ServerOrderByWithRelationInput[] = [{ isOnline: "desc" }];
@@ -132,9 +155,12 @@ export async function GET(request: Request) {
       port: server.port,
       description: server.description,
       tags: server.tags,
+      iconUrl: server.iconUrl,
       favoriteCount: server.favoriteCount,
       isVerified: server.isVerified,
       verifiedAt: server.verifiedAt?.toISOString() ?? null,
+      reviewStatus: server.status,
+      rejectReason: server.rejectReason,
       status: {
         online: server.isOnline,
         playerCount: server.playerCount,
@@ -173,10 +199,15 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    const authResult = await requireActiveUser();
+    if (isActiveUserError(authResult)) {
+      return authResult.response;
+    }
+    const userId = authResult.user.id;
+
+    const submitRate = await rateLimit(`server-submit:${userId}`, 5, 24 * 60 * 60);
+    if (!submitRate.allowed) {
+      return NextResponse.json({ error: "今日提交次数已达上限，请明天再试" }, { status: 429 });
     }
 
     const formData = await request.formData();
@@ -201,6 +232,27 @@ export async function POST(request: Request) {
       );
     }
 
+    const { name, address, port, version, tags, description, content, maxPlayers, qqGroup } =
+      parsed.data;
+    const normalizedHost = address.toLowerCase().trim();
+
+    const existingServer = await prisma.server.findFirst({
+      where: {
+        host: {
+          equals: normalizedHost,
+          mode: "insensitive",
+        },
+        port,
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+    if (existingServer) {
+      return duplicateServerResponse(existingServer);
+    }
+
     const iconField = formData.get("icon");
     let iconBuffer: Buffer | null = null;
     let iconMimeType: string | null = null;
@@ -212,21 +264,23 @@ export async function POST(request: Request) {
       try {
         validateImageFile(iconBuffer, iconMimeType);
       } catch (error) {
+        if (error instanceof ImageValidationError) {
+          return NextResponse.json({ error: error.message }, { status: error.status });
+        }
+
         return NextResponse.json(
-          { error: resolveErrorMessage(error, "图标文件格式或大小无效") },
+          { error: "图标文件格式或大小无效" },
           { status: 400 },
         );
       }
     }
-
-    const { name, address, port, version, tags, description, content, maxPlayers, qqGroup } = parsed.data;
 
     let server;
     try {
       server = await prisma.server.create({
         data: {
           name,
-          host: address,
+          host: normalizedHost,
           port,
           description: description || null,
           content: buildServerContent({
@@ -245,10 +299,24 @@ export async function POST(request: Request) {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       ) {
-        return NextResponse.json(
-          { error: "该服务器地址和端口已存在，请勿重复提交" },
-          { status: 409 },
-        );
+        const duplicated = await prisma.server.findFirst({
+          where: {
+            host: {
+              equals: normalizedHost,
+              mode: "insensitive",
+            },
+            port,
+          },
+          select: {
+            id: true,
+            name: true,
+          },
+        });
+        if (duplicated) {
+          return duplicateServerResponse(duplicated);
+        }
+
+        return NextResponse.json({ error: "该服务器地址已被收录" }, { status: 409 });
       }
 
       throw error;
@@ -273,6 +341,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         success: true,
+        message: "服务器已提交，等待管理员审核",
         data: {
           id: server.id,
           name: server.name,

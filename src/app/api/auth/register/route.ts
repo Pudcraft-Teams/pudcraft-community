@@ -3,8 +3,26 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { rateLimit } from "@/lib/rate-limit";
 import { registerSchema } from "@/lib/validation";
 import { isLocked, verifyCode } from "@/lib/verification";
+
+function getClientIp(request: Request): string {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  if (forwardedFor) {
+    const candidate = forwardedFor.split(",")[0]?.trim();
+    if (candidate) {
+      return candidate;
+    }
+  }
+
+  const realIp = request.headers.get("x-real-ip")?.trim();
+  if (realIp) {
+    return realIp;
+  }
+
+  return "unknown";
+}
 
 /**
  * POST /api/auth/register
@@ -12,6 +30,12 @@ import { isLocked, verifyCode } from "@/lib/verification";
  */
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIp(request);
+    const registerRate = await rateLimit(`register:${clientIp}`, 10, 24 * 60 * 60);
+    if (!registerRate.allowed) {
+      return NextResponse.json({ error: "今日注册请求次数已达上限，请明天再试" }, { status: 429 });
+    }
+
     let rawBody: unknown;
     try {
       rawBody = await request.json();

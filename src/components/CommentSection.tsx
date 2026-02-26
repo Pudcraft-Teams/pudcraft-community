@@ -27,6 +27,10 @@ interface CreateCommentResponse {
 
 interface CommentSectionProps {
   serverId: string;
+  initialComments?: ServerComment[];
+  initialTotal?: number;
+  initialPage?: number;
+  initialTotalPages?: number;
 }
 
 const COMMENTS_PAGE_SIZE = 20;
@@ -40,16 +44,24 @@ function extractError(payload: unknown): string | undefined {
   return typeof maybeError === "string" ? maybeError : undefined;
 }
 
-export function CommentSection({ serverId }: CommentSectionProps) {
+export function CommentSection({
+  serverId,
+  initialComments,
+  initialTotal,
+  initialPage = 1,
+  initialTotalPages = 1,
+}: CommentSectionProps) {
   const { data: session, status } = useSession();
   const { toast } = useToast();
   const currentUserId = session?.user?.id;
+  const hasInitialPayload =
+    Array.isArray(initialComments) && typeof initialTotal === "number";
 
-  const [comments, setComments] = useState<ServerComment[]>([]);
-  const [total, setTotal] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
+  const [comments, setComments] = useState<ServerComment[]>(initialComments ?? []);
+  const [total, setTotal] = useState(initialTotal ?? 0);
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [totalPages, setTotalPages] = useState(Math.max(1, initialTotalPages));
+  const [isLoading, setIsLoading] = useState(!hasInitialPayload);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [content, setContent] = useState("");
@@ -103,13 +115,32 @@ export function CommentSection({ serverId }: CommentSectionProps) {
   );
 
   useEffect(() => {
+    setActiveReplyCommentId(null);
+    setLoadError(null);
+
+    if (hasInitialPayload && initialComments && typeof initialTotal === "number") {
+      setComments(initialComments);
+      setTotal(initialTotal);
+      setCurrentPage(initialPage);
+      setTotalPages(Math.max(1, initialTotalPages));
+      setIsLoading(false);
+      return;
+    }
+
     setComments([]);
     setTotal(0);
     setCurrentPage(1);
     setTotalPages(1);
-    setActiveReplyCommentId(null);
     void loadComments(1, false);
-  }, [loadComments, serverId]);
+  }, [
+    hasInitialPayload,
+    initialComments,
+    initialPage,
+    initialTotal,
+    initialTotalPages,
+    loadComments,
+    serverId,
+  ]);
 
   const handleSubmitComment = async () => {
     const nextContent = content.trim();

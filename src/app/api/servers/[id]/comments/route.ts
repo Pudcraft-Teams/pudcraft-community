@@ -1,13 +1,86 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { createNotification } from "@/lib/notification";
 import { rateLimit } from "@/lib/rate-limit";
 import type { ServerComment } from "@/lib/types";
 import { createCommentSchema, queryCommentsSchema, serverIdSchema } from "@/lib/validation";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
+}
+
+interface CommentNotificationParams {
+  serverId: string;
+  commentId: string;
+  parentId: string | null;
+  actorId: string;
+  actorName: string;
+}
+
+function getActorDisplayName(name: string | null | undefined): string {
+  if (typeof name !== "string") {
+    return "用户";
+  }
+
+  const trimmed = name.trim();
+  return trimmed.length > 0 ? trimmed : "用户";
+}
+
+async function createCommentNotification({
+  serverId,
+  commentId,
+  parentId,
+  actorId,
+  actorName,
+}: CommentNotificationParams): Promise<void> {
+  try {
+    if (parentId) {
+      const parentComment = await prisma.comment.findUnique({
+        where: { id: parentId },
+        select: {
+          authorId: true,
+        },
+      });
+
+      if (parentComment && parentComment.authorId !== actorId) {
+        await createNotification({
+          userId: parentComment.authorId,
+          type: "comment_reply",
+          title: "新的评论回复",
+          message: `${actorName} 回复了你的评论`,
+          link: `/servers/${serverId}#comment-${commentId}`,
+          serverId,
+          commentId,
+        });
+      }
+
+      return;
+    }
+
+    const server = await prisma.server.findUnique({
+      where: { id: serverId },
+      select: {
+        ownerId: true,
+        name: true,
+      },
+    });
+
+    if (server?.ownerId && server.ownerId !== actorId) {
+      await createNotification({
+        userId: server.ownerId,
+        type: "comment_reply",
+        title: "新的服务器评论",
+        message: `${actorName} 评论了「${server.name}」`,
+        link: `/servers/${serverId}#comment-${commentId}`,
+        serverId,
+        commentId,
+      });
+    }
+  } catch (error) {
+    logger.error("[api/servers/[id]/comments] Failed to create notification", error);
+  }
 }
 
 function mapComments(comments: Array<{
@@ -145,11 +218,11 @@ export async function GET(request: Request, { params }: RouteContext) {
  */
 export async function POST(request: Request, { params }: RouteContext) {
   try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    const authResult = await requireActiveUser();
+    if (isActiveUserError(authResult)) {
+      return authResult.response;
     }
+    const userId = authResult.user.id;
 
     const limitResult = await rateLimit(`comment:${userId}`, 5, 60);
     if (!limitResult.allowed) {
@@ -217,6 +290,15 @@ export async function POST(request: Request, { params }: RouteContext) {
           },
         },
       },
+    });
+
+    const actorName = getActorDisplayName(authResult.user.name);
+    void createCommentNotification({
+      serverId: parsedServerId.data,
+      commentId: comment.id,
+      parentId: comment.parentId,
+      actorId: userId,
+      actorName,
     });
 
     return NextResponse.json(

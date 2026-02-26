@@ -2,9 +2,54 @@ import { Worker, type Job } from "bullmq";
 import { PrismaClient } from "@prisma/client";
 import { pingServer } from "../lib/mc-ping";
 import { logger } from "../lib/logger";
+import { getRedisConnection } from "../lib/redis";
 import { getQueueConnection, PING_QUEUE_NAME, type PingJobData } from "../lib/queue";
 
 const prisma = new PrismaClient();
+const ONLINE_NOTIFY_COOLDOWN_SECONDS = 60 * 60;
+
+async function notifyServerOnline(serverId: string, serverName: string): Promise<void> {
+  try {
+    const redis = getRedisConnection();
+    const cooldownKey = `notify-online:${serverId}`;
+    const cooldownSet = await redis.set(
+      cooldownKey,
+      "1",
+      "EX",
+      ONLINE_NOTIFY_COOLDOWN_SECONDS,
+      "NX",
+    );
+
+    if (!cooldownSet) {
+      return;
+    }
+
+    const favorites = await prisma.favorite.findMany({
+      where: { serverId },
+      select: { userId: true },
+    });
+
+    if (favorites.length === 0) {
+      return;
+    }
+
+    await prisma.notification.createMany({
+      data: favorites.map((favorite) => ({
+        userId: favorite.userId,
+        type: "server_online",
+        title: "服务器已上线",
+        message: `你收藏的「${serverName}」已上线`,
+        link: `/servers/${serverId}`,
+        serverId,
+      })),
+    });
+  } catch (error) {
+    logger.error("[worker] Failed to create server online notifications", {
+      serverId,
+      error: error instanceof Error ? error.message : "unknown",
+    });
+  }
+}
 
 /**
  * 消费 server-ping 队列并写入状态结果。
@@ -13,6 +58,14 @@ export const pingWorker = new Worker<PingJobData>(
   PING_QUEUE_NAME,
   async (job: Job<PingJobData>) => {
     const { serverId, address, port } = job.data;
+    const previousStatus = await prisma.server.findUnique({
+      where: { id: serverId },
+      select: {
+        isOnline: true,
+        name: true,
+      },
+    });
+
     const result = await pingServer(address, port);
 
     await prisma.serverStatus.create({
@@ -38,6 +91,10 @@ export const pingWorker = new Worker<PingJobData>(
         lastPingedAt: new Date(),
       },
     });
+
+    if (!previousStatus?.isOnline && result.isOnline) {
+      await notifyServerOnline(serverId, previousStatus?.name ?? address);
+    }
 
     return result;
   },

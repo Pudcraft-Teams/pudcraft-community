@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
+import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { deleteFile, getObjectKeyFromUrl, uploadAvatar, validateImageFile } from "@/lib/storage";
+import {
+  deleteFile,
+  getObjectKeyFromUrl,
+  ImageValidationError,
+  uploadAvatar,
+  validateImageFile,
+} from "@/lib/storage";
 import { updateProfileSchema } from "@/lib/validation";
 
 interface ProfileResponseData {
@@ -71,11 +78,11 @@ export async function GET() {
  */
 export async function PATCH(request: Request) {
   try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    const authResult = await requireActiveUser();
+    if (isActiveUserError(authResult)) {
+      return authResult.response;
     }
+    const userId = authResult.user.id;
 
     const existingUser = await prisma.user.findUnique({
       where: { id: userId },
@@ -122,8 +129,11 @@ export async function PATCH(request: Request) {
       try {
         validateImageFile(avatarBuffer, avatarMimeType);
       } catch (error) {
-        const message = error instanceof Error ? error.message : "头像文件无效";
-        return NextResponse.json({ error: message }, { status: 400 });
+        if (error instanceof ImageValidationError) {
+          return NextResponse.json({ error: error.message }, { status: error.status });
+        }
+
+        return NextResponse.json({ error: "头像文件格式或大小无效" }, { status: 400 });
       }
     }
 

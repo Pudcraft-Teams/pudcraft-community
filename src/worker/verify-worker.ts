@@ -68,9 +68,9 @@ export const verifyWorker = new Worker<VerifyJobData, VerifyJobResult>(
       where: { id: serverId },
       select: {
         id: true,
-        isVerified: true,
         verifyToken: true,
         verifyExpiresAt: true,
+        verifyUserId: true,
       },
     });
 
@@ -78,12 +78,12 @@ export const verifyWorker = new Worker<VerifyJobData, VerifyJobResult>(
       return { success: false, reason: "服务器不存在" };
     }
 
-    if (server.isVerified) {
-      return { success: true };
-    }
-
     if (!server.verifyToken || server.verifyToken !== token) {
       return { success: false, reason: "验证码已更新，请重新获取后再验证" };
+    }
+
+    if (!server.verifyUserId) {
+      return { success: false, reason: "当前验证码缺少认领者，请重新获取" };
     }
 
     if (!server.verifyExpiresAt || server.verifyExpiresAt.getTime() <= Date.now()) {
@@ -103,24 +103,35 @@ export const verifyWorker = new Worker<VerifyJobData, VerifyJobResult>(
     const updateResult = await prisma.server.updateMany({
       where: {
         id: serverId,
-        isVerified: false,
         verifyToken: token,
+        verifyUserId: server.verifyUserId,
       },
       data: {
         isVerified: true,
         verifiedAt: now,
+        ownerId: server.verifyUserId,
         verifyToken: null,
         verifyExpiresAt: null,
+        verifyUserId: null,
       },
     });
 
     if (updateResult.count === 0) {
       const latest = await prisma.server.findUnique({
         where: { id: serverId },
-        select: { isVerified: true },
+        select: {
+          ownerId: true,
+          verifyToken: true,
+          verifyUserId: true,
+        },
       });
 
-      if (latest?.isVerified) {
+      if (
+        latest &&
+        latest.ownerId === server.verifyUserId &&
+        latest.verifyToken === null &&
+        latest.verifyUserId === null
+      ) {
         return { success: true };
       }
 

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { sendVerificationCode } from "@/lib/mail";
+import { rateLimit } from "@/lib/rate-limit";
 import { sendCodeSchema } from "@/lib/validation";
 import {
   canSendCode,
-  checkIpLimit,
   generateCode,
   setSendCooldown,
   storeCode,
@@ -39,8 +39,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "发送过于频繁，请 60 秒后再试" }, { status: 429 });
     }
 
-    const ipAllowed = await checkIpLimit(ip);
-    if (!ipAllowed) {
+    const ipRate = await rateLimit(`send-code:${ip}`, 10, 24 * 60 * 60);
+    if (!ipRate.allowed) {
       return NextResponse.json({ error: "当前 IP 今日发送次数已达上限" }, { status: 429 });
     }
 
