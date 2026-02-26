@@ -28,6 +28,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   const servers = await db.server.findMany({
+    where: {
+      status: "approved",
+    },
     select: {
       id: true,
       updatedAt: true,

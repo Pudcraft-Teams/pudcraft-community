@@ -157,7 +157,7 @@ const getServerPageData = cache(async (serverId: string) => {
 });
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id } = await params;
+  const [{ id }, session] = await Promise.all([params, auth()]);
   const data = await getServerPageData(id);
 
   if (!data) {
@@ -165,6 +165,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const { server } = data;
+  const currentUserId = session?.user?.id ?? null;
+  const isOwner = !!currentUserId && currentUserId === server.ownerId;
+  const isAdmin = session?.user?.role === "admin";
+  if (server.status !== "approved" && !isOwner && !isAdmin) {
+    return { title: "服务器未找到" };
+  }
   const serverAddress = server.port !== 25565 ? `${server.host}:${server.port}` : server.host;
   const description =
     server.description?.trim() || `${server.name} - Minecraft 服务器，地址 ${serverAddress}`;
