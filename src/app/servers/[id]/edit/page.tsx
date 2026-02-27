@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
@@ -205,8 +206,18 @@ export default function EditServerPage() {
   return (
     <div className="mx-auto w-full max-w-2xl px-4">
       <div className="m3-surface p-6">
-        <h1 className="text-2xl font-semibold text-slate-900">编辑服务器</h1>
-        <p className="mt-2 text-sm text-slate-600">更新服务器信息并保存修改</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900">编辑服务器</h1>
+            <p className="mt-2 text-sm text-slate-600">更新服务器信息并保存修改</p>
+          </div>
+          <Link
+            href={`/servers/${id}/modpacks`}
+            className="rounded-xl border border-teal-600 px-3 py-1.5 text-xs font-medium text-teal-600 transition-colors hover:bg-teal-50"
+          >
+            管理整合包
+          </Link>
+        </div>
         <ServerForm
           mode="edit"
           initialData={initialData}

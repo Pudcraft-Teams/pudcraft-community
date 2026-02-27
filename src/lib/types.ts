@@ -44,6 +44,33 @@ export interface ServerDetail extends ServerListItem {
   updatedAt: string;
 }
 
+/** 整合包加载器类型 */
+export type ModpackLoader = "fabric" | "forge" | "neoforge" | "quilt";
+
+/** 服务器整合包版本项 */
+export interface ModpackItem {
+  id: string;
+  serverId: string;
+  uploaderId: string;
+  name: string;
+  version: string | null;
+  loader: ModpackLoader | null;
+  gameVersion: string | null;
+  summary: string | null;
+  fileSize: number;
+  sha1: string;
+  sha512: string;
+  modsCount: number;
+  hasOverrides: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 服务器整合包列表 API 响应 */
+export interface ServerModpackListResponse {
+  data: ModpackItem[];
+}
+
 /** 分页信息 */
 export interface PaginationInfo {
   page: number;

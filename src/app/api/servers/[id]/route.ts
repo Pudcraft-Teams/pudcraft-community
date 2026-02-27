@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import {
   deleteFile,
+  deleteObject,
   getObjectKeyFromUrl,
   ImageValidationError,
   uploadServerIcon,
@@ -397,6 +398,11 @@ export async function DELETE(
       return NextResponse.json({ error: "无权限" }, { status: 403 });
     }
 
+    const modpackFiles = await prisma.modpack.findMany({
+      where: { serverId: existing.id },
+      select: { fileKey: true },
+    });
+
     await prisma.$transaction([
       prisma.notification.deleteMany({
         where: { serverId: existing.id },
@@ -407,6 +413,17 @@ export async function DELETE(
     ]);
 
     await deleteIconIfExists(existing.iconUrl);
+    for (const item of modpackFiles) {
+      try {
+        await deleteObject(item.fileKey);
+      } catch (error) {
+        logger.warn("[api/servers/[id]] delete modpack file failed", {
+          serverId: existing.id,
+          fileKey: item.fileKey,
+          reason: resolveErrorMessage(error, "unknown"),
+        });
+      }
+    }
 
     return NextResponse.json({
       success: true,

@@ -28,6 +28,23 @@ export const serverPortSchema = z
 export const serverIdSchema = z.string().cuid();
 /** 用户 ID 校验（cuid 格式） */
 export const userIdSchema = z.string().cuid();
+/** 整合包 ID 校验（cuid 格式） */
+export const modpackIdSchema = z.string().cuid();
+
+const optionalTrimmedText = (max: number, message: string) =>
+  z.preprocess(
+    (value) => {
+      if (typeof value !== "string") {
+        return undefined;
+      }
+
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : undefined;
+    },
+    z.string().max(max, message).optional(),
+  );
+
+export const modpackLoaderSchema = z.enum(["fabric", "forge", "neoforge", "quilt"]);
 
 // ─── 复合 Schema ─────────────────────────────
 
@@ -145,6 +162,22 @@ export const queryCommentsSchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
 
+/** 上传整合包请求体（multipart 文本字段） */
+export const uploadModpackSchema = z.object({
+  version: optionalTrimmedText(64, "版本号最多 64 个字符"),
+  loader: z.preprocess(
+    (value) => {
+      if (typeof value !== "string") {
+        return undefined;
+      }
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : undefined;
+    },
+    modpackLoaderSchema.optional(),
+  ),
+  gameVersion: optionalTrimmedText(32, "游戏版本最多 32 个字符"),
+});
+
 /** 通知列表查询参数 */
 export const queryNotificationsSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -242,6 +275,7 @@ export type QueryNotificationsInput = z.infer<typeof queryNotificationsSchema>;
 export type MarkNotificationsReadInput = z.infer<typeof markNotificationsReadSchema>;
 export type QueryServerStatsInput = z.infer<typeof queryServerStatsSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+export type UploadModpackInput = z.infer<typeof uploadModpackSchema>;
 export type AdminQueryServersInput = z.infer<typeof adminQueryServersSchema>;
 export type AdminServerActionInput = z.infer<typeof adminServerActionSchema>;
 export type AdminQueryUsersInput = z.infer<typeof adminQueryUsersSchema>;

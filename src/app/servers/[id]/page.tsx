@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CopyServerIpButton } from "@/components/CopyServerIpButton";
 import { CommentSection } from "@/components/CommentSection";
+import { DeleteModpackButton } from "@/components/DeleteModpackButton";
 import { DeleteServerDialog } from "@/components/DeleteServerDialog";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
@@ -20,6 +21,27 @@ const COMMENTS_PAGE_SIZE = 20;
 
 interface Props {
   params: Promise<{ id: string }>;
+}
+
+function formatFileSize(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return "0 B";
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function formatDate(date: Date): string {
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
 }
 
 function toAbsoluteUrl(input: string): string {
@@ -212,6 +234,7 @@ export default async function ServerDetailPage({ params }: Props) {
 
   const isOnline = server.isOnline;
   const serverAddress = server.port !== 25565 ? `${server.host}:${server.port}` : server.host;
+  const canViewModpacks = server.status === "approved" || isOwner || isAdmin;
   const favoriteCount = server.favoriteCount;
   const lastPingLabel = server.lastPingedAt ? timeAgo(server.lastPingedAt) : "尚未检测";
   const verifiedAtLabel = server.verifiedAt
@@ -238,6 +261,25 @@ export default async function ServerDetailPage({ params }: Props) {
     });
     initialFavorited = !!favorite;
   }
+
+  const modpacks = canViewModpacks
+    ? await prisma.modpack.findMany({
+        where: { serverId: server.id },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+          version: true,
+          loader: true,
+          gameVersion: true,
+          summary: true,
+          fileSize: true,
+          modsCount: true,
+          hasOverrides: true,
+          createdAt: true,
+        },
+      })
+    : [];
 
   const gameServerSchema = {
     "@context": "https://schema.org",
@@ -282,6 +324,15 @@ export default async function ServerDetailPage({ params }: Props) {
                 className="m3-btn m3-btn-primary rounded-lg px-3 py-1.5 text-xs"
               >
                 编辑
+              </Link>
+            )}
+
+            {isOwner && (
+              <Link
+                href={`/servers/${server.id}/modpacks`}
+                className="m3-btn m3-btn-tonal rounded-lg px-3 py-1.5 text-xs text-teal-700"
+              >
+                整合包管理
               </Link>
             )}
 
@@ -439,6 +490,71 @@ export default async function ServerDetailPage({ params }: Props) {
         <section className="m3-surface p-4 sm:p-6">
           <h2 className="mb-4 text-lg font-semibold text-slate-900">服务器介绍</h2>
           <MarkdownRenderer content={server.content} />
+        </section>
+      )}
+
+      {canViewModpacks && (
+        <section className="mt-6 rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold text-slate-900">整合包</h2>
+            {isOwner && (
+              <Link
+                href={`/servers/${server.id}/modpacks`}
+                className="rounded-xl border border-teal-600 px-3 py-1.5 text-xs font-medium text-teal-600 transition-colors hover:bg-teal-50"
+              >
+                上传 / 管理
+              </Link>
+            )}
+          </div>
+
+          {modpacks.length === 0 ? (
+            <p className="text-sm text-slate-500">当前暂无整合包版本。</p>
+          ) : (
+            <div className="space-y-3">
+              {modpacks.map((modpack, index) => (
+                <div key={modpack.id} className="rounded-xl border border-gray-200 bg-white p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-base font-semibold text-slate-900">{modpack.name}</h3>
+                    {index === 0 && (
+                      <span className="rounded-full border border-teal-600 px-2 py-0.5 text-xs font-medium text-teal-600">
+                        最新版本
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
+                    <span>版本：{modpack.version ?? "--"}</span>
+                    <span>加载器：{modpack.loader ?? "--"}</span>
+                    <span>游戏版本：{modpack.gameVersion ?? "--"}</span>
+                    <span>Mods：{modpack.modsCount}</span>
+                    <span>文件大小：{formatFileSize(modpack.fileSize)}</span>
+                    <span>上传时间：{formatDate(modpack.createdAt)}</span>
+                    <span>{modpack.hasOverrides ? "含 overrides" : "无 overrides"}</span>
+                  </div>
+
+                  {modpack.summary && (
+                    <p className="mt-2 text-sm text-slate-600">{modpack.summary}</p>
+                  )}
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <a
+                      href={`/api/modpacks/${modpack.id}/download`}
+                      className="rounded-xl border border-teal-600 px-3 py-1.5 text-xs font-medium text-teal-600 transition-colors hover:bg-teal-50"
+                    >
+                      下载
+                    </a>
+                    {isOwner && (
+                      <DeleteModpackButton
+                        modpackId={modpack.id}
+                        modpackName={modpack.name}
+                        className="rounded-xl border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50"
+                      />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       )}
 

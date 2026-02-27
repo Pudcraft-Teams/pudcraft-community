@@ -33,6 +33,7 @@ model User {
   servers  Server[]
   comments Comment[]
   favorites Favorite[]
+  modpacks Modpack[]
   notifications Notification[]
 
   @@map("users")
@@ -75,6 +76,7 @@ model Server {
   statuses ServerStatus[]
   comments Comment[]
   favorites Favorite[]
+  modpacks Modpack[]
 
   // 未来扩展：
   // channels Channel[]
@@ -179,6 +181,37 @@ model Favorite {
   @@unique([userId, serverId])
   @@index([userId, createdAt(sort: Desc)])
   @@map("favorites")
+}
+
+/// 服务器整合包 —— 仅支持 Modrinth .mrpack，多版本记录
+model Modpack {
+  id           String   @id @default(cuid())
+  serverId     String   @map("server_id")
+  uploaderId   String   @map("uploader_id")
+
+  name         String
+  version      String?
+  loader       String?
+  gameVersion  String?  @map("game_version")
+  summary      String?  @db.Text
+
+  fileKey      String   @map("file_key")
+  fileSize     Int      @map("file_size")
+  sha1         String
+  sha512       String
+
+  mrIndex      Json     @map("mr_index")
+  modsCount    Int      @map("mods_count")
+  hasOverrides Boolean  @default(false) @map("has_overrides")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  server   Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  uploader User   @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+
+  @@index([serverId])
+  @@map("modpacks")
 }
 
 /// 站内通知 —— 评论回复、服务器上线、审核结果等

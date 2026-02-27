@@ -1,4 +1,6 @@
+import nodeFs from "fs";
 import fs from "fs/promises";
+import { randomUUID } from "crypto";
 import path from "path";
 import { z } from "zod";
 
@@ -22,6 +24,9 @@ const MIME_EXTENSION_MAP: Record<AllowedImageMimeType, string> = {
 const PUBLIC_DIR = path.join(process.cwd(), "public");
 const UPLOAD_DIR = path.join(PUBLIC_DIR, "uploads");
 const UPLOAD_URL_PREFIX = "/uploads";
+const PRIVATE_STORAGE_DIR = path.join(process.cwd(), "storage");
+const MODPACK_OBJECT_PREFIX = "modpacks";
+const MRPACK_EXTENSION = ".mrpack";
 
 type AllowedImageMimeType = (typeof ALLOWED_IMAGE_MIME_TYPES)[number];
 
@@ -115,6 +120,30 @@ function normalizeUploadUrlPath(filePath: string): string | null {
   return null;
 }
 
+function normalizeObjectKey(objectKey: string): string {
+  const normalized = objectKey.replace(/\\/g, "/").trim().replace(/^\/+/, "");
+  if (!normalized) {
+    throw new Error("无效的存储对象 key");
+  }
+
+  const segments = normalized.split("/");
+  if (segments.some((segment) => !segment || segment === "." || segment === "..")) {
+    throw new Error("存储对象 key 非法");
+  }
+
+  return segments.join("/");
+}
+
+function resolveObjectKeyPath(objectKey: string): string {
+  const normalizedKey = normalizeObjectKey(objectKey);
+  const absolutePath = path.resolve(PRIVATE_STORAGE_DIR, normalizedKey);
+  const storageRoot = path.resolve(PRIVATE_STORAGE_DIR);
+  if (!absolutePath.startsWith(`${storageRoot}${path.sep}`)) {
+    throw new Error("存储对象路径非法");
+  }
+  return absolutePath;
+}
+
 async function uploadImage(
   file: Buffer,
   entityId: string,
@@ -172,6 +201,19 @@ export async function uploadAvatar(file: Buffer, userId: string, mimeType: strin
 }
 
 /**
+ * 上传服务器整合包并返回对象 key（不暴露真实路径）。
+ */
+export async function uploadModpack(file: Buffer, serverId: string): Promise<string> {
+  const parsedServerId = entityIdSchema.parse(serverId);
+  const objectKey = `${MODPACK_OBJECT_PREFIX}/${parsedServerId}/${Date.now()}-${randomUUID().replaceAll("-", "")}${MRPACK_EXTENSION}`;
+  const absolutePath = resolveObjectKeyPath(objectKey);
+
+  await ensureDir(path.dirname(absolutePath));
+  await fs.writeFile(absolutePath, file);
+  return objectKey;
+}
+
+/**
  * 删除本地上传文件。
  */
 export async function deleteFile(filePath: string): Promise<void> {
@@ -193,6 +235,46 @@ export async function deleteFile(filePath: string): Promise<void> {
       throw error;
     }
   }
+}
+
+/**
+ * 删除私有存储对象（如整合包文件）。
+ */
+export async function deleteObject(objectKey: string): Promise<void> {
+  const absolutePath = resolveObjectKeyPath(objectKey);
+  try {
+    await fs.unlink(absolutePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw error;
+    }
+  }
+}
+
+/**
+ * 获取私有存储对象的绝对路径与大小。
+ */
+export async function getObjectFileInfo(
+  objectKey: string,
+): Promise<{ absolutePath: string; size: number }> {
+  const absolutePath = resolveObjectKeyPath(objectKey);
+  const stats = await fs.stat(absolutePath);
+  if (!stats.isFile()) {
+    throw new Error("存储对象不存在");
+  }
+
+  return {
+    absolutePath,
+    size: stats.size,
+  };
+}
+
+/**
+ * 读取私有存储对象流（如整合包下载）。
+ */
+export function createObjectReadStream(objectKey: string): nodeFs.ReadStream {
+  const absolutePath = resolveObjectKeyPath(objectKey);
+  return nodeFs.createReadStream(absolutePath);
 }
 
 /**
