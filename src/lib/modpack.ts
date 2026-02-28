@@ -3,8 +3,9 @@ import path from "path";
 import yauzl from "yauzl";
 import { z } from "zod";
 
+// Fix: modpack.ts:7 - MRPACK_MAX_FILE_SIZE_BYTES 从 500MB 改为 50MB（安全审查要求）
 const MRPACK_EXTENSION = ".mrpack";
-const MRPACK_MAX_FILE_SIZE_BYTES = 300 * 1024 * 1024;
+const MRPACK_MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 const MRPACK_MAX_ENTRY_COUNT = 10_000;
 const MRPACK_MAX_UNCOMPRESSED_BYTES = 1024 * 1024 * 1024;
 const MRPACK_MAX_INDEX_BYTES = 5 * 1024 * 1024;

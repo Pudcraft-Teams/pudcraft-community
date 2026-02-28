@@ -1,6 +1,9 @@
+// Fix: modpack/route.ts:4 - POST 改用 requireActiveUser() 以支持实时封禁检查（不再依赖 JWT 缓存）
+// Fix: modpack/route.ts:240 - outer catch 不再通过 resolveErrorMessage 泄露 error.message
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
+import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -107,11 +110,11 @@ export async function POST(
   let uploadedFileKey: string | null = null;
 
   try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    const authResult = await requireActiveUser();
+    if (isActiveUserError(authResult)) {
+      return authResult.response;
     }
+    const userId = authResult.user.id;
 
     const { id } = await params;
     const parsedId = serverIdSchema.safeParse(id);
@@ -124,6 +127,7 @@ export async function POST(
       select: {
         id: true,
         ownerId: true,
+        isVerified: true,
       },
     });
 
@@ -133,6 +137,13 @@ export async function POST(
 
     if (!server.ownerId || server.ownerId !== userId) {
       return NextResponse.json({ error: "无权限" }, { status: 403 });
+    }
+
+    if (!server.isVerified) {
+      return NextResponse.json(
+        { error: "请先完成服务器认领认证，再上传整合包" },
+        { status: 403 },
+      );
     }
 
     const formData = await request.formData();
@@ -230,7 +241,7 @@ export async function POST(
 
     logger.error("[api/servers/[id]/modpack] Unexpected POST error", error);
     return NextResponse.json(
-      { error: resolveErrorMessage(error, "整合包上传失败，请稍后重试") },
+      { error: "整合包上传失败，请稍后重试" },
       { status: 500 },
     );
   }

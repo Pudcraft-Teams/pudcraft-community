@@ -54,49 +54,59 @@ async function notifyServerOnline(serverId: string, serverName: string): Promise
 /**
  * 消费 server-ping 队列并写入状态结果。
  */
+// Fix: ping-worker.ts:57 - job 处理函数增加 try-catch，失败时 console.error 保留日志
 export const pingWorker = new Worker<PingJobData>(
   PING_QUEUE_NAME,
   async (job: Job<PingJobData>) => {
     const { serverId, address, port } = job.data;
-    const previousStatus = await prisma.server.findUnique({
-      where: { id: serverId },
-      select: {
-        isOnline: true,
-        name: true,
-      },
-    });
+    try {
+      const previousStatus = await prisma.server.findUnique({
+        where: { id: serverId },
+        select: {
+          isOnline: true,
+          name: true,
+        },
+      });
 
-    const result = await pingServer(address, port);
+      const result = await pingServer(address, port);
 
-    await prisma.serverStatus.create({
-      data: {
+      await prisma.serverStatus.create({
+        data: {
+          serverId,
+          online: result.isOnline,
+          playerCount: result.playerCount,
+          maxPlayers: result.maxPlayers,
+          latencyMs: result.latency,
+          version: result.version,
+          motd: result.motd,
+          error: result.error,
+        },
+      });
+
+      await prisma.server.update({
+        where: { id: serverId },
+        data: {
+          isOnline: result.isOnline,
+          playerCount: result.playerCount,
+          maxPlayers: result.maxPlayers,
+          latency: result.latency,
+          lastPingedAt: new Date(),
+        },
+      });
+
+      if (!previousStatus?.isOnline && result.isOnline) {
+        await notifyServerOnline(serverId, previousStatus?.name ?? address);
+      }
+
+      return result;
+    } catch (error) {
+      console.error("[ping-worker] Job failed", {
         serverId,
-        online: result.isOnline,
-        playerCount: result.playerCount,
-        maxPlayers: result.maxPlayers,
-        latencyMs: result.latency,
-        version: result.version,
-        motd: result.motd,
-        error: result.error,
-      },
-    });
-
-    await prisma.server.update({
-      where: { id: serverId },
-      data: {
-        isOnline: result.isOnline,
-        playerCount: result.playerCount,
-        maxPlayers: result.maxPlayers,
-        latency: result.latency,
-        lastPingedAt: new Date(),
-      },
-    });
-
-    if (!previousStatus?.isOnline && result.isOnline) {
-      await notifyServerOnline(serverId, previousStatus?.name ?? address);
+        address,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
     }
-
-    return result;
   },
   {
     connection: getQueueConnection(),
