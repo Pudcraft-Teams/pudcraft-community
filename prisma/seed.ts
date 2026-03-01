@@ -461,7 +461,6 @@ async function main() {
             maxPlayers: status.maxPlayers,
             motd: status.motd,
             favicon: null,
-            latencyMs: status.latencyMs,
           },
         },
       },

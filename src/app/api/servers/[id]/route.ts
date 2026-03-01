@@ -119,7 +119,6 @@ export async function GET(
         maxPlayers: server.maxPlayers,
         motd: null,
         favicon: null,
-        latencyMs: server.latency,
         checkedAt: (server.lastPingedAt ?? server.updatedAt).toISOString(),
       },
     };

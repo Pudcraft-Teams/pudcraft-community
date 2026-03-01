@@ -59,7 +59,6 @@ const getUser = cache(async (userId: string) => {
           isOnline: true,
           playerCount: true,
           maxPlayers: true,
-          latency: true,
           lastPingedAt: true,
           updatedAt: true,
         },
@@ -114,7 +113,6 @@ export default async function UserProfilePage({ params }: PageProps) {
       maxPlayers: server.maxPlayers,
       motd: null,
       favicon: null,
-      latencyMs: server.latency,
       checkedAt: (server.lastPingedAt ?? server.updatedAt).toISOString(),
     },
   }));

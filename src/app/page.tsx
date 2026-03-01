@@ -106,7 +106,6 @@ async function getInitialServerList(query: HomeQuery): Promise<{
         isOnline: true,
         playerCount: true,
         maxPlayers: true,
-        latency: true,
         lastPingedAt: true,
         updatedAt: true,
       },
@@ -131,7 +130,6 @@ async function getInitialServerList(query: HomeQuery): Promise<{
       maxPlayers: server.maxPlayers,
       motd: null,
       favicon: null,
-      latencyMs: server.latency,
       checkedAt: (server.lastPingedAt ?? server.updatedAt).toISOString(),
     },
   }));

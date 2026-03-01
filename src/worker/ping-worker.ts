@@ -75,7 +75,6 @@ export const pingWorker = new Worker<PingJobData>(
           online: result.isOnline,
           playerCount: result.playerCount,
           maxPlayers: result.maxPlayers,
-          latencyMs: result.latency,
           version: result.version,
           motd: result.motd,
           error: result.error,
@@ -88,7 +87,6 @@ export const pingWorker = new Worker<PingJobData>(
           isOnline: result.isOnline,
           playerCount: result.playerCount,
           maxPlayers: result.maxPlayers,
-          latency: result.latency,
           lastPingedAt: new Date(),
         },
       });

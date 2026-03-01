@@ -35,7 +35,6 @@ export async function GET() {
             isOnline: true,
             playerCount: true,
             maxPlayers: true,
-            latency: true,
             lastPingedAt: true,
             updatedAt: true,
             status: true,
@@ -65,7 +64,6 @@ export async function GET() {
           maxPlayers: server.maxPlayers,
           motd: null,
           favicon: null,
-          latencyMs: server.latency,
           checkedAt: (server.lastPingedAt ?? server.updatedAt).toISOString(),
         },
       };

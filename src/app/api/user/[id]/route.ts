@@ -59,7 +59,6 @@ export async function GET(_request: Request, { params }: RouteContext) {
         maxPlayers: server.maxPlayers,
         motd: null,
         favicon: null,
-        latencyMs: server.latency,
         checkedAt: (server.lastPingedAt ?? server.updatedAt).toISOString(),
       },
     }));

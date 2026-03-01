@@ -60,7 +60,6 @@ model Server {
   isOnline        Boolean   @default(false) @map("is_online")
   playerCount     Int       @default(0) @map("player_count")
   maxPlayers      Int       @default(0) @map("max_players")
-  latency         Int       @default(0)
   lastPingedAt DateTime? @map("last_pinged_at")
   status       String    @default("pending") // pending | approved | rejected
   rejectReason String?   @map("reject_reason")
@@ -134,7 +133,6 @@ model ServerStatus {
   maxPlayers  Int?     @map("max_players")
   motd        String?
   favicon     String?  @db.Text
-  latencyMs   Int?     @map("latency_ms")
   version     String?
   error       String?  @db.Text
   checkedAt   DateTime @default(now()) @map("checked_at")

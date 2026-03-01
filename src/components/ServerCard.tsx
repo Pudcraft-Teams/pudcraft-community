@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { FavoriteButton } from "@/components/FavoriteButton";
@@ -28,6 +29,18 @@ export function ServerCard({
     !Number.isFinite(checkedAtMs) || Date.now() - checkedAtMs > 15 * 60 * 1000;
   const isOnline = status.online;
   const statusText = isStale ? "状态未知" : isOnline ? "在线" : "离线";
+
+  const [pingMs, setPingMs] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (isStale || !isOnline) return;
+    const start = performance.now();
+    fetch(`/api/servers/${server.id}/ping`, { cache: "no-store" })
+      .then(() => {
+        setPingMs(Math.round(performance.now() - start));
+      })
+      .catch(() => {/* ignore */});
+  }, [server.id, isOnline, isStale]);
 
   return (
     <Link
@@ -115,17 +128,17 @@ export function ServerCard({
             <span className="font-medium text-slate-800">{status.playerCount}</span>
             <span> / {status.maxPlayers} 在线</span>
           </span>
-          {status.latencyMs !== null && (
+          {pingMs !== null && (
             <span
               className={
-                status.latencyMs < 50
+                pingMs < 50
                   ? "text-emerald-600"
-                  : status.latencyMs < 100
+                  : pingMs < 100
                     ? "text-amber-600"
                     : "text-rose-600"
               }
             >
-              {status.latencyMs}ms
+              {pingMs}ms
             </span>
           )}
         </div>

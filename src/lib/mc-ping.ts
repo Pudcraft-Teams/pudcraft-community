@@ -4,7 +4,6 @@ export interface PingResult {
   isOnline: boolean;
   playerCount: number;
   maxPlayers: number;
-  latency: number;
   version: string | null;
   motd: string | null;
   error: string | null;
@@ -76,15 +75,12 @@ export async function pingServer(address: string, port: number): Promise<PingRes
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     try {
-      const startTime = Date.now();
       const response = await javaStatus(address, port, { timeout: DEFAULT_TIMEOUT_MS });
-      const latency = Date.now() - startTime;
 
       return {
         isOnline: true,
         playerCount: response.players.online,
         maxPlayers: response.players.max,
-        latency,
         version: response.version.name ?? null,
         motd: resolveMotd(response.motd),
         error: null,
@@ -105,7 +101,6 @@ export async function pingServer(address: string, port: number): Promise<PingRes
     isOnline: false,
     playerCount: 0,
     maxPlayers: 0,
-    latency: 0,
     version: null,
     motd: null,
     error: lastErrorMessage,

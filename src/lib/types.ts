@@ -10,7 +10,6 @@ export interface ServerStatusResponse {
   maxPlayers: number | null;
   motd: string | null;
   favicon: string | null;
-  latencyMs: number | null;
   checkedAt: string;
 }
 
