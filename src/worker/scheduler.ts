@@ -19,6 +19,7 @@ export async function scheduleAllPings(): Promise<void> {
   isScheduling = true;
   try {
     const servers = await prisma.server.findMany({
+      where: { status: "approved" },
       select: { id: true, host: true, port: true },
     });
 

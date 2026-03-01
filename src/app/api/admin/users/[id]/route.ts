@@ -29,7 +29,12 @@ export async function PATCH(
       );
     }
 
-    const body: unknown = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "请求体必须是合法 JSON" }, { status: 400 });
+    }
     const parsed = adminUserActionSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(

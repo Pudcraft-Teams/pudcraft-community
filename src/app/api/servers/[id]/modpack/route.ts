@@ -1,5 +1,3 @@
-// Fix: modpack/route.ts:4 - POST 改用 requireActiveUser() 以支持实时封禁检查（不再依赖 JWT 缓存）
-// Fix: modpack/route.ts:240 - outer catch 不再通过 resolveErrorMessage 泄露 error.message
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";

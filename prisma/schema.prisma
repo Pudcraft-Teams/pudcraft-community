@@ -50,7 +50,7 @@ model Server {
   imageUrl        String?   @map("image_url")
   iconUrl         String?   @map("icon_url")
   ownerId         String?   @map("owner_id")
-  owner           User?     @relation(fields: [ownerId], references: [id])
+  owner           User?     @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   isVerified      Boolean   @default(false) @map("is_verified")
   verifyToken     String?   @map("verify_token")
   verifyExpiresAt DateTime? @map("verify_expires_at")
