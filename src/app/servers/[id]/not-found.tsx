@@ -13,10 +13,7 @@ export default function ServerDetailNotFound() {
         <p className="mb-6 text-sm text-slate-600">
           可能是链接已失效，或者该服务器尚未收录。你可以先返回列表继续浏览。
         </p>
-        <Link
-          href="/"
-          className="m3-btn m3-btn-primary inline-flex items-center"
-        >
+        <Link href="/" className="m3-btn m3-btn-primary inline-flex items-center">
           返回服务器列表
         </Link>
       </div>

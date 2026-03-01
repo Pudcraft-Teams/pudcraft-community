@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { canAccessServer } from "@/lib/server-access";
 import {
   deleteFile,
   deleteObject,
@@ -61,20 +62,14 @@ async function deleteServerAssetIfExists(
  * GET /api/servers/:id — 获取单个服务器详情。
  * 未通过审核的服务器只有 owner 和管理员可访问。
  */
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
 
     // ─── Zod 校验 ───
     const parsed = serverIdSchema.safeParse(id);
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "无效的服务器 ID 格式" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
     }
 
     const server = await prisma.server.findUnique({
@@ -88,9 +83,13 @@ export async function GET(
     // ─── 审核状态访问控制 ───
     if (server.status !== "approved") {
       const session = await auth();
-      const isOwner = !!session?.user?.id && session.user.id === server.ownerId;
-      const isAdmin = session?.user?.role === "admin";
-      if (!isOwner && !isAdmin) {
+      const canAccessCurrentServer = canAccessServer({
+        status: server.status,
+        ownerId: server.ownerId,
+        currentUserId: session?.user?.id,
+        currentUserRole: session?.user?.role,
+      });
+      if (!canAccessCurrentServer) {
         return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
       }
     }
@@ -134,10 +133,7 @@ export async function GET(
  * PATCH /api/servers/:id — 编辑服务器信息。
  * 仅服务器 owner 可编辑，图标上传失败时降级保留原图标。
  */
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -220,20 +216,14 @@ export async function PATCH(
           return NextResponse.json({ error: error.message }, { status: error.status });
         }
 
-        return NextResponse.json(
-          { error: "图标文件格式或大小无效" },
-          { status: 400 },
-        );
+        return NextResponse.json({ error: "图标文件格式或大小无效" }, { status: 400 });
       }
     }
 
     const updateInput = parsed.data;
 
     const existingMetadata = extractServerContentMetadata(existing.content);
-    const nextVersion =
-      updateInput.version ??
-      existingMetadata.version ??
-      "未知";
+    const nextVersion = updateInput.version ?? existingMetadata.version ?? "未知";
     const nextBody =
       updateInput.content !== undefined ? updateInput.content : existingMetadata.body;
     const nextMaxPlayers =
@@ -241,7 +231,9 @@ export async function PATCH(
         ? updateInput.maxPlayers
         : (existingMetadata.maxPlayers ?? existing.maxPlayers);
     const nextQqGroup =
-      updateInput.qqGroup !== undefined ? (updateInput.qqGroup || undefined) : (existingMetadata.qqGroup ?? undefined);
+      updateInput.qqGroup !== undefined
+        ? updateInput.qqGroup || undefined
+        : (existingMetadata.qqGroup ?? undefined);
     const shouldRebuildContent =
       hasField(updateInput, "version") ||
       hasField(updateInput, "content") ||
@@ -285,7 +277,7 @@ export async function PATCH(
       host: hasField(updateInput, "address") ? updateInput.address : existing.host,
       port: hasField(updateInput, "port") ? updateInput.port : existing.port,
       description: hasField(updateInput, "description")
-        ? (updateInput.description || null)
+        ? updateInput.description || null
         : existing.description,
       tags: hasField(updateInput, "tags") ? updateInput.tags : existing.tags,
       content: nextContent,
@@ -324,10 +316,7 @@ export async function PATCH(
         },
       });
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
-      ) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         return NextResponse.json(
           { error: "该服务器地址和端口已存在，请勿重复设置" },
           { status: 409 },
@@ -339,7 +328,8 @@ export async function PATCH(
 
     const shouldDeleteOldIcon =
       existing.iconUrl &&
-      (nextIconKey === null || (typeof nextIconKey === "string" && nextIconKey !== existing.iconUrl));
+      (nextIconKey === null ||
+        (typeof nextIconKey === "string" && nextIconKey !== existing.iconUrl));
     if (shouldDeleteOldIcon) {
       await deleteServerAssetIfExists(existing.iconUrl, "icon");
     }
@@ -360,10 +350,7 @@ export async function PATCH(
  * DELETE /api/servers/:id — 删除服务器。
  * 服务器 owner 和管理员可删除。
  */
-export async function DELETE(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {

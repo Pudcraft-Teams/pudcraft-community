@@ -4,6 +4,7 @@ import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { rateLimit } from "@/lib/rate-limit";
+import { canAccessServer } from "@/lib/server-access";
 import { serverIdSchema } from "@/lib/validation";
 
 interface RouteContext {
@@ -31,6 +32,28 @@ export async function GET(_request: Request, { params }: RouteContext) {
     const parsedServerId = serverIdSchema.safeParse(id);
     if (!parsedServerId.success) {
       return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+    }
+
+    const server = await prisma.server.findUnique({
+      where: { id: parsedServerId.data },
+      select: {
+        id: true,
+        status: true,
+        ownerId: true,
+      },
+    });
+    if (!server) {
+      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+    }
+
+    const canAccessCurrentServer = canAccessServer({
+      status: server.status,
+      ownerId: server.ownerId,
+      currentUserId: userId,
+      currentUserRole: authResult.user.role,
+    });
+    if (!canAccessCurrentServer) {
+      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
     }
 
     const favorite = await prisma.favorite.findUnique({
@@ -75,9 +98,24 @@ export async function POST(_request: Request, { params }: RouteContext) {
 
     const server = await prisma.server.findUnique({
       where: { id: parsedServerId.data },
-      select: { id: true, favoriteCount: true },
+      select: {
+        id: true,
+        favoriteCount: true,
+        status: true,
+        ownerId: true,
+      },
     });
     if (!server) {
+      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+    }
+
+    const canAccessCurrentServer = canAccessServer({
+      status: server.status,
+      ownerId: server.ownerId,
+      currentUserId: userId,
+      currentUserRole: authResult.user.role,
+    });
+    if (!canAccessCurrentServer) {
       return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
     }
 
@@ -162,6 +200,28 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
     const parsedServerId = serverIdSchema.safeParse(id);
     if (!parsedServerId.success) {
       return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+    }
+
+    const server = await prisma.server.findUnique({
+      where: { id: parsedServerId.data },
+      select: {
+        id: true,
+        status: true,
+        ownerId: true,
+      },
+    });
+    if (!server) {
+      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+    }
+
+    const canAccessCurrentServer = canAccessServer({
+      status: server.status,
+      ownerId: server.ownerId,
+      currentUserId: userId,
+      currentUserRole: authResult.user.role,
+    });
+    if (!canAccessCurrentServer) {
+      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
     }
 
     const result = await prisma.$transaction(async (tx) => {

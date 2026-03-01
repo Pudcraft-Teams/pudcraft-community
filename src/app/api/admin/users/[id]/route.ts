@@ -7,26 +7,17 @@ import { userIdSchema, adminUserActionSchema } from "@/lib/validation";
 /**
  * PATCH /api/admin/users/:id — 封禁/解封用户。
  */
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const adminResult = await requireAdmin();
     if (isAdminError(adminResult)) {
-      return NextResponse.json(
-        { error: adminResult.error },
-        { status: adminResult.status },
-      );
+      return NextResponse.json({ error: adminResult.error }, { status: adminResult.status });
     }
 
     const { id } = await params;
     const parsedId = userIdSchema.safeParse(id);
     if (!parsedId.success) {
-      return NextResponse.json(
-        { error: "无效的用户 ID 格式" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "无效的用户 ID 格式" }, { status: 400 });
     }
 
     let body: unknown;
@@ -56,18 +47,12 @@ export async function PATCH(
 
     // 不能封禁管理员
     if (action === "ban" && user.role === "admin") {
-      return NextResponse.json(
-        { error: "不能封禁管理员" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "不能封禁管理员" }, { status: 400 });
     }
 
     if (action === "ban") {
       if (!reason) {
-        return NextResponse.json(
-          { error: "封禁时必须填写原因" },
-          { status: 400 },
-        );
+        return NextResponse.json({ error: "封禁时必须填写原因" }, { status: 400 });
       }
 
       await prisma.user.update({

@@ -18,19 +18,18 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
     <div className="prose prose-slate max-w-none text-slate-700">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[
-          rehypeSanitize,
-          [rehypeHighlight, { detect: true, ignoreMissing: true }],
-        ]}
+        rehypePlugins={[rehypeSanitize, [rehypeHighlight, { detect: true, ignoreMissing: true }]]}
         components={{
           h1: ({ children }) => (
-            <h1 className="mt-8 mb-4 text-3xl font-bold tracking-tight text-slate-900">{children}</h1>
+            <h1 className="mb-4 mt-8 text-3xl font-bold tracking-tight text-slate-900">
+              {children}
+            </h1>
           ),
           h2: ({ children }) => (
-            <h2 className="mt-7 mb-3 text-2xl font-semibold text-slate-900">{children}</h2>
+            <h2 className="mb-3 mt-7 text-2xl font-semibold text-slate-900">{children}</h2>
           ),
           h3: ({ children }) => (
-            <h3 className="mt-6 mb-3 text-xl font-semibold text-slate-900">{children}</h3>
+            <h3 className="mb-3 mt-6 text-xl font-semibold text-slate-900">{children}</h3>
           ),
           p: ({ children }) => <p className="my-3 leading-7 text-slate-700">{children}</p>,
           a: ({ href, children }) => (

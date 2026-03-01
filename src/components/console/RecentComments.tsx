@@ -33,7 +33,7 @@ function resolveAuthorName(comment: ServerComment): string {
     return name;
   }
 
-  return comment.author.email.split("@")[0] ?? "匿名用户";
+  return "匿名用户";
 }
 
 /**
@@ -97,12 +97,14 @@ export function RecentComments({ serverId }: RecentCommentsProps) {
       ) : (
         <div className="mt-4 space-y-3">
           {comments.map((comment) => (
-            <div key={comment.id} className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3 last:border-none last:pb-0">
+            <div
+              key={comment.id}
+              className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3 last:border-none last:pb-0"
+            >
               <div className="flex min-w-0 items-start gap-2">
                 <UserAvatar
                   src={comment.author.image}
                   name={comment.author.name}
-                  email={comment.author.email}
                   className="h-8 w-8"
                   fallbackClassName="bg-teal-600 text-white"
                 />
@@ -117,10 +119,7 @@ export function RecentComments({ serverId }: RecentCommentsProps) {
         </div>
       )}
 
-      <Link
-        href={`/servers/${serverId}`}
-        className="m3-link mt-4 inline-flex items-center text-sm"
-      >
+      <Link href={`/servers/${serverId}`} className="m3-link mt-4 inline-flex items-center text-sm">
         查看全部评论 →
       </Link>
     </section>

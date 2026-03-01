@@ -98,9 +98,7 @@ function parseStatsPayload(raw: unknown): StatsPayload {
 
   return {
     period: isStatsPeriod(raw.period) ? raw.period : undefined,
-    dataPoints: Array.isArray(raw.dataPoints)
-      ? raw.dataPoints.filter(isStatsDataPoint)
-      : undefined,
+    dataPoints: Array.isArray(raw.dataPoints) ? raw.dataPoints.filter(isStatsDataPoint) : undefined,
     summary: isStatsSummary(raw.summary) ? raw.summary : undefined,
     hourlyAverages: Array.isArray(raw.hourlyAverages)
       ? raw.hourlyAverages.filter(isHourlyAveragePoint)

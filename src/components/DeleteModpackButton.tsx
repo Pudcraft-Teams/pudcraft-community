@@ -88,4 +88,3 @@ export function DeleteModpackButton({
     </button>
   );
 }
-

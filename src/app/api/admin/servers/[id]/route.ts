@@ -50,26 +50,17 @@ async function createReviewNotification({
 /**
  * PATCH /api/admin/servers/:id — 审核服务器（通过/拒绝）。
  */
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const adminResult = await requireAdmin();
     if (isAdminError(adminResult)) {
-      return NextResponse.json(
-        { error: adminResult.error },
-        { status: adminResult.status },
-      );
+      return NextResponse.json({ error: adminResult.error }, { status: adminResult.status });
     }
 
     const { id } = await params;
     const parsedId = serverIdSchema.safeParse(id);
     if (!parsedId.success) {
-      return NextResponse.json(
-        { error: "无效的服务器 ID 格式" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
     }
 
     let body: unknown;
@@ -117,10 +108,7 @@ export async function PATCH(
 
     if (action === "reject") {
       if (!reason) {
-        return NextResponse.json(
-          { error: "拒绝时必须填写原因" },
-          { status: 400 },
-        );
+        return NextResponse.json({ error: "拒绝时必须填写原因" }, { status: 400 });
       }
 
       await prisma.server.update({
@@ -151,26 +139,17 @@ export async function PATCH(
 /**
  * DELETE /api/admin/servers/:id — 删除服务器。
  */
-export async function DELETE(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const adminResult = await requireAdmin();
     if (isAdminError(adminResult)) {
-      return NextResponse.json(
-        { error: adminResult.error },
-        { status: adminResult.status },
-      );
+      return NextResponse.json({ error: adminResult.error }, { status: adminResult.status });
     }
 
     const { id } = await params;
     const parsedId = serverIdSchema.safeParse(id);
     if (!parsedId.success) {
-      return NextResponse.json(
-        { error: "无效的服务器 ID 格式" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
     }
 
     const server = await prisma.server.findUnique({

@@ -151,7 +151,9 @@ export function NotificationBell() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ all: true }),
       });
-      const payload = (await response.json().catch(() => null)) as MarkNotificationsReadResponse | null;
+      const payload = (await response
+        .json()
+        .catch(() => null)) as MarkNotificationsReadResponse | null;
       if (!response.ok || !payload) {
         return;
       }
@@ -172,7 +174,9 @@ export function NotificationBell() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids: [notificationId] }),
     });
-    const payload = (await response.json().catch(() => null)) as MarkNotificationsReadResponse | null;
+    const payload = (await response
+      .json()
+      .catch(() => null)) as MarkNotificationsReadResponse | null;
     if (!response.ok || !payload) {
       return;
     }

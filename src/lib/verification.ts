@@ -3,7 +3,11 @@ import { z } from "zod";
 import { getRedisConnection } from "@/lib/redis";
 
 const codeSchema = z.string().regex(/^\d{6}$/, "验证码必须是 6 位数字");
-const emailSchema = z.string().trim().email().transform((value) => value.toLowerCase());
+const emailSchema = z
+  .string()
+  .trim()
+  .email()
+  .transform((value) => value.toLowerCase());
 const ipSchema = z.string().trim().min(1).max(64);
 const keyPrefixSchema = z
   .string()
@@ -57,7 +61,12 @@ export async function storeCode(email: string, code: string, prefix = "verify"):
   const validatedPrefix = keyPrefixSchema.parse(prefix);
   const redis = getRedisConnection();
 
-  await redis.set(getCodeKey(validatedEmail, validatedPrefix), validatedCode, "EX", CODE_TTL_SECONDS);
+  await redis.set(
+    getCodeKey(validatedEmail, validatedPrefix),
+    validatedCode,
+    "EX",
+    CODE_TTL_SECONDS,
+  );
 }
 
 /**
@@ -136,11 +145,16 @@ export async function recordFailedAttempt(
  * @param attemptsPrefix - 失败次数用途前缀（默认 `verify-attempts`）
  * @returns `true` 已锁定；`false` 未锁定
  */
-export async function isLocked(email: string, attemptsPrefix = "verify-attempts"): Promise<boolean> {
+export async function isLocked(
+  email: string,
+  attemptsPrefix = "verify-attempts",
+): Promise<boolean> {
   const validatedEmail = emailSchema.parse(email);
   const validatedAttemptsPrefix = keyPrefixSchema.parse(attemptsPrefix);
   const redis = getRedisConnection();
-  const rawAttempts = await redis.get(getFailedAttemptsKey(validatedEmail, validatedAttemptsPrefix));
+  const rawAttempts = await redis.get(
+    getFailedAttemptsKey(validatedEmail, validatedAttemptsPrefix),
+  );
   const attempts = rawAttempts ? Number(rawAttempts) : 0;
 
   return attempts >= MAX_FAILED_ATTEMPTS;
@@ -174,6 +188,9 @@ export async function verifyCode(email: string, code: string, prefix = "verify")
     return false;
   }
 
-  await Promise.all([redis.del(key), redis.del(getFailedAttemptsKey(validatedEmail, attemptsPrefix))]);
+  await Promise.all([
+    redis.del(key),
+    redis.del(getFailedAttemptsKey(validatedEmail, attemptsPrefix)),
+  ]);
   return true;
 }

@@ -3,6 +3,7 @@ import { Readable } from "stream";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { canAccessServer } from "@/lib/server-access";
 import { createObjectReadStream, getObjectFileInfo, getSignedUrl } from "@/lib/storage";
 import { modpackIdSchema } from "@/lib/validation";
 
@@ -61,7 +62,7 @@ const isObjectStorageDriver = () => {
 
 /**
  * GET /api/modpacks/:modpackId/download — 下载整合包。
- * 未通过审核服务器的整合包仅 owner 可下载。
+ * 未通过审核服务器的整合包仅 owner / admin 可下载。
  */
 export async function GET(
   _request: Request,
@@ -84,7 +85,7 @@ export async function GET(
         server: {
           select: {
             ownerId: true,
-            isVerified: true,
+            status: true,
           },
         },
       },
@@ -95,10 +96,17 @@ export async function GET(
     }
 
     const session = await auth();
-    const currentUserId = session?.user?.id;
-    const isOwner = !!currentUserId && currentUserId === modpack.server.ownerId;
-    if (!modpack.server.isVerified && !isOwner) {
-      return NextResponse.json({ error: "服务器未通过审核，整合包暂不可公开下载" }, { status: 403 });
+    const canAccessCurrentServer = canAccessServer({
+      status: modpack.server.status,
+      ownerId: modpack.server.ownerId,
+      currentUserId: session?.user?.id,
+      currentUserRole: session?.user?.role,
+    });
+    if (!canAccessCurrentServer) {
+      return NextResponse.json(
+        { error: "服务器未通过审核，整合包暂不可公开下载" },
+        { status: 403 },
+      );
     }
 
     const filename = buildDownloadFilename(modpack.name, modpack.version);
@@ -118,11 +126,14 @@ export async function GET(
         });
         return NextResponse.redirect(signedUrl, { status: 307 });
       } catch (error) {
-        logger.error("[api/modpacks/[modpackId]/download] Failed to sign object storage download URL", {
-          modpackId: modpack.id,
-          fileKey: modpack.fileKey,
-          reason: error instanceof Error ? error.message : "unknown",
-        });
+        logger.error(
+          "[api/modpacks/[modpackId]/download] Failed to sign object storage download URL",
+          {
+            modpackId: modpack.id,
+            fileKey: modpack.fileKey,
+            reason: error instanceof Error ? error.message : "unknown",
+          },
+        );
         return NextResponse.json({ error: "整合包下载链接生成失败" }, { status: 500 });
       }
     }

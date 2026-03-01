@@ -5,8 +5,14 @@ import { auth } from "@/lib/auth";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { getClientIp } from "@/lib/request-ip";
 import { rateLimit } from "@/lib/rate-limit";
-import { getPublicUrl, ImageValidationError, uploadServerIcon, validateImageFile } from "@/lib/storage";
+import {
+  getPublicUrl,
+  ImageValidationError,
+  uploadServerIcon,
+  validateImageFile,
+} from "@/lib/storage";
 import { buildServerContent } from "@/lib/serverContent";
 import { createServerSchema, queryServersSchema } from "@/lib/validation";
 import type { ServerListItem } from "@/lib/types";
@@ -36,10 +42,6 @@ function resolveErrorMessage(error: unknown, fallback: string): string {
   }
 
   return fallback;
-}
-
-function getClientIp(request: Request): string {
-  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
 }
 
 function duplicateServerResponse(existing: { id: string; name: string | null }) {
@@ -267,10 +269,7 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: error.message }, { status: error.status });
         }
 
-        return NextResponse.json(
-          { error: "图标文件格式或大小无效" },
-          { status: 400 },
-        );
+        return NextResponse.json({ error: "图标文件格式或大小无效" }, { status: 400 });
       }
     }
 
@@ -294,10 +293,7 @@ export async function POST(request: Request) {
         },
       });
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
-      ) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         const duplicated = await prisma.server.findFirst({
           where: {
             host: {

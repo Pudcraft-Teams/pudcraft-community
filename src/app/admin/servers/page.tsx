@@ -170,9 +170,7 @@ export default function AdminServersPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold tracking-tight text-slate-900">
-        服务器管理
-      </h1>
+      <h1 className="mb-6 text-2xl font-bold tracking-tight text-slate-900">服务器管理</h1>
 
       {/* 状态筛选 */}
       <div className="mb-4 flex flex-wrap gap-2">
@@ -184,9 +182,7 @@ export default function AdminServersPage() {
               setStatusFilter(tab.key);
               setPage(1);
             }}
-            className={`m3-chip text-sm ${
-              statusFilter === tab.key ? "m3-chip-active" : ""
-            }`}
+            className={`m3-chip text-sm ${statusFilter === tab.key ? "m3-chip-active" : ""}`}
           >
             {tab.label}
           </button>
@@ -210,9 +206,7 @@ export default function AdminServersPage() {
       {isLoading ? (
         <PageLoading />
       ) : servers.length === 0 ? (
-        <div className="py-12 text-center text-sm text-slate-500">
-          暂无数据
-        </div>
+        <div className="py-12 text-center text-sm text-slate-500">暂无数据</div>
       ) : (
         <>
           {/* 服务器表格 */}
@@ -222,16 +216,10 @@ export default function AdminServersPage() {
                 <tr className="border-b border-slate-200 text-xs text-slate-500">
                   <th className="px-4 py-3 font-medium">名称</th>
                   <th className="px-4 py-3 font-medium">地址</th>
-                  <th className="hidden px-4 py-3 font-medium md:table-cell">
-                    提交者
-                  </th>
+                  <th className="hidden px-4 py-3 font-medium md:table-cell">提交者</th>
                   <th className="px-4 py-3 font-medium">状态</th>
-                  <th className="hidden px-4 py-3 font-medium sm:table-cell">
-                    认领
-                  </th>
-                  <th className="hidden px-4 py-3 font-medium lg:table-cell">
-                    提交时间
-                  </th>
+                  <th className="hidden px-4 py-3 font-medium sm:table-cell">认领</th>
+                  <th className="hidden px-4 py-3 font-medium lg:table-cell">提交时间</th>
                   <th className="px-4 py-3 font-medium">操作</th>
                 </tr>
               </thead>
@@ -239,7 +227,7 @@ export default function AdminServersPage() {
                 {servers.map((server) => (
                   <tr
                     key={server.id}
-                    className="border-b border-slate-100 transition-colors hover:bg-slate-50 last:border-0"
+                    className="border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50"
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -278,9 +266,7 @@ export default function AdminServersPage() {
                     <td className="hidden px-4 py-3 sm:table-cell">
                       <span
                         className={`text-xs ${
-                          server.isVerified
-                            ? "font-medium text-teal-700"
-                            : "text-slate-400"
+                          server.isVerified ? "font-medium text-teal-700" : "text-slate-400"
                         }`}
                       >
                         {server.isVerified ? "已认领" : "未认领"}
@@ -317,9 +303,7 @@ export default function AdminServersPage() {
                         <button
                           type="button"
                           disabled={actionLoading === server.id}
-                          onClick={() =>
-                            handleDelete(server.id, server.name)
-                          }
+                          onClick={() => handleDelete(server.id, server.name)}
                           className="rounded bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700 transition-colors hover:bg-rose-100 disabled:opacity-50"
                         >
                           删除

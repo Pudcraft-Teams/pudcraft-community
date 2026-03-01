@@ -47,10 +47,7 @@ export async function GET(request: Request) {
   try {
     const adminResult = await requireAdmin();
     if (isAdminError(adminResult)) {
-      return NextResponse.json(
-        { error: adminResult.error },
-        { status: adminResult.status },
-      );
+      return NextResponse.json({ error: adminResult.error }, { status: adminResult.status });
     }
 
     const { searchParams } = new URL(request.url);

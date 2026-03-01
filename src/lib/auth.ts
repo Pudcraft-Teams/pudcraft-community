@@ -4,6 +4,7 @@ import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
+import { getClientIp } from "@/lib/request-ip";
 import { rateLimit } from "@/lib/rate-limit";
 import { getPublicUrl } from "@/lib/storage";
 import { loginSchema } from "@/lib/validation";
@@ -12,23 +13,6 @@ const DUMMY_PASSWORD_HASH = "$2b$12$7MsJQQUhISt6L0QkQlym9eQygPzy5Q89vgzW0fvkYl9w
 
 class BannedUserError extends CredentialsSignin {
   code = "banned";
-}
-
-function getClientIp(request?: Pick<Request, "headers"> | null): string {
-  const forwardedFor = request?.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    const candidate = forwardedFor.split(",")[0]?.trim();
-    if (candidate) {
-      return candidate;
-    }
-  }
-
-  const realIp = request?.headers.get("x-real-ip")?.trim();
-  if (realIp) {
-    return realIp;
-  }
-
-  return "unknown";
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -148,10 +132,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user && typeof token.email === "string") {
         session.user.email = token.email;
       }
-      if (
-        session.user &&
-        (typeof token.picture === "string" || token.picture === null)
-      ) {
+      if (session.user && (typeof token.picture === "string" || token.picture === null)) {
         session.user.image = token.picture;
       }
       if (session.user) {

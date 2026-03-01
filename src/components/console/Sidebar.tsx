@@ -49,7 +49,7 @@ export function Sidebar({ servers }: SidebarProps) {
   const selectedServerId =
     activeServerId && servers.some((server) => server.id === activeServerId)
       ? activeServerId
-      : servers[0]?.id ?? "";
+      : (servers[0]?.id ?? "");
 
   return (
     <>

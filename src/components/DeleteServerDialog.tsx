@@ -127,11 +127,7 @@ export function DeleteServerDialog({
             </p>
 
             <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="m3-btn m3-btn-tonal"
-              >
+              <button type="button" onClick={() => setOpen(false)} className="m3-btn m3-btn-tonal">
                 取消
               </button>
               <button

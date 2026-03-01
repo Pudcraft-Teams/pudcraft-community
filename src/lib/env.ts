@@ -2,6 +2,7 @@
 //   DATABASE_URL、NEXTAUTH_SECRET、NEXTAUTH_URL（env.ts:1 - 安全审查）
 //   Redis 连接信息（env.ts:1 - 稳定性审查）
 import { z } from "zod";
+import { parseRedisConfig } from "@/lib/redis-config";
 
 // ─── 核心必填变量 ─────────────────────────────────────
 // NEXTAUTH_URL 在 NextAuth v5 中可被自动推断（Vercel/localhost），
@@ -15,18 +16,7 @@ const coreEnvSchema = z.object({
 coreEnvSchema.parse(process.env);
 
 // ─── Redis 连接（REDIS_URL 或 REDIS_HOST + REDIS_PORT 二选一） ───
-const redisEnvSchema = z.object({
-  REDIS_URL: z.string().optional(),
-  REDIS_HOST: z.string().optional(),
-  REDIS_PORT: z.coerce.number().int().min(1).max(65535).optional(),
-});
-
-const parsedRedis = redisEnvSchema.parse(process.env);
-if (!parsedRedis.REDIS_URL && !parsedRedis.REDIS_HOST) {
-  throw new Error(
-    "Redis 连接配置缺失：请设置 REDIS_URL 或 REDIS_HOST（+ REDIS_PORT）",
-  );
-}
+export const redisEnv = parseRedisConfig();
 
 // ─── SMTP 邮件配置 ─────────────────────────────────────
 const envSchema = z.object({
@@ -84,8 +74,7 @@ const normalizedStorageEnv = {
     parsedObjectStorage.STORAGE_DRIVER === "oss" ? "s3" : parsedObjectStorage.STORAGE_DRIVER,
   S3_REGION: parsedObjectStorage.S3_REGION ?? parsedObjectStorage.OSS_REGION,
   S3_BUCKET: parsedObjectStorage.S3_BUCKET ?? parsedObjectStorage.OSS_BUCKET,
-  S3_ACCESS_KEY_ID:
-    parsedObjectStorage.S3_ACCESS_KEY_ID ?? parsedObjectStorage.OSS_ACCESS_KEY_ID,
+  S3_ACCESS_KEY_ID: parsedObjectStorage.S3_ACCESS_KEY_ID ?? parsedObjectStorage.OSS_ACCESS_KEY_ID,
   S3_ACCESS_KEY_SECRET:
     parsedObjectStorage.S3_ACCESS_KEY_SECRET ?? parsedObjectStorage.OSS_ACCESS_KEY_SECRET,
   S3_ENDPOINT: parsedObjectStorage.S3_ENDPOINT ?? parsedObjectStorage.OSS_ENDPOINT,

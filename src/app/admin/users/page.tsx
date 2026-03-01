@@ -124,9 +124,7 @@ export default function AdminUsersPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold tracking-tight text-slate-900">
-        用户管理
-      </h1>
+      <h1 className="mb-6 text-2xl font-bold tracking-tight text-slate-900">用户管理</h1>
 
       {/* 状态筛选 */}
       <div className="mb-4 flex flex-wrap gap-2">
@@ -138,9 +136,7 @@ export default function AdminUsersPage() {
               setBannedFilter(tab.key);
               setPage(1);
             }}
-            className={`m3-chip text-sm ${
-              bannedFilter === tab.key ? "m3-chip-active" : ""
-            }`}
+            className={`m3-chip text-sm ${bannedFilter === tab.key ? "m3-chip-active" : ""}`}
           >
             {tab.label}
           </button>
@@ -164,9 +160,7 @@ export default function AdminUsersPage() {
       {isLoading ? (
         <PageLoading />
       ) : users.length === 0 ? (
-        <div className="py-12 text-center text-sm text-slate-500">
-          暂无数据
-        </div>
+        <div className="py-12 text-center text-sm text-slate-500">暂无数据</div>
       ) : (
         <>
           {/* 用户表格 */}
@@ -175,18 +169,10 @@ export default function AdminUsersPage() {
               <thead>
                 <tr className="border-b border-slate-200 text-xs text-slate-500">
                   <th className="px-4 py-3 font-medium">用户</th>
-                  <th className="hidden px-4 py-3 font-medium sm:table-cell">
-                    邮箱
-                  </th>
-                  <th className="hidden px-4 py-3 font-medium md:table-cell">
-                    服务器
-                  </th>
-                  <th className="hidden px-4 py-3 font-medium md:table-cell">
-                    评论
-                  </th>
-                  <th className="hidden px-4 py-3 font-medium lg:table-cell">
-                    注册时间
-                  </th>
+                  <th className="hidden px-4 py-3 font-medium sm:table-cell">邮箱</th>
+                  <th className="hidden px-4 py-3 font-medium md:table-cell">服务器</th>
+                  <th className="hidden px-4 py-3 font-medium md:table-cell">评论</th>
+                  <th className="hidden px-4 py-3 font-medium lg:table-cell">注册时间</th>
                   <th className="px-4 py-3 font-medium">状态</th>
                   <th className="px-4 py-3 font-medium">操作</th>
                 </tr>
@@ -195,7 +181,7 @@ export default function AdminUsersPage() {
                 {users.map((user) => (
                   <tr
                     key={user.id}
-                    className="border-b border-slate-100 transition-colors hover:bg-slate-50 last:border-0"
+                    className="border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50"
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">

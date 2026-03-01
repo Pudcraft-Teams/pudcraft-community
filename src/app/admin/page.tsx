@@ -32,23 +32,22 @@ export default async function AdminDashboardPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold tracking-tight text-slate-900">
-        管理后台
-      </h1>
+      <h1 className="mb-6 text-2xl font-bold tracking-tight text-slate-900">管理后台</h1>
 
       <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3">
         {stats.map((stat) => (
           <div key={stat.label} className="m3-surface p-4">
             <p className="text-sm text-slate-500">{stat.label}</p>
-            <p className={`mt-1 text-3xl font-bold ${stat.color}`}>
-              {stat.value}
-            </p>
+            <p className={`mt-1 text-3xl font-bold ${stat.color}`}>{stat.value}</p>
           </div>
         ))}
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <Link href="/admin/servers" className="m3-btn m3-btn-primary inline-flex items-center gap-2">
+        <Link
+          href="/admin/servers"
+          className="m3-btn m3-btn-primary inline-flex items-center gap-2"
+        >
           服务器管理
           {pendingCount > 0 && (
             <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700">

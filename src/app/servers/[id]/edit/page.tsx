@@ -27,9 +27,7 @@ function toApiPayload(raw: unknown): ApiResponsePayload {
     error: typeof payload.error === "string" ? payload.error : undefined,
     warning: typeof payload.warning === "string" ? payload.warning : undefined,
     resubmittedForReview:
-      typeof payload.resubmittedForReview === "boolean"
-        ? payload.resubmittedForReview
-        : undefined,
+      typeof payload.resubmittedForReview === "boolean" ? payload.resubmittedForReview : undefined,
   };
 }
 
@@ -106,7 +104,8 @@ export default function EditServerPage() {
 
         const metadata = extractServerContentMetadata(data.content);
         const resolvedMaxPlayers =
-          metadata.maxPlayers ?? (typeof data.status.maxPlayers === "number" ? data.status.maxPlayers : null);
+          metadata.maxPlayers ??
+          (typeof data.status.maxPlayers === "number" ? data.status.maxPlayers : null);
 
         if (!cancelled) {
           setInitialData({

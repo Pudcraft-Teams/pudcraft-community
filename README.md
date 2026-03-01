@@ -1,54 +1,45 @@
-# Pudcraft Community — Minecraft 服务器聚合站
+# Pudcraft Community
 
-国内 Minecraft 私人服务器交流聚合平台。用户可以浏览服务器信息流、查看服务器在线状态与玩家人数。
+Minecraft 服务器社区平台。用户可以浏览、提交、认领、评论、收藏服务器，并下载服务器公开发布的整合包。
 
 ## 技术栈
 
-- **框架**：Next.js 15 (App Router) + TypeScript
-- **样式**：Tailwind CSS
-- **数据库**：PostgreSQL + Prisma ORM
-- **任务队列**：Redis + BullMQ
-- **输入校验**：Zod
-- **代码质量**：ESLint + Prettier
-- **包管理**：pnpm
+- Next.js 15（App Router）+ React 19 + TypeScript 5
+- Tailwind CSS 3
+- PostgreSQL + Prisma ORM
+- NextAuth v5（Credentials + JWT Session）
+- Redis + BullMQ
+- Nodemailer
+- Zod
+- pnpm
 
----
-
-## 快速启动
+## 本地开发
 
 ### 前置要求
 
-- **Node.js** >= 20
-- **pnpm** >= 9（`npm install -g pnpm`）
-- **Docker** & **Docker Compose**
+- Node.js 20+
+- pnpm 9+
+- Docker 与 Docker Compose
 
-### 1. 克隆项目 & 安装依赖
+### 1. 安装依赖
 
 ```bash
-cd Pudcraft-community
 pnpm install
 ```
 
-> `postinstall` 脚本会自动运行 `prisma generate` 生成数据库客户端类型。
+`postinstall` 会自动执行 `prisma generate`。
 
-### 2. 启动基础设施（PostgreSQL + Redis）
+### 2. 启动 PostgreSQL 与 Redis
 
 ```bash
 docker compose up -d
-```
-
-启动后：
-
-| 服务       | 地址                | 认证信息                              |
-| ---------- | ------------------- | ------------------------------------- |
-| PostgreSQL | `localhost:5432`    | 用户 `pudcraft` / 密码 `pudcraft_dev` |
-| Redis      | `localhost:6379`    | 无密码                                |
-
-验证容器状态：
-
-```bash
 docker compose ps
 ```
+
+默认端口：
+
+- PostgreSQL: `localhost:5432`
+- Redis: `localhost:6379`
 
 ### 3. 配置环境变量
 
@@ -56,129 +47,116 @@ docker compose ps
 cp .env.example .env
 ```
 
-默认值即可在本地开发中直接使用，**无需修改**。
+本地开发可直接使用 `.env.example` 中的默认值；生产环境请改为真实密钥和服务地址。
 
 ### 4. 初始化数据库
 
 ```bash
-pnpm db:push
+pnpm db:migrate --name init_local
 ```
 
-> 首次运行会创建所有表。后续模型变更请使用 `pnpm db:migrate --name your_change`。
+后续模型变更也使用 Prisma migration，不要在生产环境使用 `db push`。
 
-### 5. 启动开发服务器
+### 5. 启动应用与 Worker
+
+开发时需要两个终端：
 
 ```bash
 pnpm dev
 ```
 
-打开浏览器访问 **http://localhost:3000** 查看主页信息流。
-
-### 6. 启动 Worker（可选）
-
 ```bash
 pnpm worker:dev
 ```
 
-Worker 会从 Redis 队列取任务并执行 Minecraft 服务器状态检查（当前为 Mock 实现）。
+Web 负责页面和 API，Worker 负责 Minecraft 状态探测与认领验证任务。
 
----
+## 常用命令
 
-## 可用脚本
+| 命令                            | 说明                        |
+| ------------------------------- | --------------------------- |
+| `pnpm dev`                      | 启动 Next.js 开发服务器     |
+| `pnpm build`                    | 构建生产版本                |
+| `pnpm start`                    | 启动生产服务器              |
+| `pnpm lint`                     | 运行 ESLint 检查            |
+| `pnpm format`                   | 使用 Prettier 格式化 `src/` |
+| `pnpm format:check`             | 检查 `src/` 的格式是否规范  |
+| `pnpm db:migrate --name <name>` | 创建并执行 Prisma 迁移      |
+| `pnpm db:generate`              | 重新生成 Prisma Client      |
+| `pnpm db:studio`                | 打开 Prisma Studio          |
+| `pnpm db:push`                  | 仅开发调试时直接同步 Schema |
+| `pnpm worker`                   | 启动 Worker                 |
+| `pnpm worker:dev`               | 以 watch 模式启动 Worker    |
+| `pnpm sync:favorite-counts`     | 同步修正收藏计数            |
+| `pnpm storage:check`            | 检查对象存储行为            |
 
-| 命令                | 说明                                |
-| ------------------- | ----------------------------------- |
-| `pnpm dev`          | 启动 Next.js 开发服务器              |
-| `pnpm build`        | 构建生产版本                         |
-| `pnpm start`        | 启动生产服务器                       |
-| `pnpm lint`         | 运行 ESLint 检查                     |
-| `pnpm format`       | 使用 Prettier 格式化代码             |
-| `pnpm format:check` | 检查代码格式是否规范                 |
-| `pnpm db:push`      | 推送 Schema 到数据库（仅开发用）     |
-| `pnpm db:migrate`   | 创建并执行数据库迁移                 |
-| `pnpm db:studio`    | 打开 Prisma Studio（数据库可视化）   |
-| `pnpm db:generate`  | 重新生成 Prisma Client               |
-| `pnpm worker:dev`   | 启动 BullMQ Worker（开发热重载）     |
+## 核心环境变量
 
----
+### 基础配置
 
-## 环境变量说明
+| 变量              | 说明                                                       |
+| ----------------- | ---------------------------------------------------------- |
+| `DATABASE_URL`    | PostgreSQL 连接串                                          |
+| `NEXTAUTH_SECRET` | NextAuth 密钥                                              |
+| `NEXTAUTH_URL`    | 生产自托管时建议显式配置                                   |
+| `LOG_LEVEL`       | `debug` / `info` / `warn` / `error`，非法值会回退到 `info` |
 
-| 变量           | 说明                              | 默认值                                                                      |
-| -------------- | --------------------------------- | --------------------------------------------------------------------------- |
-| `DATABASE_URL` | PostgreSQL 连接字符串             | `postgresql://pudcraft:pudcraft_dev@localhost:5432/pudcraft?schema=public`   |
-| `REDIS_URL`    | Redis 连接字符串                  | `redis://localhost:6379`                                                    |
-| `NODE_ENV`     | 运行环境                          | `development`                                                               |
-| `LOG_LEVEL`    | 日志级别 (debug/info/warn/error)  | `info`                                                                      |
+### Redis
 
----
+二选一：
+
+- `REDIS_URL`
+- `REDIS_HOST` + `REDIS_PORT`（可选 `REDIS_PASSWORD`）
+
+应用限流、验证码和 BullMQ 队列共用同一套 Redis 解析逻辑。
+
+### 邮件
+
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `SMTP_FROM`
+
+### 文件存储
+
+- `STORAGE_DRIVER=local|s3|oss`
+- 使用 S3 兼容存储时需要配置 `S3_BUCKET`、`S3_ACCESS_KEY_ID`、`S3_ACCESS_KEY_SECRET`，以及 `S3_ENDPOINT` 或 `S3_REGION`
+
+### 反向代理 IP
+
+| 变量                      | 说明                                                                                                             |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `TRUSTED_PROXY_IP_HEADER` | 可选，指定用于限流的可信客户端 IP 头；未设置时依次读取 `x-real-ip`、`cf-connecting-ip`、`x-vercel-forwarded-for` |
 
 ## 项目结构
 
-```
+```text
 src/
-├── app/                # Next.js 页面和 API 路由
-│   ├── api/servers/    # 服务器 REST API
-│   └── servers/[id]/   # 服务器详情页
+├── app/                # Next.js 页面与 API Route
 ├── components/         # 可复用 UI 组件
-├── lib/                # 工具函数、DB 客户端、校验等
-│   └── serverStatus/   # MC 服务器 Ping 逻辑
-├── queues/             # BullMQ 队列定义
+├── hooks/              # 自定义 Hooks
+├── lib/                # 工具函数、认证、队列、存储封装
 ├── styles/             # 全局样式
-└── worker/             # 后台 Worker 进程
+├── types/              # 类型声明
+└── worker/             # BullMQ Worker 与调度器
+prisma/
+├── migrations/         # Prisma 迁移
+└── schema.prisma       # 数据模型
 ```
 
----
+## 运行边界
 
-## 常见问题
+- 页面和 API 不直接 ping Minecraft 服务器，只读数据库缓存字段
+- `server-ping` 队列每 5 分钟探测一次已审核服务器
+- `server-verify` 队列处理 MOTD 认领验证
+- 未审核服务器默认不可公开访问，owner / admin 例外
 
-### Q: Docker 端口 5432 或 6379 冲突？
+## 提交前检查
 
-修改 `docker-compose.yml` 中的端口映射（如 `5433:5432`），然后同步修改 `.env` 中的 `DATABASE_URL`。
-
-### Q: `pnpm db:push` 报连接错误？
-
-1. 确认 Docker 容器已启动：`docker compose ps`
-2. 如果刚启动，等待 3-5 秒让 PostgreSQL 完成初始化
-3. 确认 `.env` 中 `DATABASE_URL` 与 `docker-compose.yml` 配置一致
-
-### Q: Worker 启动报 Redis 连接错误？
-
-确认 Redis 容器正在运行（`docker compose ps`），并检查 `.env` 中 `REDIS_URL` 是否正确。
-
-### Q: 主页显示的是假数据？
-
-是的，MVP 阶段使用 Mock 数据。数据源在 `src/lib/mock.ts`，后续切换为数据库查询只需替换数据读取层，不影响 UI 组件。
-
-### Q: 如何添加新的 Prisma 模型？
-
-1. 编辑 `prisma/schema.prisma`
-2. 运行 `pnpm db:migrate --name describe_your_change`
-3. Prisma Client 会自动重新生成
-
-### Q: 如何向队列添加一个测试任务？
-
-在 Node.js REPL 或脚本中：
-
-```typescript
-import { enqueueStatusCheck } from "@/queues/statusQueue";
-await enqueueStatusCheck("mock-server-id");
+```bash
+pnpm lint
+pnpm tsc --noEmit
 ```
 
----
-
-## 架构边界
-
-```
-浏览器
-  ↓ HTTP
-Next.js (SSR/API)
-  ↓ 读取
-数据库 (PostgreSQL)
-  ↑ 写入
-Worker (BullMQ)
-  ↓ ping
-Minecraft 服务器
-```
-
-**关键约束**：Next.js 层只读数据库，不直接 ping MC 服务器。所有抓取逻辑在 Worker 中执行。
+同时确认没有提交 `.env`。

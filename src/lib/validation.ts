@@ -50,17 +50,14 @@ export const userIdSchema = z.string().cuid();
 export const modpackIdSchema = z.string().cuid();
 
 const optionalTrimmedText = (max: number, message: string) =>
-  z.preprocess(
-    (value) => {
-      if (typeof value !== "string") {
-        return undefined;
-      }
+  z.preprocess((value) => {
+    if (typeof value !== "string") {
+      return undefined;
+    }
 
-      const trimmed = value.trim();
-      return trimmed.length > 0 ? trimmed : undefined;
-    },
-    z.string().max(max, message).optional(),
-  );
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }, z.string().max(max, message).optional());
 
 export const modpackLoaderSchema = z.enum(["fabric", "forge", "neoforge", "quilt"]);
 
@@ -83,24 +80,15 @@ export const createServerSchema = z.object({
     )
     .refine((tags) => tags.length > 0, "至少选择 1 个服务器类型")
     .refine((tags) => tags.length <= 10, "服务器类型最多 10 个")
-    .refine(
-      (tags) => tags.every((tag) => tag.length <= 20),
-      "服务器类型长度不能超过 20",
-    ),
-  description: z
-    .string()
-    .trim()
-    .max(200, "简介最多 200 字")
-    .optional()
-    .or(z.literal("")),
-  content: z
-    .string()
-    .trim()
-    .max(10000, "详细介绍最多 10000 字")
-    .optional()
-    .or(z.literal("")),
+    .refine((tags) => tags.every((tag) => tag.length <= 20), "服务器类型长度不能超过 20"),
+  description: z.string().trim().max(200, "简介最多 200 字").optional().or(z.literal("")),
+  content: z.string().trim().max(10000, "详细介绍最多 10000 字").optional().or(z.literal("")),
   maxPlayers: z.coerce.number().int().min(1).max(10000).optional(),
-  qqGroup: z.string().regex(/^\d{5,11}$/, "QQ 群号格式不正确").optional().or(z.literal("")),
+  qqGroup: z
+    .string()
+    .regex(/^\d{5,11}$/, "QQ 群号格式不正确")
+    .optional()
+    .or(z.literal("")),
 });
 
 /** 编辑服务器请求体 */
@@ -126,7 +114,10 @@ export const registerSchema = z.object({
     .email()
     .transform((value) => value.toLowerCase().trim()),
   password: z.string().min(8, "密码至少 8 位"),
-  code: z.string().length(6, "验证码为 6 位数字").regex(/^\d{6}$/),
+  code: z
+    .string()
+    .length(6, "验证码为 6 位数字")
+    .regex(/^\d{6}$/),
 });
 
 /** 登录请求体 */
@@ -160,17 +151,16 @@ export const resetPasswordSchema = z.object({
     .string()
     .email()
     .transform((value) => value.toLowerCase().trim()),
-  code: z.string().length(6, "验证码为 6 位数字").regex(/^\d{6}$/),
+  code: z
+    .string()
+    .length(6, "验证码为 6 位数字")
+    .regex(/^\d{6}$/),
   newPassword: z.string().min(8, "密码至少 8 位"),
 });
 
 /** 发表评论/回复请求体 */
 export const createCommentSchema = z.object({
-  content: z
-    .string()
-    .trim()
-    .min(1, "评论内容不能为空")
-    .max(1000, "评论最多 1000 字"),
+  content: z.string().trim().min(1, "评论内容不能为空").max(1000, "评论最多 1000 字"),
   parentId: z.string().cuid().optional(),
 });
 
@@ -183,16 +173,13 @@ export const queryCommentsSchema = z.object({
 /** 上传整合包请求体（multipart 文本字段） */
 export const uploadModpackSchema = z.object({
   version: optionalTrimmedText(64, "版本号最多 64 个字符"),
-  loader: z.preprocess(
-    (value) => {
-      if (typeof value !== "string") {
-        return undefined;
-      }
-      const trimmed = value.trim();
-      return trimmed.length > 0 ? trimmed : undefined;
-    },
-    modpackLoaderSchema.optional(),
-  ),
+  loader: z.preprocess((value) => {
+    if (typeof value !== "string") {
+      return undefined;
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }, modpackLoaderSchema.optional()),
   gameVersion: optionalTrimmedText(32, "游戏版本最多 32 个字符"),
 });
 
@@ -223,17 +210,8 @@ export const queryServerStatsSchema = z.object({
 
 /** 资料更新请求体 */
 export const updateProfileSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(2, "昵称至少 2 个字符")
-    .max(20, "昵称最多 20 个字符")
-    .optional(),
-  bio: z
-    .string()
-    .trim()
-    .max(200, "简介最多 200 字")
-    .optional(),
+  name: z.string().trim().min(2, "昵称至少 2 个字符").max(20, "昵称最多 20 个字符").optional(),
+  bio: z.string().trim().max(200, "简介最多 200 字").optional(),
 });
 
 /** Ping 结果（Worker 输出校验） */

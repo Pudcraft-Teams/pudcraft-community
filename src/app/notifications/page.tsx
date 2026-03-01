@@ -31,7 +31,10 @@ function getTypeIcon(type: NotificationType): { icon: string; className: string 
   }
 }
 
-function markNotificationReadLocally(notifications: NotificationItem[], ids: string[]): NotificationItem[] {
+function markNotificationReadLocally(
+  notifications: NotificationItem[],
+  ids: string[],
+): NotificationItem[] {
   const readAt = new Date().toISOString();
   const targets = new Set(ids);
   return notifications.map((notification) => {
@@ -83,9 +86,7 @@ export default function NotificationsPage() {
         const payload = (await response.json()) as NotificationsResponse;
         const nextNotifications = payload.notifications ?? [];
 
-        setNotifications((prev) =>
-          append ? [...prev, ...nextNotifications] : nextNotifications,
-        );
+        setNotifications((prev) => (append ? [...prev, ...nextNotifications] : nextNotifications));
         setUnreadCount(payload.unreadCount ?? 0);
         setTotal(payload.total ?? 0);
         setPage(payload.page ?? targetPage);
@@ -199,7 +200,10 @@ export default function NotificationsPage() {
       ) : error ? (
         <div className="m3-alert-error">{error}</div>
       ) : notifications.length === 0 ? (
-        <EmptyState title="暂无通知" description="当有人回复你或你收藏的服务器上线时，会显示在这里" />
+        <EmptyState
+          title="暂无通知"
+          description="当有人回复你或你收藏的服务器上线时，会显示在这里"
+        />
       ) : (
         <>
           <div className="m3-surface overflow-hidden">

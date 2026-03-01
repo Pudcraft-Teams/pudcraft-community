@@ -20,14 +20,7 @@ export const metadata: Metadata = {
   },
   description:
     "浏览国内优质 Minecraft 私人服务器，找到适合你的社区。支持 Java 版和基岩版，实时在线状态监控。",
-  keywords: [
-    "Minecraft",
-    "MC服务器",
-    "我的世界",
-    "服务器列表",
-    "MC联机",
-    "我的世界服务器",
-  ],
+  keywords: ["Minecraft", "MC服务器", "我的世界", "服务器列表", "MC联机", "我的世界服务器"],
   authors: [{ name: "PudCraft" }],
   openGraph: {
     type: "website",

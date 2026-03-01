@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { logger } from "../lib/logger";
-import { pingQueue } from "../lib/queue";
+import { getPingJobId, pingQueue } from "../lib/queue";
 
 const prisma = new PrismaClient();
 const PING_INTERVAL_MS = 5 * 60 * 1000;
@@ -35,8 +35,9 @@ export async function scheduleAllPings(): Promise<void> {
             port: server.port,
           },
           {
-            removeOnComplete: 100,
-            removeOnFail: 50,
+            jobId: getPingJobId(server.id),
+            removeOnComplete: true,
+            removeOnFail: true,
             attempts: 1,
           },
         ),

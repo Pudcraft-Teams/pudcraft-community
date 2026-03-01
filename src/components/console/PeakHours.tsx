@@ -69,7 +69,13 @@ export function PeakHours({ hourlyAverages, isLoading = false }: PeakHoursProps)
                   interval={1}
                   tickFormatter={(value: string) => value.slice(0, 2)}
                 />
-                <YAxis tick={{ fontSize: 12, fill: "#64748b" }} tickLine={false} axisLine={false} allowDecimals={false} width={36} />
+                <YAxis
+                  tick={{ fontSize: 12, fill: "#64748b" }}
+                  tickLine={false}
+                  axisLine={false}
+                  allowDecimals={false}
+                  width={36}
+                />
                 <Tooltip
                   contentStyle={{
                     borderRadius: 12,

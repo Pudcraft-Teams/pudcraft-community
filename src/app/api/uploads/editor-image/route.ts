@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { logger } from "@/lib/logger";
-import { getPublicUrl, ImageValidationError, uploadEditorImage, validateImageFile } from "@/lib/storage";
+import {
+  getPublicUrl,
+  ImageValidationError,
+  uploadEditorImage,
+  validateImageFile,
+} from "@/lib/storage";
 
 /**
  * POST /api/uploads/editor-image

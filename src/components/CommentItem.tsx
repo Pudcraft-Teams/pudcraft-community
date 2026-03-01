@@ -5,7 +5,7 @@ import { useState } from "react";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useToast } from "@/hooks/useToast";
 import { timeAgo } from "@/lib/time";
-import type { CommentReply, ServerComment } from "@/lib/types";
+import type { CommentAuthor, CommentReply, ServerComment } from "@/lib/types";
 
 interface CreateCommentResponse {
   data?: {
@@ -13,12 +13,7 @@ interface CreateCommentResponse {
     content: string;
     createdAt: string;
     parentId: string | null;
-    author: {
-      id: string;
-      name: string | null;
-      email: string;
-      image: string | null;
-    };
+    author: CommentAuthor;
   };
   error?: string;
 }
@@ -37,11 +32,11 @@ interface CommentItemProps {
   onDeleted: (commentId: string, parentId: string | null) => void;
 }
 
-function displayAuthorName(author: { name: string | null; email: string }): string {
+function displayAuthorName(author: Pick<CommentAuthor, "name">): string {
   if (author.name && author.name.trim().length > 0) {
     return author.name.trim();
   }
-  return author.email.split("@")[0] ?? "匿名用户";
+  return "匿名用户";
 }
 
 export function CommentItem({
@@ -103,11 +98,7 @@ export function CommentItem({
     }
   };
 
-  const handleDelete = async (
-    commentId: string,
-    parentId: string | null,
-    confirmText: string,
-  ) => {
+  const handleDelete = async (commentId: string, parentId: string | null, confirmText: string) => {
     if (!window.confirm(confirmText)) {
       return;
     }
@@ -140,7 +131,6 @@ export function CommentItem({
           <UserAvatar
             src={comment.author.image}
             name={comment.author.name}
-            email={comment.author.email}
             className="h-8 w-8"
             fallbackClassName="bg-teal-600 text-white"
           />
@@ -170,11 +160,7 @@ export function CommentItem({
             type="button"
             disabled={deletingId === comment.id}
             onClick={() =>
-              handleDelete(
-                comment.id,
-                null,
-                "确定删除这条评论吗？删除后其下所有回复也会一起删除。",
-              )
+              handleDelete(comment.id, null, "确定删除这条评论吗？删除后其下所有回复也会一起删除。")
             }
             className="text-sm text-slate-500 transition-colors hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
@@ -240,7 +226,6 @@ export function CommentItem({
                   <UserAvatar
                     src={reply.author.image}
                     name={reply.author.name}
-                    email={reply.author.email}
                     className="h-8 w-8"
                     fallbackClassName="bg-teal-600 text-white"
                   />
@@ -259,9 +244,7 @@ export function CommentItem({
                   <button
                     type="button"
                     disabled={deletingId === reply.id}
-                    onClick={() =>
-                      handleDelete(reply.id, comment.id, "确定删除这条回复吗？")
-                    }
+                    onClick={() => handleDelete(reply.id, comment.id, "确定删除这条回复吗？")}
                     className="text-sm text-slate-500 transition-colors hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {deletingId === reply.id ? "删除中..." : "删除"}
@@ -272,7 +255,6 @@ export function CommentItem({
           ))}
         </div>
       )}
-
     </div>
   );
 }

@@ -74,8 +74,9 @@ export default function ServerModpacksPage() {
 
   const loadPageData = useCallback(async () => {
     const detailResponse = await fetch(`/api/servers/${id}`, { cache: "no-store" });
-    const detailPayload = (await detailResponse.json().catch(() => ({}))) as Partial<ServerDetailResponse> &
-      ApiPayload;
+    const detailPayload = (await detailResponse
+      .json()
+      .catch(() => ({}))) as Partial<ServerDetailResponse> & ApiPayload;
     if (!detailResponse.ok || !detailPayload.data) {
       throw new Error(detailPayload.error ?? "加载服务器信息失败");
     }
@@ -88,8 +89,9 @@ export default function ServerModpacksPage() {
     setServerName(detailPayload.data.name);
 
     const modpackResponse = await fetch(`/api/servers/${id}/modpack`, { cache: "no-store" });
-    const modpackPayload = (await modpackResponse.json().catch(() => ({}))) as ServerModpackListResponse &
-      ApiPayload;
+    const modpackPayload = (await modpackResponse
+      .json()
+      .catch(() => ({}))) as ServerModpackListResponse & ApiPayload;
     if (!modpackResponse.ok) {
       throw new Error(modpackPayload.error ?? "加载整合包列表失败");
     }
@@ -286,7 +288,10 @@ export default function ServerModpacksPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700" htmlFor="modpack-game-version">
+              <label
+                className="block text-sm font-medium text-slate-700"
+                htmlFor="modpack-game-version"
+              >
                 游戏版本（可选）
               </label>
               <input
@@ -324,10 +329,7 @@ export default function ServerModpacksPage() {
         {!pageError && modpacks.length > 0 && (
           <div className="mt-4 space-y-3">
             {modpacks.map((modpack, index) => (
-              <div
-                key={modpack.id}
-                className="rounded-xl border border-gray-200 bg-white p-4"
-              >
+              <div key={modpack.id} className="rounded-xl border border-gray-200 bg-white p-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-base font-semibold text-slate-900">{modpack.name}</h3>
                   {index === 0 && (

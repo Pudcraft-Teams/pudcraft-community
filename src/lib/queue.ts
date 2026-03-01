@@ -1,4 +1,5 @@
 import { Queue, QueueEvents } from "bullmq";
+import { getRedisConnectionOptions } from "@/lib/redis-config";
 
 export const PING_QUEUE_NAME = "server-ping";
 export const VERIFY_QUEUE_NAME = "server-verify";
@@ -21,38 +22,26 @@ export interface VerifyJobResult {
   reason?: string;
 }
 
-function resolveConnection() {
-  const redisUrl = process.env.REDIS_URL;
-  if (redisUrl && redisUrl.length > 0) {
-    const parsed = new URL(redisUrl);
-    return {
-      host: parsed.hostname,
-      port: Number(parsed.port || 6379),
-      username: parsed.username || undefined,
-      password: parsed.password || undefined,
-      tls: parsed.protocol === "rediss:" ? {} : undefined,
-    };
-  }
+export function getPingJobId(serverId: string): string {
+  return `server-ping:${serverId}`;
+}
 
-  return {
-    host: process.env.REDIS_HOST || "localhost",
-    port: Number(process.env.REDIS_PORT) || 6379,
-    password: process.env.REDIS_PASSWORD || undefined,
-  };
+export function getVerifyJobId(serverId: string, token: string): string {
+  return `server-verify:${serverId}:${token}`;
 }
 
 export const pingQueue = new Queue<PingJobData>(PING_QUEUE_NAME, {
-  connection: resolveConnection(),
+  connection: getRedisConnectionOptions(),
 });
 
 export const verifyQueue = new Queue<VerifyJobData>(VERIFY_QUEUE_NAME, {
-  connection: resolveConnection(),
+  connection: getRedisConnectionOptions(),
 });
 
 export const verifyQueueEvents = new QueueEvents(VERIFY_QUEUE_NAME, {
-  connection: resolveConnection(),
+  connection: getRedisConnectionOptions(),
 });
 
 export function getQueueConnection() {
-  return resolveConnection();
+  return getRedisConnectionOptions();
 }

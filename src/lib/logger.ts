@@ -13,8 +13,16 @@ const LOG_LEVELS: Record<LogLevel, number> = {
   error: 3,
 };
 
-const currentLevel: LogLevel =
-  (process.env.LOG_LEVEL as LogLevel) ?? "info";
+function isLogLevel(value: string | undefined): value is LogLevel {
+  if (!value) {
+    return false;
+  }
+
+  return value in LOG_LEVELS;
+}
+
+const rawLogLevel = process.env.LOG_LEVEL?.trim().toLowerCase();
+const currentLevel: LogLevel = isLogLevel(rawLogLevel) ? rawLogLevel : "info";
 
 function shouldLog(level: LogLevel): boolean {
   return LOG_LEVELS[level] >= LOG_LEVELS[currentLevel];

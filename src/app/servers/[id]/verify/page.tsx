@@ -64,7 +64,8 @@ function parseVerifyStatusPayload(raw: unknown): VerifyStatusPayload {
     verifiedAt: typeof payload.verifiedAt === "string" ? payload.verifiedAt : null,
     serverName: typeof payload.serverName === "string" ? payload.serverName : undefined,
     ownerId: typeof payload.ownerId === "string" ? payload.ownerId : null,
-    isCurrentOwner: typeof payload.isCurrentOwner === "boolean" ? payload.isCurrentOwner : undefined,
+    isCurrentOwner:
+      typeof payload.isCurrentOwner === "boolean" ? payload.isCurrentOwner : undefined,
     hasOwner: typeof payload.hasOwner === "boolean" ? payload.hasOwner : undefined,
     isTokenOwnedByCurrentUser:
       typeof payload.isTokenOwnedByCurrentUser === "boolean"
@@ -331,7 +332,10 @@ export default function ServerVerifyPage() {
 
       const statusOk = await fetchVerifyStatus();
       if (statusOk) {
-        const nextMessage = [payload.currentOwner, payload.instruction ?? "验证码已生成，请将其写入 MOTD 后开始验证"]
+        const nextMessage = [
+          payload.currentOwner,
+          payload.instruction ?? "验证码已生成，请将其写入 MOTD 后开始验证",
+        ]
           .filter((item): item is string => !!item)
           .join(" ");
         setStatusMessage(nextMessage);
@@ -422,11 +426,7 @@ export default function ServerVerifyPage() {
   }
 
   if (pageError) {
-    return (
-      <div className="m3-alert-error mx-auto max-w-2xl px-4 py-3">
-        {pageError}
-      </div>
-    );
+    return <div className="m3-alert-error mx-auto max-w-2xl px-4 py-3">{pageError}</div>;
   }
 
   return (
@@ -494,7 +494,9 @@ export default function ServerVerifyPage() {
                 <div>
                   <p className="mb-2 text-sm font-medium text-slate-700">你的验证码：</p>
                   <div className="m3-surface-soft flex items-center justify-between gap-3 px-4 py-3">
-                    <code className="break-all font-mono text-sm text-slate-800">{verifyState.verifyToken}</code>
+                    <code className="break-all font-mono text-sm text-slate-800">
+                      {verifyState.verifyToken}
+                    </code>
                     <button
                       type="button"
                       onClick={handleCopyToken}
@@ -542,9 +544,7 @@ export default function ServerVerifyPage() {
                   </button>
                 </div>
 
-                {isVerifying && (
-                  <p className="text-sm text-slate-500">正在连接服务器，请稍候...</p>
-                )}
+                {isVerifying && <p className="text-sm text-slate-500">正在连接服务器，请稍候...</p>}
               </div>
             )}
 
@@ -558,7 +558,11 @@ export default function ServerVerifyPage() {
                   请确认：验证码已写入 MOTD、服务器已重启、服务器当前在线。
                 </p>
                 {verifyState.verifyToken && !isTokenExpired && (
-                  <button type="button" onClick={handleVerify} className="m3-btn m3-btn-tonal px-3 py-1.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={handleVerify}
+                    className="m3-btn m3-btn-tonal px-3 py-1.5 text-xs"
+                  >
                     重试验证
                   </button>
                 )}

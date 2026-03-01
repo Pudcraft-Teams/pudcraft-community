@@ -10,21 +10,27 @@ const MRPACK_MAX_ENTRY_COUNT = 10_000;
 const MRPACK_MAX_UNCOMPRESSED_BYTES = 1024 * 1024 * 1024;
 const MRPACK_MAX_INDEX_BYTES = 5 * 1024 * 1024;
 
-const modrinthFileSchema = z.object({
-  path: z.string().min(1),
-  hashes: z.object({
-    sha1: z.string().min(1),
-    sha512: z.string().min(1),
-  }).passthrough(),
-}).passthrough();
+const modrinthFileSchema = z
+  .object({
+    path: z.string().min(1),
+    hashes: z
+      .object({
+        sha1: z.string().min(1),
+        sha512: z.string().min(1),
+      })
+      .passthrough(),
+  })
+  .passthrough();
 
-const modrinthIndexSchema = z.object({
-  name: z.string().trim().min(1, "整合包名称不能为空"),
-  versionId: z.string().trim().optional(),
-  summary: z.string().trim().optional(),
-  dependencies: z.record(z.string()).optional(),
-  files: z.array(modrinthFileSchema),
-}).passthrough();
+const modrinthIndexSchema = z
+  .object({
+    name: z.string().trim().min(1, "整合包名称不能为空"),
+    versionId: z.string().trim().optional(),
+    summary: z.string().trim().optional(),
+    dependencies: z.record(z.string()).optional(),
+    files: z.array(modrinthFileSchema),
+  })
+  .passthrough();
 
 type ModpackLoader = "fabric" | "forge" | "neoforge" | "quilt";
 type ModrinthIndex = z.infer<typeof modrinthIndexSchema>;
@@ -92,10 +98,7 @@ function openZipFromBuffer(buffer: Buffer): Promise<yauzl.ZipFile> {
   });
 }
 
-function readIndexEntry(
-  zipfile: yauzl.ZipFile,
-  entry: yauzl.Entry,
-): Promise<string> {
+function readIndexEntry(zipfile: yauzl.ZipFile, entry: yauzl.Entry): Promise<string> {
   return new Promise((resolve, reject) => {
     zipfile.openReadStream(entry, (error, stream) => {
       if (error || !stream) {
@@ -126,7 +129,9 @@ function readIndexEntry(
   });
 }
 
-async function inspectMrpackArchive(buffer: Buffer): Promise<{ indexText: string; hasOverrides: boolean }> {
+async function inspectMrpackArchive(
+  buffer: Buffer,
+): Promise<{ indexText: string; hasOverrides: boolean }> {
   const zipfile = await openZipFromBuffer(buffer);
 
   return new Promise((resolve, reject) => {
@@ -223,9 +228,7 @@ async function inspectMrpackArchive(buffer: Buffer): Promise<{ indexText: string
             zipfile.readEntry();
           })
           .catch((error) => {
-            finalize(
-              new Error(parseErrorMessage(error, "读取 modrinth.index.json 失败")),
-            );
+            finalize(new Error(parseErrorMessage(error, "读取 modrinth.index.json 失败")));
           });
         return;
       }

@@ -6,11 +6,7 @@ export const metadata = {
   title: "管理后台 | PudCraft Community",
 };
 
-export default async function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const result = await requireAdmin();
   if (isAdminError(result)) {
     redirect("/");

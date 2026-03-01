@@ -101,8 +101,7 @@ export default function LoginPage() {
     }
   };
 
-  const inputClass =
-    "m3-input mt-2 w-full";
+  const inputClass = "m3-input mt-2 w-full";
 
   return (
     <div className="mx-auto w-full max-w-md px-4">
@@ -122,7 +121,9 @@ export default function LoginPage() {
                 placeholder="you@example.com"
                 autoComplete="email"
               />
-              {fieldErrors.email && <p className="mt-1 text-xs text-red-400">{fieldErrors.email}</p>}
+              {fieldErrors.email && (
+                <p className="mt-1 text-xs text-red-400">{fieldErrors.email}</p>
+              )}
             </label>
 
             <label className="block text-sm text-slate-700">
@@ -166,10 +167,7 @@ export default function LoginPage() {
 
         <p className="mt-6 text-center text-sm text-slate-600">
           没有账号？
-          <Link
-            href="/register"
-            className="m3-link ml-1"
-          >
+          <Link href="/register" className="m3-link ml-1">
             去注册
           </Link>
         </p>

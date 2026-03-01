@@ -25,8 +25,7 @@ export function ServerCard({
 }: ServerCardProps) {
   const { name, host, port, description, tags, status, isVerified, iconUrl } = server;
   const checkedAtMs = Date.parse(status.checkedAt);
-  const isStale =
-    !Number.isFinite(checkedAtMs) || Date.now() - checkedAtMs > 15 * 60 * 1000;
+  const isStale = !Number.isFinite(checkedAtMs) || Date.now() - checkedAtMs > 15 * 60 * 1000;
   const isOnline = status.online;
   const statusText = isStale ? "状态未知" : isOnline ? "在线" : "离线";
 
@@ -39,7 +38,9 @@ export function ServerCard({
       .then(() => {
         setPingMs(Math.round(performance.now() - start));
       })
-      .catch(() => {/* ignore */});
+      .catch(() => {
+        /* ignore */
+      });
   }, [server.id, isOnline, isStale]);
 
   return (
@@ -97,11 +98,7 @@ export function ServerCard({
             />
             <span
               className={
-                isStale
-                  ? "text-slate-400"
-                  : isOnline
-                    ? "text-emerald-600"
-                    : "text-slate-500"
+                isStale ? "text-slate-400" : isOnline ? "text-emerald-600" : "text-slate-500"
               }
             >
               {statusText}
@@ -131,11 +128,7 @@ export function ServerCard({
           {pingMs !== null && (
             <span
               className={
-                pingMs < 50
-                  ? "text-emerald-600"
-                  : pingMs < 100
-                    ? "text-amber-600"
-                    : "text-rose-600"
+                pingMs < 50 ? "text-emerald-600" : pingMs < 100 ? "text-amber-600" : "text-rose-600"
               }
             >
               {pingMs}ms
@@ -148,7 +141,10 @@ export function ServerCard({
       {tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {tags.map((tag) => (
-            <span key={tag} className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs text-slate-600">
+            <span
+              key={tag}
+              className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs text-slate-600"
+            >
               {tag}
             </span>
           ))}

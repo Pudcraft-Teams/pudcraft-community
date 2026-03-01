@@ -12,9 +12,10 @@ import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { serializeJsonForScript } from "@/lib/json";
+import { canAccessServer, isServerOwner } from "@/lib/server-access";
+import { getPublicUrl } from "@/lib/storage";
 import { timeAgo } from "@/lib/time";
 import type { ServerComment } from "@/lib/types";
-import { getPublicUrl } from "@/lib/storage";
 import { serverIdSchema } from "@/lib/validation";
 
 const SITE_URL = "https://pudcraft.cn";
@@ -61,7 +62,6 @@ function mapComments(
     author: {
       id: string;
       name: string | null;
-      email: string;
       image: string | null;
     };
     replies: Array<{
@@ -71,7 +71,6 @@ function mapComments(
       author: {
         id: string;
         name: string | null;
-        email: string;
         image: string | null;
       };
     }>;
@@ -84,7 +83,6 @@ function mapComments(
     author: {
       id: comment.author.id,
       name: comment.author.name,
-      email: comment.author.email,
       image: getPublicUrl(comment.author.image),
     },
     replies: comment.replies.map((reply) => ({
@@ -94,7 +92,6 @@ function mapComments(
       author: {
         id: reply.author.id,
         name: reply.author.name,
-        email: reply.author.email,
         image: getPublicUrl(reply.author.image),
       },
     })),
@@ -146,7 +143,6 @@ const getServerPageData = cache(async (serverId: string) => {
           select: {
             id: true,
             name: true,
-            email: true,
             image: true,
           },
         },
@@ -157,7 +153,6 @@ const getServerPageData = cache(async (serverId: string) => {
               select: {
                 id: true,
                 name: true,
-                email: true,
                 image: true,
               },
             },
@@ -189,9 +184,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const { server } = data;
   const currentUserId = session?.user?.id ?? null;
-  const isOwner = !!currentUserId && currentUserId === server.ownerId;
-  const isAdmin = session?.user?.role === "admin";
-  if (server.status !== "approved" && !isOwner && !isAdmin) {
+  const canAccessCurrentServer = canAccessServer({
+    status: server.status,
+    ownerId: server.ownerId,
+    currentUserId,
+    currentUserRole: session?.user?.role,
+  });
+  if (!canAccessCurrentServer) {
     return { title: "服务器未找到" };
   }
   const serverAddress = server.port !== 25565 ? `${server.host}:${server.port}` : server.host;
@@ -204,7 +203,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title: `${server.name} | PudCraft Community`,
       description: server.description?.trim() || `${server.name} Minecraft 服务器`,
-      images: server.iconUrl ? [{ url: toAbsoluteUrl(getPublicUrl(server.iconUrl) ?? "/default-server-icon.png") }] : [],
+      images: server.iconUrl
+        ? [{ url: toAbsoluteUrl(getPublicUrl(server.iconUrl) ?? "/default-server-icon.png") }]
+        : [],
     },
   };
 }
@@ -222,20 +223,24 @@ export default async function ServerDetailPage({ params }: Props) {
 
   const { server, comments, commentTotal, commentTotalPages } = data;
 
-  // ─── 审核状态访问控制 ───
   const currentUserId = session?.user?.id ?? null;
-  const isOwner = !!currentUserId && currentUserId === server.ownerId;
+  const isOwner = isServerOwner(server.ownerId, currentUserId);
   const isLoggedIn = !!currentUserId;
   const canClaimUnverified = isLoggedIn && !server.isVerified;
   const canReclaimVerified = isLoggedIn && server.isVerified && server.ownerId !== currentUserId;
-  const isAdmin = session?.user?.role === "admin";
-  if (server.status !== "approved" && !isOwner && !isAdmin) {
+  const canAccessCurrentServer = canAccessServer({
+    status: server.status,
+    ownerId: server.ownerId,
+    currentUserId,
+    currentUserRole: session?.user?.role,
+  });
+  if (!canAccessCurrentServer) {
     notFound();
   }
 
   const isOnline = server.isOnline;
   const serverAddress = server.port !== 25565 ? `${server.host}:${server.port}` : server.host;
-  const canViewModpacks = server.status === "approved" || isOwner || isAdmin;
+  const canViewModpacks = canAccessCurrentServer;
   const favoriteCount = server.favoriteCount;
   const lastPingLabel = server.lastPingedAt ? timeAgo(server.lastPingedAt) : "尚未检测";
   const verifiedAtLabel = server.verifiedAt
@@ -393,7 +398,7 @@ export default async function ServerDetailPage({ params }: Props) {
                   {(canReclaimVerified || !isLoggedIn) && (
                     <details className="group relative">
                       <summary
-                        className="list-none cursor-pointer rounded-md px-1.5 py-0.5 text-xs text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                        className="cursor-pointer list-none rounded-md px-1.5 py-0.5 text-xs text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
                         aria-label="更多操作"
                       >
                         ...

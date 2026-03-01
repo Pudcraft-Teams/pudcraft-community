@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { verifyQueue, verifyQueueEvents, type VerifyJobResult } from "@/lib/queue";
+import { getVerifyJobId, verifyQueue, verifyQueueEvents, type VerifyJobResult } from "@/lib/queue";
 import { serverIdSchema } from "@/lib/validation";
 
 interface RouteContext {
@@ -163,7 +163,9 @@ export async function GET(_request: Request, { params }: RouteContext) {
     return NextResponse.json({
       isVerified: server.isVerified,
       verifyToken: isTokenOwnedByCurrentUser ? server.verifyToken : null,
-      verifyExpiresAt: isTokenOwnedByCurrentUser ? server.verifyExpiresAt?.toISOString() ?? null : null,
+      verifyExpiresAt: isTokenOwnedByCurrentUser
+        ? (server.verifyExpiresAt?.toISOString() ?? null)
+        : null,
       verifiedAt: server.verifiedAt?.toISOString() ?? null,
       serverName: server.name,
       ownerId: server.ownerId,
@@ -202,10 +204,7 @@ export async function PATCH(_request: Request, { params }: RouteContext) {
     }
 
     if (!server.verifyToken || !server.verifyExpiresAt || !server.verifyUserId) {
-      return NextResponse.json(
-        { error: "请先获取验证码后再验证" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "请先获取验证码后再验证" }, { status: 400 });
     }
 
     if (server.verifyUserId !== userId) {
@@ -216,10 +215,7 @@ export async function PATCH(_request: Request, { params }: RouteContext) {
     }
 
     if (server.verifyExpiresAt.getTime() <= Date.now()) {
-      return NextResponse.json(
-        { error: "验证码已过期，请重新获取后再验证" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "验证码已过期，请重新获取后再验证" }, { status: 400 });
     }
 
     const job = await verifyQueue.add(
@@ -231,13 +227,10 @@ export async function PATCH(_request: Request, { params }: RouteContext) {
         token: server.verifyToken,
       },
       {
-        attempts: 3,
-        backoff: {
-          type: "exponential",
-          delay: 2000,
-        },
-        removeOnComplete: { count: 1000 },
-        removeOnFail: { count: 5000 },
+        jobId: getVerifyJobId(server.id, server.verifyToken),
+        attempts: 1,
+        removeOnComplete: true,
+        removeOnFail: true,
       },
     );
 

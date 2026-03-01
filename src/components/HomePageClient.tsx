@@ -171,7 +171,7 @@ export function HomePageClient({
         const nextTotalPages =
           typeof payload.totalPages === "number"
             ? payload.totalPages
-            : payload.pagination?.totalPages ?? 1;
+            : (payload.pagination?.totalPages ?? 1);
 
         setServers(list);
         setTotalPages(Math.max(1, nextTotalPages));

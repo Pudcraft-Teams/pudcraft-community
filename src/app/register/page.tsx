@@ -200,8 +200,7 @@ export default function RegisterPage() {
     }
   };
 
-  const inputClass =
-    "m3-input mt-2 w-full";
+  const inputClass = "m3-input mt-2 w-full";
 
   return (
     <div className="mx-auto w-full max-w-md px-4">

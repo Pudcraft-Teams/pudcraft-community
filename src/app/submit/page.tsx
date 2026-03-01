@@ -27,7 +27,8 @@ function toApiPayload(raw: unknown): ApiResponsePayload {
     error: typeof payload.error === "string" ? payload.error : undefined,
     message: typeof payload.message === "string" ? payload.message : undefined,
     hint: typeof payload.hint === "string" ? payload.hint : undefined,
-    existingServerId: typeof payload.existingServerId === "string" ? payload.existingServerId : undefined,
+    existingServerId:
+      typeof payload.existingServerId === "string" ? payload.existingServerId : undefined,
     existingServerName:
       typeof payload.existingServerName === "string" ? payload.existingServerName : undefined,
   };
@@ -110,14 +111,19 @@ export default function SubmitServerPage() {
     <div className="mx-auto w-full max-w-2xl px-4">
       <div className="m3-surface p-6">
         <h1 className="text-2xl font-semibold text-slate-900">提交服务器</h1>
-        <p className="mt-2 text-sm text-slate-600">提交你自己的 Minecraft 服务器信息，提交后将由管理员审核</p>
+        <p className="mt-2 text-sm text-slate-600">
+          提交你自己的 Minecraft 服务器信息，提交后将由管理员审核
+        </p>
         {duplicateServer && (
           <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             <p>
               该服务器地址已被收录为「{duplicateServer.name}」。
               {duplicateServer.hint}
             </p>
-            <Link href={`/servers/${duplicateServer.id}/verify`} className="m3-link mt-2 inline-flex text-sm">
+            <Link
+              href={`/servers/${duplicateServer.id}/verify`}
+              className="m3-link mt-2 inline-flex text-sm"
+            >
               前往认领
             </Link>
           </div>

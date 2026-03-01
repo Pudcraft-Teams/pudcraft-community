@@ -28,12 +28,12 @@ model User {
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  accounts Account[]
-  sessions Session[]
-  servers  Server[]
-  comments Comment[]
-  favorites Favorite[]
-  modpacks Modpack[]
+  accounts      Account[]
+  sessions      Session[]
+  servers       Server[]
+  comments      Comment[]
+  favorites     Favorite[]
+  modpacks      Modpack[]
   notifications Notification[]
 
   @@map("users")
@@ -60,27 +60,29 @@ model Server {
   isOnline        Boolean   @default(false) @map("is_online")
   playerCount     Int       @default(0) @map("player_count")
   maxPlayers      Int       @default(0) @map("max_players")
-  lastPingedAt DateTime? @map("last_pinged_at")
-  status       String    @default("pending") // pending | approved | rejected
-  rejectReason String?   @map("reject_reason")
+  lastPingedAt    DateTime? @map("last_pinged_at")
+  status          String    @default("pending") // pending | approved | rejected
+  rejectReason    String?   @map("reject_reason")
 
   content String? @db.Text // Markdown 详细介绍
 
   // 未来扩展字段（认领）：
   // claimToken  String?  @unique @map("claim_token")
 
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  statuses ServerStatus[]
-  comments Comment[]
+  statuses  ServerStatus[]
+  comments  Comment[]
   favorites Favorite[]
-  modpacks Modpack[]
+  modpacks  Modpack[]
 
   // 未来扩展：
   // channels Channel[]
 
   @@unique([host, port], name: "unique_host_port")
+  @@index([status])
+  @@index([ownerId])
   @@map("servers")
 }
 
@@ -178,29 +180,30 @@ model Favorite {
 
   @@unique([userId, serverId])
   @@index([userId, createdAt(sort: Desc)])
+  @@index([serverId])
   @@map("favorites")
 }
 
 /// 服务器整合包 —— 仅支持 Modrinth .mrpack，多版本记录
 model Modpack {
-  id           String   @id @default(cuid())
-  serverId     String   @map("server_id")
-  uploaderId   String   @map("uploader_id")
+  id         String @id @default(cuid())
+  serverId   String @map("server_id")
+  uploaderId String @map("uploader_id")
 
-  name         String
-  version      String?
-  loader       String?
-  gameVersion  String?  @map("game_version")
-  summary      String?  @db.Text
+  name        String
+  version     String?
+  loader      String?
+  gameVersion String? @map("game_version")
+  summary     String? @db.Text
 
-  fileKey      String   @map("file_key")
-  fileSize     Int      @map("file_size")
-  sha1         String
-  sha512       String
+  fileKey  String @map("file_key")
+  fileSize Int    @map("file_size")
+  sha1     String
+  sha512   String
 
-  mrIndex      Json     @map("mr_index")
-  modsCount    Int      @map("mods_count")
-  hasOverrides Boolean  @default(false) @map("has_overrides")
+  mrIndex      Json    @map("mr_index")
+  modsCount    Int     @map("mods_count")
+  hasOverrides Boolean @default(false) @map("has_overrides")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

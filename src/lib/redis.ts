@@ -1,4 +1,5 @@
 import Redis from "ioredis";
+import { getRedisConnectionOptions } from "@/lib/redis-config";
 
 let redis: Redis | undefined;
 
@@ -8,8 +9,8 @@ let redis: Redis | undefined;
  */
 export function getRedisConnection(): Redis {
   if (!redis) {
-    const url = process.env.REDIS_URL ?? "redis://localhost:6379";
-    redis = new Redis(url, {
+    redis = new Redis({
+      ...getRedisConnectionOptions(),
       maxRetriesPerRequest: null,
     });
   }

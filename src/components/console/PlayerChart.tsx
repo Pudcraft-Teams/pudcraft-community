@@ -49,8 +49,7 @@ function renderTooltip({ active, label, payload }: TooltipContentProps<number, s
   const playerCount = typeof rawPoint.playerCount === "number" ? rawPoint.playerCount : 0;
   const maxPlayers = typeof rawPoint.maxPlayers === "number" ? rawPoint.maxPlayers : 0;
   const isOnline = rawPoint.isOnline === true;
-  const labelText =
-    typeof label === "string" || typeof label === "number" ? String(label) : "--";
+  const labelText = typeof label === "string" || typeof label === "number" ? String(label) : "--";
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-lg">
@@ -107,9 +106,13 @@ export function PlayerChart({
       </div>
 
       {isLoading ? (
-        <div className="flex h-[300px] items-center justify-center text-sm text-slate-500">加载统计中...</div>
+        <div className="flex h-[300px] items-center justify-center text-sm text-slate-500">
+          加载统计中...
+        </div>
       ) : noData ? (
-        <div className="flex h-[300px] items-center justify-center text-sm text-slate-500">数据收集中，稍后再来查看趋势。</div>
+        <div className="flex h-[300px] items-center justify-center text-sm text-slate-500">
+          数据收集中，稍后再来查看趋势。
+        </div>
       ) : (
         <ResponsiveContainer width="100%" height={300}>
           <AreaChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
@@ -120,7 +123,12 @@ export function PlayerChart({
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            <XAxis dataKey="time" tick={{ fontSize: 12, fill: "#64748b" }} tickLine={false} axisLine={false} />
+            <XAxis
+              dataKey="time"
+              tick={{ fontSize: 12, fill: "#64748b" }}
+              tickLine={false}
+              axisLine={false}
+            />
             <YAxis
               tick={{ fontSize: 12, fill: "#64748b" }}
               tickLine={false}

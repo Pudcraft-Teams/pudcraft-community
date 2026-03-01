@@ -163,8 +163,25 @@ export function ImageUpload({
         />
 
         <div className="flex flex-col items-center gap-3">
-          {displaySrc ? isAvatarWithImage ? (
-            <div className="group relative">
+          {displaySrc ? (
+            isAvatarWithImage ? (
+              <div className="group relative">
+                <Image
+                  src={displaySrc}
+                  alt="图片预览"
+                  width={size}
+                  height={size}
+                  unoptimized
+                  className={`object-cover ${shapeClass}`}
+                  style={{ width: size, height: size }}
+                />
+                <div
+                  className={`absolute inset-0 flex items-center justify-center bg-black/45 text-lg text-white opacity-0 transition-opacity group-hover:opacity-100 ${shapeClass}`}
+                >
+                  编辑
+                </div>
+              </div>
+            ) : (
               <Image
                 src={displaySrc}
                 alt="图片预览"
@@ -174,24 +191,9 @@ export function ImageUpload({
                 className={`object-cover ${shapeClass}`}
                 style={{ width: size, height: size }}
               />
-              <div
-                className={`absolute inset-0 flex items-center justify-center bg-black/45 text-lg text-white opacity-0 transition-opacity group-hover:opacity-100 ${shapeClass}`}
-              >
-                编辑
-              </div>
-            </div>
+            )
           ) : (
-            <Image
-              src={displaySrc}
-              alt="图片预览"
-              width={size}
-              height={size}
-              unoptimized
-              className={`object-cover ${shapeClass}`}
-              style={{ width: size, height: size }}
-            />
-          ) : (
-            placeholder ?? defaultPlaceholder
+            (placeholder ?? defaultPlaceholder)
           )}
         </div>
       </div>

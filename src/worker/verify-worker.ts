@@ -2,7 +2,12 @@ import { PrismaClient } from "@prisma/client";
 import { Worker, type Job } from "bullmq";
 import { logger } from "../lib/logger";
 import { pingServer } from "../lib/mc-ping";
-import { getQueueConnection, VERIFY_QUEUE_NAME, type VerifyJobData, type VerifyJobResult } from "../lib/queue";
+import {
+  getQueueConnection,
+  VERIFY_QUEUE_NAME,
+  type VerifyJobData,
+  type VerifyJobResult,
+} from "../lib/queue";
 
 const prisma = new PrismaClient();
 
@@ -20,7 +25,9 @@ function collectTextFragments(value: unknown): string[] {
   }
 
   if (typeof value === "object" && value !== null) {
-    return Object.values(value as Record<string, unknown>).flatMap((item) => collectTextFragments(item));
+    return Object.values(value as Record<string, unknown>).flatMap((item) =>
+      collectTextFragments(item),
+    );
   }
 
   return [];
@@ -54,7 +61,9 @@ function buildMotdCandidates(motd: string | null): string[] {
 
 function motdContainsToken(motd: string | null, token: string): boolean {
   const normalizedToken = token.toLowerCase();
-  return buildMotdCandidates(motd).some((candidate) => candidate.toLowerCase().includes(normalizedToken));
+  return buildMotdCandidates(motd).some((candidate) =>
+    candidate.toLowerCase().includes(normalizedToken),
+  );
 }
 
 /**

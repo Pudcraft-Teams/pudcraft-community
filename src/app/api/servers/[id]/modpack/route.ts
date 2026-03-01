@@ -11,6 +11,7 @@ import {
   parseMrpackFile,
   validateMrpackFile,
 } from "@/lib/modpack";
+import { canAccessServer } from "@/lib/server-access";
 import { deleteObject, uploadModpack } from "@/lib/storage";
 import { serverIdSchema, uploadModpackSchema } from "@/lib/validation";
 
@@ -33,12 +34,9 @@ function resolveErrorMessage(error: unknown, fallback: string): string {
 
 /**
  * GET /api/servers/:id/modpack — 获取服务器整合包版本列表（新到旧）。
- * 公开访问仅允许已通过审核（当前使用 isVerified 代表 approved）服务器。
+ * 公开访问仅允许已通过审核服务器，owner / admin 例外。
  */
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const parsedId = serverIdSchema.safeParse(id);
@@ -51,7 +49,7 @@ export async function GET(
       select: {
         id: true,
         ownerId: true,
-        isVerified: true,
+        status: true,
       },
     });
 
@@ -60,11 +58,17 @@ export async function GET(
     }
 
     const session = await auth();
-    const currentUserId = session?.user?.id;
-    const isOwner = !!currentUserId && currentUserId === server.ownerId;
-
-    if (!server.isVerified && !isOwner) {
-      return NextResponse.json({ error: "服务器未通过审核，整合包暂不可公开访问" }, { status: 403 });
+    const canAccessCurrentServer = canAccessServer({
+      status: server.status,
+      ownerId: server.ownerId,
+      currentUserId: session?.user?.id,
+      currentUserRole: session?.user?.role,
+    });
+    if (!canAccessCurrentServer) {
+      return NextResponse.json(
+        { error: "服务器未通过审核，整合包暂不可公开访问" },
+        { status: 403 },
+      );
     }
 
     const modpacks = await prisma.modpack.findMany({
@@ -101,10 +105,7 @@ export async function GET(
 /**
  * POST /api/servers/:id/modpack — 上传 Modrinth .mrpack（仅 owner）。
  */
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   let uploadedFileKey: string | null = null;
 
   try {
@@ -138,10 +139,7 @@ export async function POST(
     }
 
     if (!server.isVerified) {
-      return NextResponse.json(
-        { error: "请先完成服务器认领认证，再上传整合包" },
-        { status: 403 },
-      );
+      return NextResponse.json({ error: "请先完成服务器认领认证，再上传整合包" }, { status: 403 });
     }
 
     const formData = await request.formData();
@@ -238,9 +236,6 @@ export async function POST(
     }
 
     logger.error("[api/servers/[id]/modpack] Unexpected POST error", error);
-    return NextResponse.json(
-      { error: "整合包上传失败，请稍后重试" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "整合包上传失败，请稍后重试" }, { status: 500 });
   }
 }

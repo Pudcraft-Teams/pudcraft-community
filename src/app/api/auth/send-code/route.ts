@@ -1,14 +1,10 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { sendVerificationCode } from "@/lib/mail";
+import { getClientIp } from "@/lib/request-ip";
 import { rateLimit } from "@/lib/rate-limit";
 import { sendCodeSchema } from "@/lib/validation";
-import {
-  canSendCode,
-  generateCode,
-  setSendCooldown,
-  storeCode,
-} from "@/lib/verification";
+import { canSendCode, generateCode, setSendCooldown, storeCode } from "@/lib/verification";
 
 /**
  * POST /api/auth/send-code
@@ -32,7 +28,7 @@ export async function POST(request: Request) {
     }
 
     const email = parsed.data.email;
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getClientIp(request);
 
     const sendAllowed = await canSendCode(email);
     if (!sendAllowed) {

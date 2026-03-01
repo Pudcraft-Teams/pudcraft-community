@@ -7,7 +7,12 @@ import { CommentItem } from "@/components/CommentItem";
 import { EmptyState } from "@/components/EmptyState";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useToast } from "@/hooks/useToast";
-import type { CommentReply, ServerComment, ServerCommentsResponse } from "@/lib/types";
+import type {
+  CommentAuthor,
+  CommentReply,
+  ServerComment,
+  ServerCommentsResponse,
+} from "@/lib/types";
 
 interface CreateCommentResponse {
   data?: {
@@ -15,12 +20,7 @@ interface CreateCommentResponse {
     content: string;
     createdAt: string;
     parentId: string | null;
-    author: {
-      id: string;
-      name: string | null;
-      email: string;
-      image: string | null;
-    };
+    author: CommentAuthor;
   };
   error?: string;
 }
@@ -54,8 +54,7 @@ export function CommentSection({
   const { data: session, status } = useSession();
   const { toast } = useToast();
   const currentUserId = session?.user?.id;
-  const hasInitialPayload =
-    Array.isArray(initialComments) && typeof initialTotal === "number";
+  const hasInitialPayload = Array.isArray(initialComments) && typeof initialTotal === "number";
 
   const [comments, setComments] = useState<ServerComment[]>(initialComments ?? []);
   const [total, setTotal] = useState(initialTotal ?? 0);

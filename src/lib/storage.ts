@@ -43,8 +43,18 @@ const PUBLIC_DIR = path.join(process.cwd(), "public");
 const UPLOAD_DIR = path.join(PUBLIC_DIR, "uploads");
 const UPLOAD_URL_PREFIX = "/uploads";
 const PRIVATE_STORAGE_DIR = path.join(process.cwd(), "storage");
-const KNOWN_STORAGE_PREFIXES = ["avatars/", "server-icons/", "editor-images/", "modpacks/"] as const;
-const LOCAL_STORAGE_MARKERS = ["/public/uploads/", "public/uploads/", "/storage/", "storage/"] as const;
+const KNOWN_STORAGE_PREFIXES = [
+  "avatars/",
+  "server-icons/",
+  "editor-images/",
+  "modpacks/",
+] as const;
+const LOCAL_STORAGE_MARKERS = [
+  "/public/uploads/",
+  "public/uploads/",
+  "/storage/",
+  "storage/",
+] as const;
 
 type AllowedImageMimeType = (typeof ALLOWED_IMAGE_MIME_TYPES)[number];
 
@@ -110,10 +120,14 @@ export function getObjectStorageRuntimeConfig(): ObjectStorageRuntimeConfig {
   const region = readStorageEnv("S3_REGION", "OSS_REGION");
   const endpoint = readStorageEnv("S3_ENDPOINT", "OSS_ENDPOINT");
   const publicBaseUrl = readStorageEnv("S3_PUBLIC_BASE_URL", "OSS_PUBLIC_BASE_URL") ?? null;
-  const forcePathStyle = parseBooleanEnv(readStorageEnv("S3_FORCE_PATH_STYLE", "OSS_FORCE_PATH_STYLE"));
+  const forcePathStyle = parseBooleanEnv(
+    readStorageEnv("S3_FORCE_PATH_STYLE", "OSS_FORCE_PATH_STYLE"),
+  );
 
   if (!bucket || !accessKeyId || !accessKeySecret) {
-    throw new Error("对象存储配置不完整：请检查 S3_BUCKET / S3_ACCESS_KEY_ID / S3_ACCESS_KEY_SECRET");
+    throw new Error(
+      "对象存储配置不完整：请检查 S3_BUCKET / S3_ACCESS_KEY_ID / S3_ACCESS_KEY_SECRET",
+    );
   }
 
   if (!region && !endpoint) {
@@ -143,7 +157,10 @@ function getObjectStoragePublicBaseUrl(): string {
     if (config.forcePathStyle) {
       return `${endpointUrl.origin}${normalizedPath}/${config.bucket}`.replace(/\/+$/, "");
     }
-    return `${endpointUrl.protocol}//${config.bucket}.${endpointUrl.host}${normalizedPath}`.replace(/\/+$/, "");
+    return `${endpointUrl.protocol}//${config.bucket}.${endpointUrl.host}${normalizedPath}`.replace(
+      /\/+$/,
+      "",
+    );
   }
 
   return `https://${config.bucket}.s3.${config.region}.amazonaws.com`;
@@ -176,10 +193,7 @@ function getObjectStorageClient(): S3Client {
 async function streamBodyToBuffer(
   body: AsyncIterable<Uint8Array> | { transformToByteArray?: () => Promise<Uint8Array> },
 ): Promise<Buffer> {
-  if (
-    "transformToByteArray" in body &&
-    typeof body.transformToByteArray === "function"
-  ) {
+  if ("transformToByteArray" in body && typeof body.transformToByteArray === "function") {
     return Buffer.from(await body.transformToByteArray());
   }
 
@@ -433,12 +447,14 @@ export async function putObject(opts: {
   if (driver === "s3") {
     const client = getObjectStorageClient();
     const config = getObjectStorageRuntimeConfig();
-    await client.send(new PutObjectCommand({
-      Bucket: config.bucket,
-      Key: normalizedKey,
-      Body: opts.body,
-      ContentType: contentType,
-    }));
+    await client.send(
+      new PutObjectCommand({
+        Bucket: config.bucket,
+        Key: normalizedKey,
+        Body: opts.body,
+        ContentType: contentType,
+      }),
+    );
     return;
   }
 
@@ -459,10 +475,12 @@ export async function deleteObject(key: string): Promise<void> {
     const client = getObjectStorageClient();
     const config = getObjectStorageRuntimeConfig();
     try {
-      await client.send(new DeleteObjectCommand({
-        Bucket: config.bucket,
-        Key: normalizedKey,
-      }));
+      await client.send(
+        new DeleteObjectCommand({
+          Bucket: config.bucket,
+          Key: normalizedKey,
+        }),
+      );
     } catch {
       // 对象存储删除不存在的 key 通常不报错，异常时忽略
     }
@@ -501,10 +519,12 @@ export async function objectExists(key: string): Promise<boolean> {
     const client = getObjectStorageClient();
     const config = getObjectStorageRuntimeConfig();
     try {
-      await client.send(new HeadObjectCommand({
-        Bucket: config.bucket,
-        Key: normalizedKey,
-      }));
+      await client.send(
+        new HeadObjectCommand({
+          Bucket: config.bucket,
+          Key: normalizedKey,
+        }),
+      );
       return true;
     } catch {
       return false;
@@ -562,16 +582,14 @@ export async function getSignedUrl(
   options:
     | number
     | {
-      expiresInSeconds?: number;
-      responseContentDisposition?: string;
-      responseContentType?: string;
-    } = 3600,
+        expiresInSeconds?: number;
+        responseContentDisposition?: string;
+        responseContentType?: string;
+      } = 3600,
 ): Promise<string> {
   const normalizedKey = normalizeObjectKey(key);
   const driver = getStorageDriver();
-  const resolvedOptions = typeof options === "number"
-    ? { expiresInSeconds: options }
-    : options;
+  const resolvedOptions = typeof options === "number" ? { expiresInSeconds: options } : options;
   const expiresInSeconds = resolvedOptions.expiresInSeconds ?? 3600;
 
   if (driver === "s3") {
@@ -595,19 +613,19 @@ export async function getSignedUrl(
 /**
  * 获取对象信息（大小等）。
  */
-export async function getObjectFileInfo(
-  key: string,
-): Promise<{ size: number }> {
+export async function getObjectFileInfo(key: string): Promise<{ size: number }> {
   const normalizedKey = normalizeObjectKey(key);
   const driver = getStorageDriver();
 
   if (driver === "s3") {
     const client = getObjectStorageClient();
     const config = getObjectStorageRuntimeConfig();
-    const result = await client.send(new HeadObjectCommand({
-      Bucket: config.bucket,
-      Key: normalizedKey,
-    }));
+    const result = await client.send(
+      new HeadObjectCommand({
+        Bucket: config.bucket,
+        Key: normalizedKey,
+      }),
+    );
     const size = Number(result.ContentLength ?? 0);
     return { size };
   }
@@ -670,18 +688,24 @@ export async function getObjectBuffer(key: string): Promise<Buffer> {
   if (driver === "s3") {
     const client = getObjectStorageClient();
     const config = getObjectStorageRuntimeConfig();
-    const result = await client.send(new GetObjectCommand({
-      Bucket: config.bucket,
-      Key: normalizedKey,
-    }));
+    const result = await client.send(
+      new GetObjectCommand({
+        Bucket: config.bucket,
+        Key: normalizedKey,
+      }),
+    );
 
     if (!result.Body) {
       throw new Error("存储对象不存在");
     }
 
-    return streamBodyToBuffer(result.Body as AsyncIterable<Uint8Array> | {
-      transformToByteArray?: () => Promise<Uint8Array>;
-    });
+    return streamBodyToBuffer(
+      result.Body as
+        | AsyncIterable<Uint8Array>
+        | {
+            transformToByteArray?: () => Promise<Uint8Array>;
+          },
+    );
   }
 
   // local

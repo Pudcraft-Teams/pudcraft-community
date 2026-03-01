@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { createNotification } from "@/lib/notification";
 import { rateLimit } from "@/lib/rate-limit";
+import { canAccessServer } from "@/lib/server-access";
 import { getPublicUrl } from "@/lib/storage";
 import type { ServerComment } from "@/lib/types";
 import { createCommentSchema, queryCommentsSchema, serverIdSchema } from "@/lib/validation";
@@ -84,28 +86,28 @@ async function createCommentNotification({
   }
 }
 
-function mapComments(comments: Array<{
-  id: string;
-  content: string;
-  createdAt: Date;
-  author: {
-    id: string;
-    name: string | null;
-    email: string;
-    image: string | null;
-  };
-  replies: Array<{
+function mapComments(
+  comments: Array<{
     id: string;
     content: string;
     createdAt: Date;
     author: {
       id: string;
       name: string | null;
-      email: string;
       image: string | null;
     };
-  }>;
-}>): ServerComment[] {
+    replies: Array<{
+      id: string;
+      content: string;
+      createdAt: Date;
+      author: {
+        id: string;
+        name: string | null;
+        image: string | null;
+      };
+    }>;
+  }>,
+): ServerComment[] {
   return comments.map((comment) => ({
     id: comment.id,
     content: comment.content,
@@ -113,7 +115,6 @@ function mapComments(comments: Array<{
     author: {
       id: comment.author.id,
       name: comment.author.name,
-      email: comment.author.email,
       image: getPublicUrl(comment.author.image),
     },
     replies: comment.replies.map((reply) => ({
@@ -123,7 +124,6 @@ function mapComments(comments: Array<{
       author: {
         id: reply.author.id,
         name: reply.author.name,
-        email: reply.author.email,
         image: getPublicUrl(reply.author.image),
       },
     })),
@@ -156,10 +156,28 @@ export async function GET(request: Request, { params }: RouteContext) {
 
     const server = await prisma.server.findUnique({
       where: { id: parsedServerId.data },
-      select: { id: true },
+      select: {
+        id: true,
+        status: true,
+        ownerId: true,
+      },
     });
     if (!server) {
       return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+    }
+
+    if (server.status !== "approved") {
+      const session = await auth();
+      const canAccessCurrentServer = canAccessServer({
+        status: server.status,
+        ownerId: server.ownerId,
+        currentUserId: session?.user?.id,
+        currentUserRole: session?.user?.role,
+      });
+
+      if (!canAccessCurrentServer) {
+        return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      }
     }
 
     const { page, limit } = parsedQuery.data;
@@ -180,7 +198,6 @@ export async function GET(request: Request, { params }: RouteContext) {
             select: {
               id: true,
               name: true,
-              email: true,
               image: true,
             },
           },
@@ -191,7 +208,6 @@ export async function GET(request: Request, { params }: RouteContext) {
                 select: {
                   id: true,
                   name: true,
-                  email: true,
                   image: true,
                 },
               },
@@ -238,9 +254,23 @@ export async function POST(request: Request, { params }: RouteContext) {
 
     const server = await prisma.server.findUnique({
       where: { id: parsedServerId.data },
-      select: { id: true },
+      select: {
+        id: true,
+        status: true,
+        ownerId: true,
+      },
     });
     if (!server) {
+      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+    }
+
+    const canAccessCurrentServer = canAccessServer({
+      status: server.status,
+      ownerId: server.ownerId,
+      currentUserId: userId,
+      currentUserRole: authResult.user.role,
+    });
+    if (!canAccessCurrentServer) {
       return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
     }
 
@@ -286,7 +316,6 @@ export async function POST(request: Request, { params }: RouteContext) {
           select: {
             id: true,
             name: true,
-            email: true,
             image: true,
           },
         },
@@ -312,7 +341,6 @@ export async function POST(request: Request, { params }: RouteContext) {
           author: {
             id: comment.author.id,
             name: comment.author.name,
-            email: comment.author.email,
             image: getPublicUrl(comment.author.image),
           },
         },

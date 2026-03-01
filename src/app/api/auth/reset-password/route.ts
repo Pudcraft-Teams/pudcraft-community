@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { sendResetPasswordCode } from "@/lib/mail";
+import { getClientIp } from "@/lib/request-ip";
 import { resetPasswordSchema, sendResetCodeSchema } from "@/lib/validation";
 import {
   canSendCode,
@@ -16,16 +17,6 @@ import {
 
 const RESET_CODE_PREFIX = "reset";
 const RESET_ATTEMPTS_PREFIX = "reset-attempts";
-
-/**
- * 提取请求来源 IP（用于发送限流）。
- *
- * @param request - HTTP 请求对象
- * @returns 客户端 IP 或兜底值 `unknown`
- */
-function getClientIp(request: Request): string {
-  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-}
 
 /**
  * POST /api/auth/reset-password
