@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { deleteObject } from "@/lib/storage";
@@ -13,11 +13,11 @@ export async function DELETE(
   { params }: { params: Promise<{ modpackId: string }> },
 ) {
   try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    const authResult = await requireActiveUser();
+    if (isActiveUserError(authResult)) {
+      return authResult.response;
     }
+    const userId = authResult.user.id;
 
     const { modpackId } = await params;
     const parsedId = modpackIdSchema.safeParse(modpackId);

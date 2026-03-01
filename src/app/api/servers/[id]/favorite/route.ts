@@ -189,6 +189,15 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
         select: { favoriteCount: true },
       });
 
+      // 防止并发导致负数
+      if (updated.favoriteCount < 0) {
+        await tx.server.update({
+          where: { id: parsedServerId.data },
+          data: { favoriteCount: 0 },
+        });
+        return { favoriteCount: 0 };
+      }
+
       return { favoriteCount: updated.favoriteCount };
     });
 

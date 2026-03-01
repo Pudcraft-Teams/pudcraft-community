@@ -1,5 +1,3 @@
-// Fix: favorites/route.ts:21 - 改用显式 select 替换 include:{ server:true }，
-//   避免 verifyToken/verifyExpiresAt/verifyUserId 等敏感字段被过度拉取
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";

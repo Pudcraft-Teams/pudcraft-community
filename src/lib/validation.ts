@@ -7,6 +7,20 @@ import { z } from "zod";
 
 // ─── 基础字段 Schema ─────────────────────────
 
+/** 禁止的主机名模式（防 SSRF：禁止 localhost / 内网 IP / IPv6 回环） */
+const BLOCKED_HOST_PATTERNS = [
+  /^localhost$/i,
+  /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,
+  /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,
+  /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/,
+  /^192\.168\.\d{1,3}\.\d{1,3}$/,
+  /^0\.0\.0\.0$/,
+  /^169\.254\.\d{1,3}\.\d{1,3}$/,
+  /^\[?::1\]?$/,
+  /^\[?fe80:/i,
+  /^\[?fd[0-9a-f]{2}:/i,
+];
+
 /** Minecraft 服务器主机地址校验（防 SSRF，限制格式） */
 export const serverHostSchema = z
   .string()
@@ -15,6 +29,10 @@ export const serverHostSchema = z
   .regex(
     /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*$/,
     "无效的主机地址格式",
+  )
+  .refine(
+    (host) => !BLOCKED_HOST_PATTERNS.some((pattern) => pattern.test(host)),
+    "不允许使用本地或内网地址",
   );
 
 /** 端口号校验（1 - 65535） */

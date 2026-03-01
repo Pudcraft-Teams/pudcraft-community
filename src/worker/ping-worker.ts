@@ -54,7 +54,6 @@ async function notifyServerOnline(serverId: string, serverName: string): Promise
 /**
  * 消费 server-ping 队列并写入状态结果。
  */
-// Fix: ping-worker.ts:57 - job 处理函数增加 try-catch，失败时 console.error 保留日志
 export const pingWorker = new Worker<PingJobData>(
   PING_QUEUE_NAME,
   async (job: Job<PingJobData>) => {
