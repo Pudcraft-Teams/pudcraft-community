@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { Readable } from "stream";
 import { auth } from "@/lib/auth";

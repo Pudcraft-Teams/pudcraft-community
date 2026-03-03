@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { sendVerificationCode } from "@/lib/mail";

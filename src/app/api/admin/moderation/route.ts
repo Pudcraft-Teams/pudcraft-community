@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { requireAdmin, isAdminError } from "@/lib/admin";

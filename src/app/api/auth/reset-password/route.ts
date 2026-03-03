@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
