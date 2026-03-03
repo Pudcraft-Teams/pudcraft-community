@@ -20,7 +20,7 @@
     "storage:check": "tsx scripts/verify-storage-behavior.ts",
     "worker": "tsx src/worker/index.ts",
     "worker:dev": "tsx watch src/worker/index.ts",
-    "build:worker": "esbuild src/worker/index.ts --bundle --platform=node --target=node22 --outfile=dist/worker.js --tsconfig=tsconfig.json --external:@prisma/client",
+    "build:worker": "node -e \"require('esbuild').buildSync({entryPoints:['src/worker/index.ts'],bundle:true,platform:'node',target:'node24',outfile:'dist/worker.js',tsconfig:'tsconfig.json',external:['@prisma/client']})\"",
     "postinstall": "prisma generate"
   },
   "dependencies": {
