@@ -1,4 +1,4 @@
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 
 # Stage 1: Install dependencies
 FROM base AS deps
@@ -19,7 +19,7 @@ RUN pnpm build
 RUN pnpm exec esbuild src/worker/index.ts \
     --bundle \
     --platform=node \
-    --target=node20 \
+    --target=node22 \
     --outfile=dist/worker.js \
     --tsconfig=tsconfig.json \
     --external:@prisma/client
