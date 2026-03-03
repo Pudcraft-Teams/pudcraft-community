@@ -16,6 +16,7 @@ export function getGreenClient(): GreenClient {
     accessKeyId: contentModerationEnv.accessKeyId,
     accessKeySecret: contentModerationEnv.accessKeySecret,
     endpoint: contentModerationEnv.endpoint,
+    protocol: "https",
   });
 
   clientInstance = new GreenClient(config);

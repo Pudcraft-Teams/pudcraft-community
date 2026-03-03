@@ -242,15 +242,18 @@ export async function POST(request: Request) {
 
     // ─── 内容审查 ───
     const clientIpForMod = getClientIp(request);
-    const modResult = await moderateFields(
-      {
-        名称: name,
-        描述: description ?? "",
-        标签: tags?.join(" ") ?? "",
-      },
-      "server",
-      { userId, userIp: clientIpForMod },
-    );
+    const fieldsToModerate: Record<string, string> = {
+      名称: name,
+      描述: description ?? "",
+      标签: tags?.join(" ") ?? "",
+    };
+    if (content?.trim()) {
+      fieldsToModerate["详介"] = content;
+    }
+    const modResult = await moderateFields(fieldsToModerate, "server", {
+      userId,
+      userIp: clientIpForMod,
+    });
     if (!modResult.passed) {
       return NextResponse.json(
         { error: "内容包含违规信息，请修改后重新提交", detail: modResult.reason },

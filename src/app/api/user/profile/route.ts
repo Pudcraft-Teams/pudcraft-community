@@ -149,10 +149,19 @@ export async function PATCH(request: Request) {
     if (avatarField instanceof File && avatarField.size > 0) {
       avatarBuffer = Buffer.from(await avatarField.arrayBuffer());
       avatarMimeType = avatarField.type;
+      logger.info("[api/user/profile] Avatar upload attempt", {
+        claimedType: avatarMimeType,
+        size: avatarBuffer.byteLength,
+        headerHex: avatarBuffer.subarray(0, 12).toString("hex"),
+      });
       try {
         validateImageFile(avatarBuffer, avatarMimeType);
       } catch (error) {
         if (error instanceof ImageValidationError) {
+          logger.warn("[api/user/profile] Avatar validation failed", {
+            code: error.code,
+            claimedType: avatarMimeType,
+          });
           return NextResponse.json({ error: error.message }, { status: error.status });
         }
 

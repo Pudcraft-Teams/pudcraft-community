@@ -11,26 +11,12 @@ interface ImageCropDialogProps {
   imageFile: File | null;
   aspectRatio?: number;
   outputSize?: number;
-  quality?: number;
   title?: string;
-}
-
-function clampQuality(value: number): number {
-  if (value < 0) {
-    return 0;
-  }
-
-  if (value > 1) {
-    return 1;
-  }
-
-  return value;
 }
 
 async function getCroppedFile(
   cropper: Cropper,
   outputSize: number,
-  quality: number,
 ): Promise<File> {
   const canvas = cropper.getCroppedCanvas({
     width: outputSize,
@@ -53,13 +39,12 @@ async function getCroppedFile(
 
         resolve(nextBlob);
       },
-      "image/webp",
-      clampQuality(quality),
+      "image/png",
     );
   });
 
-  return new File([blob], "image.webp", {
-    type: "image/webp",
+  return new File([blob], "image.png", {
+    type: "image/png",
     lastModified: Date.now(),
   });
 }
@@ -71,7 +56,6 @@ export function ImageCropDialog({
   imageFile,
   aspectRatio = 1,
   outputSize = 512,
-  quality = 0.8,
   title = "裁切图片",
 }: ImageCropDialogProps) {
   const cropperRef = useRef<ReactCropperElement>(null);
@@ -130,7 +114,7 @@ export function ImageCropDialog({
     setIsSubmitting(true);
 
     try {
-      const file = await getCroppedFile(cropper, outputSize, quality);
+      const file = await getCroppedFile(cropper, outputSize);
       onConfirm(file);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "裁切失败，请重试");

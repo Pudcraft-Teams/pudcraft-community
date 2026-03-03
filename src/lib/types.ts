@@ -199,6 +199,8 @@ export interface AdminServerItem {
   host: string;
   port: number;
   iconUrl: string | null;
+  description: string | null;
+  content: string | null;
   status: string;
   rejectReason: string | null;
   isVerified: boolean;

@@ -215,6 +215,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (hasField(parsed.data, "description") && parsed.data.description) {
       fieldsToModerate["描述"] = parsed.data.description;
     }
+    if (hasField(parsed.data, "content") && parsed.data.content?.trim()) {
+      fieldsToModerate["详介"] = parsed.data.content;
+    }
     if (hasField(parsed.data, "tags") && parsed.data.tags) {
       fieldsToModerate["标签"] = parsed.data.tags.join(" ");
     }

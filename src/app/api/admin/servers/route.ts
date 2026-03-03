@@ -124,6 +124,8 @@ export async function GET(request: Request) {
       host: server.host,
       port: server.port,
       iconUrl: getPublicUrl(server.iconUrl),
+      description: server.description,
+      content: server.content,
       status: server.status,
       rejectReason: server.rejectReason,
       isVerified: server.isVerified,

@@ -230,7 +230,6 @@ export function ImageUpload({
         imageFile={pendingFile}
         aspectRatio={1}
         outputSize={outputSize}
-        quality={0.8}
         onConfirm={(croppedFile) => {
           setSelectedFile(croppedFile);
           setOpenCropDialog(false);

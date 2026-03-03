@@ -10,6 +10,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl as getPresignedUrl } from "@aws-sdk/s3-request-presigner";
+import sharp from "sharp";
 import { z } from "zod";
 import { moderateImage } from "@/lib/image-moderation";
 
@@ -18,7 +19,7 @@ import type { ImageModerationContext } from "@/lib/image-moderation";
 // ─── 常量 ─────────────────────────────────────────────
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
-const ALLOWED_IMAGE_MIME_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"] as const;
+const ALLOWED_IMAGE_MIME_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
 
 const imageMimeTypeSchema = z.enum(ALLOWED_IMAGE_MIME_TYPES);
 const entityIdSchema = z
@@ -30,15 +31,15 @@ const MIME_EXTENSION_MAP: Record<AllowedImageMimeType, string> = {
   "image/png": "png",
   "image/jpeg": "jpg",
   "image/webp": "webp",
-  "image/gif": "gif",
 };
+
+const WEBP_QUALITY = 80;
 
 const MIME_FROM_EXTENSION: Record<string, string> = {
   png: "image/png",
   jpg: "image/jpeg",
   jpeg: "image/jpeg",
   webp: "image/webp",
-  gif: "image/gif",
   mrpack: "application/x-modrinth-modpack+zip",
 };
 
@@ -390,11 +391,6 @@ function detectImageMimeType(file: Buffer): AllowedImageMimeType | null {
   const isJpeg = file[0] === 0xff && file[1] === 0xd8 && file[2] === 0xff;
   if (isJpeg) {
     return "image/jpeg";
-  }
-
-  const header = file.toString("ascii", 0, 6);
-  if (header === "GIF87a" || header === "GIF89a") {
-    return "image/gif";
   }
 
   const riffHeader = file.toString("ascii", 0, 4);
@@ -805,7 +801,15 @@ function getFullPublicUrl(key: string): string | null {
 }
 
 /**
+ * 将图片统一转换为 WebP 格式（strip 元数据 + 统一质量）。
+ */
+async function convertToWebP(file: Buffer): Promise<Buffer> {
+  return sharp(file).webp({ quality: WEBP_QUALITY }).toBuffer();
+}
+
+/**
  * 上传图片，返回对象存储 key（不是 URL）。
+ * 所有图片统一转换为 WebP 后存储。
  * 上传后会进行图片内容审查（如已启用），审查不通过则删除已上传文件。
  */
 async function uploadImage(
@@ -817,11 +821,13 @@ async function uploadImage(
 ): Promise<string> {
   const parsedEntityId = entityIdSchema.parse(entityId);
   validateImageFile(file, mimeType);
-  const parsedMimeType = imageMimeTypeSchema.parse(mimeType);
 
-  // 先上传
-  const key = buildImageKey(file, parsedEntityId, parsedMimeType, folder);
-  await putObject({ key, body: file, contentType: parsedMimeType });
+  // 统一转换为 WebP
+  const webpBuffer = await convertToWebP(file);
+
+  // 生成 key 并上传
+  const key = buildImageKey(webpBuffer, parsedEntityId, "image/webp", folder);
+  await putObject({ key, body: webpBuffer, contentType: "image/webp" });
 
   // 图片内容审查（上传后，通过 imageUrl）
   const imageUrl = getFullPublicUrl(key);

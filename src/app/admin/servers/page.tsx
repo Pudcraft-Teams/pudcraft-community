@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { useToast } from "@/hooks/useToast";
 import { PageLoading } from "@/components/PageLoading";
 import type { AdminServerItem, PaginationInfo } from "@/lib/types";
@@ -60,6 +60,7 @@ export default function AdminServersPage() {
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchServers = useCallback(async () => {
     setIsLoading(true);
@@ -225,8 +226,8 @@ export default function AdminServersPage() {
               </thead>
               <tbody>
                 {servers.map((server) => (
+                  <Fragment key={server.id}>
                   <tr
-                    key={server.id}
                     className="border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50"
                   >
                     <td className="px-4 py-3">
@@ -238,9 +239,16 @@ export default function AdminServersPage() {
                           height={28}
                           className="rounded"
                         />
-                        <span className="max-w-32 truncate font-medium text-slate-900">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedId(expandedId === server.id ? null : server.id)
+                          }
+                          className="max-w-32 truncate font-medium text-slate-900 underline decoration-slate-300 underline-offset-2 transition-colors hover:text-teal-700 hover:decoration-teal-400"
+                          title="点击展开/收起详情"
+                        >
                           {server.name}
-                        </span>
+                        </button>
                       </div>
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-slate-500">
@@ -342,6 +350,33 @@ export default function AdminServersPage() {
                       )}
                     </td>
                   </tr>
+
+                  {/* 展开详情行 */}
+                  {expandedId === server.id && (
+                    <tr className="bg-slate-50">
+                      <td colSpan={7} className="px-4 py-3">
+                        <div className="space-y-2 text-sm">
+                          <div>
+                            <span className="font-medium text-slate-700">简介：</span>
+                            <span className="text-slate-600">
+                              {server.description || "（未填写）"}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-slate-700">详介：</span>
+                            {server.content ? (
+                              <pre className="mt-1 max-h-60 overflow-auto whitespace-pre-wrap rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-600">
+                                {server.content}
+                              </pre>
+                            ) : (
+                              <span className="text-slate-600">（未填写）</span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
