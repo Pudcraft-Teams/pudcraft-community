@@ -6,7 +6,9 @@ RUN corepack enable
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 COPY prisma ./prisma/
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile && \
+    pnpm approve-builds esbuild @prisma/client @prisma/engines prisma sharp && \
+    pnpm install --frozen-lockfile
 
 # Stage 2: Build application
 FROM base AS builder
