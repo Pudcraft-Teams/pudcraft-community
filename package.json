@@ -56,6 +56,17 @@
     "yauzl": "^3.2.0",
     "zod": "^3.24.0"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "sharp",
+      "msgpackr-extract",
+      "unrs-resolver"
+    ]
+  },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
