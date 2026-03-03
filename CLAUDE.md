@@ -135,6 +135,43 @@ User / Server / ServerStatus / Comment(2层嵌套) / Favorite / Notification / A
 - 使用统一 Toast / EmptyState / LoadingSpinner 组件
 - 使用 Next.js `<Image>` 替代 `<img>`
 
+## 部署架构
+
+- **CI/CD**: GitHub Actions → GHCR 镜像构建 → SSH 部署到 VPS
+- **容器**: Docker Compose（web + worker），复用 1Panel 管理的 PostgreSQL / Redis 容器（`1panel-network`）
+- **反向代理**: 1Panel OpenResty，站点配置位于 `/opt/1panel/www/conf.d/`，代理规则位于 `/opt/1panel/www/sites/<domain>/proxy/`
+- **部署路径**: VPS `/opt/pudcraft/`（docker-compose.yml + .env.production + deploy.sh）
+
+## 部署踩坑记录
+
+### Docker 构建
+
+1. **GHCR 镜像名必须全小写**: `github.repository_owner` 可能返回大写（如 `HePudding`），GHCR 要求全小写。使用 bash 小写展开 `${GITHUB_REPOSITORY_OWNER,,}` 解决
+2. **Next.js 构建时会触发 Zod 环境变量校验**: `pnpm build` 执行页面收集时会 import `src/lib/env.ts`，导致 Zod 校验失败。解决：在 Dockerfile builder 阶段设置 dummy 环境变量
+3. **Next.js 构建时尝试连接数据库 (ECONNREFUSED)**: 未标记 `force-dynamic` 的页面会在构建时预渲染并执行 DB 查询。解决：所有 `layout.tsx`、`route.ts`、`sitemap.ts` 添加 `export const dynamic = "force-dynamic"`
+4. **sitemap.ts 构建时 DB 查询失败**: 即使有 `force-dynamic`，sitemap 仍可能在构建时被收集。解决：DB 查询包裹 try-catch，构建时优雅降级只返回静态页面
+5. **pnpm v10 严格模式阻止 esbuild postinstall**: pnpm v10 默认不运行依赖的 postinstall 脚本（安全策略）。解决：在 `package.json` 中添加 `pnpm.onlyBuiltDependencies` 白名单
+6. **esbuild 二进制文件在 Docker 中找不到**: pnpm 严格模式下 `pnpm exec esbuild`、`npx esbuild`、`./node_modules/.bin/esbuild` 均失败（符号链接/幽灵依赖问题）。解决：`npm install -g esbuild` 全局安装绕过 pnpm 限制
+7. **Docker 多阶段构建中 node_modules 符号链接断裂**: pnpm 使用符号链接的 node_modules 结构，从 builder 阶段 COPY 到 runner 阶段时符号链接会断裂。解决：使用 Next.js `output: "standalone"` 模式，只复制 standalone 产物
+
+### 环境变量 & 配置
+
+8. **Docker Compose env_file 特殊字符**: `.env.production` 中包含特殊字符的值（如 SMTP 密码）必须用引号包裹，否则 Docker Compose 解析错误
+9. **env 文件末尾缺少换行符**: 使用 `echo >>` 追加环境变量时，如果文件末尾无换行符，新变量会与上一行拼接。务必确认文件末尾有换行符
+10. **Prisma CLI 版本不兼容**: 直接使用 `npx prisma` 可能拉取最新 v7 版本（与项目使用的 v6 不兼容）。解决：显式指定版本 `npx prisma@6 migrate deploy`
+
+### 网络 & 认证
+
+11. **NextAuth CSRF Token 与 HTTPS 强绑定**: 当 `NEXTAUTH_URL=https://...` 时，NextAuth 会设置 `__Host-` 前缀 + `Secure` 标志的 Cookie。如果站点实际通过 HTTP 访问（未配置 SSL），浏览器会静默拒绝这些 Cookie，导致所有登录请求报 `MissingCSRF` 错误。解决：确保 `NEXTAUTH_URL` 的协议与实际访问协议一致；生产环境应配置 SSL 后使用 https
+12. **AUTH_TRUST_HOST=true 必须设置**: 在反向代理（OpenResty/Nginx）后面运行时，NextAuth v5 需要 `AUTH_TRUST_HOST=true` 才能正确信任 `X-Forwarded-Proto` 等请求头
+13. **Docker 容器健康检查 localhost vs 0.0.0.0**: Next.js standalone 模式默认监听 `0.0.0.0`，容器内 `wget http://localhost:3000` 可能失败。解决：健康检查使用 `http://0.0.0.0:3000/api/health`
+14. **GitHub Actions 健康检查无法通过公网访问**: 如果 VPS 的 3000 端口未对外开放，从 GitHub Actions runner 直接 curl 公网 IP 会失败。解决：改用 SSH 执行健康检查 `appleboy/ssh-action` + `curl localhost`
+
+### 1Panel 相关
+
+15. **OpenResty 站点配置路径**: 1Panel 的站点配置不在标准 `conf.d/` 目录，而是位于 `/opt/1panel/www/conf.d/<domain>.conf`，代理规则位于 `/opt/1panel/www/sites/<domain>/proxy/*.conf`
+16. **1Panel Docker 网络**: 1Panel 创建的服务（PostgreSQL、Redis）运行在 `1panel-network` 桥接网络中，自定义容器需加入此网络并使用容器别名（如 `postgresql`、`redis`）连接
+
 ## 禁止事项
 
 1. 不要在 API Route 中直接 ping Minecraft 服务器
