@@ -70,7 +70,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
           {/* ─── Footer ─── */}
           <footer className="border-t border-slate-200 py-6 text-center text-xs text-slate-500">
-            Pudcraft Community &copy; 2025 &mdash; Minecraft 服务器聚合站
+            Pudcraft Community &copy; 2026 &mdash; Minecraft 服务器聚合站
           </footer>
         </Providers>
       </body>

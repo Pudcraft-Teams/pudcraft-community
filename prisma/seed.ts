@@ -14,7 +14,6 @@ interface SeedServer {
     playerCount: number | null;
     maxPlayers: number | null;
     motd: string | null;
-    latencyMs: number | null;
   };
 }
 
@@ -51,7 +50,6 @@ QQ 群：7284 39120（入群备注"Pudcraft 新人"）。`,
       playerCount: 42,
       maxPlayers: 100,
       motd: "§a欢迎来到 Pudcraft 生存服！§r\n§7纯净生存 | 和平友好",
-      latencyMs: 15,
     },
   },
   {
@@ -86,7 +84,6 @@ QQ 群：6159 44087（入群需简短自我介绍）。`,
       playerCount: 18,
       maxPlayers: 50,
       motd: "§6红石科技服 §7| §e自动化的乐园",
-      latencyMs: 32,
     },
   },
   {
@@ -121,7 +118,6 @@ QQ 群：9032 11876（入群可领取新手礼包码）。`,
       playerCount: 156,
       maxPlayers: 200,
       motd: "§d像素大陆 RPG §7| §a新版本 2.0 已上线！",
-      latencyMs: 48,
     },
   },
   {
@@ -156,7 +152,6 @@ QQ 群：7410 55261（入群发送"建筑方向"可分配导师）。`,
       playerCount: null,
       maxPlayers: null,
       motd: null,
-      latencyMs: null,
     },
   },
   {
@@ -191,7 +186,6 @@ QQ 群：8567 90314（入群后机器人自动发放新手指引）。`,
       playerCount: 73,
       maxPlayers: 150,
       motd: "§b空岛生存 §7| §f挑战极限生存",
-      latencyMs: 22,
     },
   },
   {
@@ -226,7 +220,6 @@ QQ 群：6695 22408（入群绑定游戏名可同步段位身份组）。`,
       playerCount: 89,
       maxPlayers: 200,
       motd: "§c⚔ PVP 竞技场 §7| §e赛季 S3 火热进行中",
-      latencyMs: 11,
     },
   },
   {
@@ -261,7 +254,6 @@ QQ 群：5523 67891（入群获取整合包下载链接）。`,
       playerCount: 35,
       maxPlayers: 80,
       motd: "§6匠魂工艺 §7| §e锻造你的传说武器",
-      latencyMs: 28,
     },
   },
   {
@@ -296,7 +288,6 @@ QQ 群：4412 89563（入群获取推荐客户端模组列表）。`,
       playerCount: 27,
       maxPlayers: 60,
       motd: "§aFabric 轻量生存 §7| §f流畅原版体验",
-      latencyMs: 19,
     },
   },
   {
@@ -331,7 +322,6 @@ QQ 群：7789 45612（入群参与内测资格抽奖）。`,
       playerCount: 112,
       maxPlayers: 300,
       motd: "§e小游戏乐园 §7| §a5 种模式等你来战！",
-      latencyMs: 35,
     },
   },
   {
@@ -366,7 +356,6 @@ QQ 群：3345 67890（入群年龄不限，欢迎各年龄段玩家）。`,
       playerCount: 15,
       maxPlayers: 40,
       motd: "§7养老和平服 §7| §a安静建造，享受生活",
-      latencyMs: 12,
     },
   },
   {
@@ -401,7 +390,6 @@ QQ 群：8890 12345（入群可获取跑酷教学视频合集）。`,
       playerCount: 45,
       maxPlayers: 100,
       motd: "§b跑酷竞速 §7| §e挑战你的极限！",
-      latencyMs: 18,
     },
   },
   {
@@ -437,7 +425,6 @@ QQ 群：2234 56789（入群注明平台类型以获取对应指引）。`,
       playerCount: 58,
       maxPlayers: 120,
       motd: "§a基岩互通服 §7| §fJava + 基岩 一起玩！",
-      latencyMs: 40,
     },
   },
 ];
@@ -454,6 +441,7 @@ async function main() {
     const server = await prisma.server.create({
       data: {
         ...serverFields,
+        status: "approved",
         statuses: {
           create: {
             online: status.online,
