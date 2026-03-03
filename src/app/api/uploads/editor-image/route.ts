@@ -3,8 +3,10 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { logger } from "@/lib/logger";
+import { getClientIp } from "@/lib/request-ip";
 import {
   getPublicUrl,
+  ImageModerationError,
   ImageValidationError,
   uploadEditorImage,
   validateImageFile,
@@ -43,8 +45,17 @@ export async function POST(request: Request) {
 
     let imageKey: string;
     try {
-      imageKey = await uploadEditorImage(imageBuffer, authResult.user.id, imageMimeType);
+      imageKey = await uploadEditorImage(imageBuffer, authResult.user.id, imageMimeType, {
+        userId: authResult.user.id,
+        userIp: getClientIp(request),
+      });
     } catch (error) {
+      if (error instanceof ImageModerationError) {
+        return NextResponse.json(
+          { error: "图片包含违规内容，请更换图片", detail: error.message },
+          { status: error.status },
+        );
+      }
       logger.error("[api/uploads/editor-image] Upload failed", {
         userId: authResult.user.id,
         reason: error instanceof Error ? error.message : "unknown",

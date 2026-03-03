@@ -8,14 +8,17 @@ import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { canAccessServer } from "@/lib/server-access";
+import { getClientIp } from "@/lib/request-ip";
 import {
   deleteFile,
   deleteObject,
   getPublicUrl,
+  ImageModerationError,
   ImageValidationError,
   uploadServerIcon,
   validateImageFile,
 } from "@/lib/storage";
+import { moderateFields } from "@/lib/moderation";
 import { buildServerContent, extractServerContentMetadata } from "@/lib/serverContent";
 import { serverIdSchema, updateServerSchema } from "@/lib/validation";
 import type { ServerDetail } from "@/lib/types";
@@ -204,6 +207,31 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       );
     }
 
+    // ─── 文本内容审查 ───
+    const fieldsToModerate: Record<string, string> = {};
+    if (hasField(parsed.data, "name") && parsed.data.name) {
+      fieldsToModerate["名称"] = parsed.data.name;
+    }
+    if (hasField(parsed.data, "description") && parsed.data.description) {
+      fieldsToModerate["描述"] = parsed.data.description;
+    }
+    if (hasField(parsed.data, "tags") && parsed.data.tags) {
+      fieldsToModerate["标签"] = parsed.data.tags.join(" ");
+    }
+
+    if (Object.keys(fieldsToModerate).length > 0) {
+      const modResult = await moderateFields(fieldsToModerate, "server", {
+        userId,
+        userIp: getClientIp(request),
+      });
+      if (!modResult.passed) {
+        return NextResponse.json(
+          { error: "内容包含违规信息，请修改后重新提交", detail: modResult.reason },
+          { status: 422 },
+        );
+      }
+    }
+
     const iconField = formData.get("icon");
     let iconBuffer: Buffer | null = null;
     let iconMimeType: string | null = null;
@@ -263,9 +291,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
     if (iconBuffer && iconMimeType) {
       try {
-        const uploadedKey = await uploadServerIcon(iconBuffer, existing.id, iconMimeType);
+        const uploadedKey = await uploadServerIcon(iconBuffer, existing.id, iconMimeType, {
+          userId,
+          userIp: getClientIp(request),
+        });
         nextIconKey = uploadedKey;
       } catch (error) {
+        if (error instanceof ImageModerationError) {
+          return NextResponse.json(
+            { error: "图标包含违规内容，请更换图片", detail: error.message },
+            { status: error.status },
+          );
+        }
         warning = "图标上传失败，已保留原图标";
         logger.error("[api/servers/[id]] upload icon failed", {
           serverId: existing.id,

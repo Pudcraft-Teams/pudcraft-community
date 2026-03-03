@@ -11,6 +11,7 @@ import { getClientIp } from "@/lib/request-ip";
 import {
   deleteFile,
   getPublicUrl,
+  ImageModerationError,
   ImageValidationError,
   uploadAvatar,
   validateImageFile,
@@ -172,9 +173,18 @@ export async function PATCH(request: Request) {
     let nextImageKey: string | null | undefined;
     if (avatarBuffer && avatarMimeType) {
       try {
-        nextImageKey = await uploadAvatar(avatarBuffer, existingUser.id, avatarMimeType);
+        nextImageKey = await uploadAvatar(avatarBuffer, existingUser.id, avatarMimeType, {
+          userId: existingUser.id,
+          userIp: getClientIp(request),
+        });
         data.image = nextImageKey;
       } catch (error) {
+        if (error instanceof ImageModerationError) {
+          return NextResponse.json(
+            { error: "头像包含违规内容，请更换图片", detail: error.message },
+            { status: error.status },
+          );
+        }
         logger.error("[api/user/profile] Upload avatar failed", {
           userId: existingUser.id,
           reason: error instanceof Error ? error.message : "unknown",

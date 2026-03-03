@@ -11,6 +11,7 @@ import { getClientIp } from "@/lib/request-ip";
 import { rateLimit } from "@/lib/rate-limit";
 import {
   getPublicUrl,
+  ImageModerationError,
   ImageValidationError,
   uploadServerIcon,
   validateImageFile,
@@ -340,18 +341,30 @@ export async function POST(request: Request) {
     }
 
     let iconKey: string | null = null;
+    let iconWarning: string | undefined;
     if (iconBuffer && iconMimeType) {
       try {
-        iconKey = await uploadServerIcon(iconBuffer, server.id, iconMimeType);
+        iconKey = await uploadServerIcon(iconBuffer, server.id, iconMimeType, {
+          userId,
+          userIp: clientIpForMod,
+        });
         await prisma.server.update({
           where: { id: server.id },
           data: { iconUrl: iconKey },
         });
       } catch (error) {
-        logger.error("[api/servers] Upload server icon failed", {
-          serverId: server.id,
-          reason: resolveErrorMessage(error, "unknown"),
-        });
+        if (error instanceof ImageModerationError) {
+          iconWarning = "图标包含违规内容，已跳过上传";
+          logger.info("[api/servers] Server icon rejected by moderation", {
+            serverId: server.id,
+            reason: error.message,
+          });
+        } else {
+          logger.error("[api/servers] Upload server icon failed", {
+            serverId: server.id,
+            reason: resolveErrorMessage(error, "unknown"),
+          });
+        }
       }
     }
 
@@ -359,6 +372,7 @@ export async function POST(request: Request) {
       {
         success: true,
         message: "服务器已提交，等待管理员审核",
+        warning: iconWarning,
         data: {
           id: server.id,
           name: server.name,

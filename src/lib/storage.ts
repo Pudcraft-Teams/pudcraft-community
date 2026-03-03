@@ -11,6 +11,9 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl as getPresignedUrl } from "@aws-sdk/s3-request-presigner";
 import { z } from "zod";
+import { moderateImage } from "@/lib/image-moderation";
+
+import type { ImageModerationContext } from "@/lib/image-moderation";
 
 // ─── 常量 ─────────────────────────────────────────────
 
@@ -350,6 +353,17 @@ export class ImageValidationError extends Error {
     this.name = "ImageValidationError";
     this.code = code;
     this.status = code === "FILE_TOO_LARGE" ? 413 : 400;
+  }
+}
+
+export class ImageModerationError extends Error {
+  readonly status = 422;
+  readonly category?: string;
+
+  constructor(reason: string, category?: string) {
+    super(reason);
+    this.name = "ImageModerationError";
+    this.category = category;
   }
 }
 
@@ -758,21 +772,72 @@ function buildImageKey(
   return `${OSS_KEY_PREFIX}/${folder}/${entityId}/${hash}.${extension}`;
 }
 
+const FOLDER_MODERATION_CONTEXT: Record<
+  "server-icons" | "avatars" | "editor-images",
+  ImageModerationContext
+> = {
+  avatars: "avatar",
+  "server-icons": "server-icon",
+  "editor-images": "editor-image",
+};
+
+export interface ImageUploadModerationOptions {
+  userId?: string;
+  userIp?: string;
+}
+
+/**
+ * 获取已上传图片的完整公网 URL（用于图片审查 imageUrl 参数）。
+ * 本地 driver 需要 NEXTAUTH_URL 才能拼出完整 URL。
+ */
+function getFullPublicUrl(key: string): string | null {
+  const relativeUrl = getPublicUrl(key);
+  if (!relativeUrl) return null;
+
+  // S3 driver 返回的已是完整 URL
+  if (/^https?:\/\//i.test(relativeUrl)) return relativeUrl;
+
+  // local driver 返回相对路径（如 /uploads/...），需拼上站点域名
+  const siteUrl = process.env.NEXTAUTH_URL?.replace(/\/+$/, "");
+  if (!siteUrl) return null;
+
+  return `${siteUrl}${relativeUrl}`;
+}
+
 /**
  * 上传图片，返回对象存储 key（不是 URL）。
+ * 上传后会进行图片内容审查（如已启用），审查不通过则删除已上传文件。
  */
 async function uploadImage(
   file: Buffer,
   entityId: string,
   mimeType: string,
   folder: "server-icons" | "avatars" | "editor-images",
+  moderationOptions?: ImageUploadModerationOptions,
 ): Promise<string> {
   const parsedEntityId = entityIdSchema.parse(entityId);
   validateImageFile(file, mimeType);
   const parsedMimeType = imageMimeTypeSchema.parse(mimeType);
 
+  // 先上传
   const key = buildImageKey(file, parsedEntityId, parsedMimeType, folder);
   await putObject({ key, body: file, contentType: parsedMimeType });
+
+  // 图片内容审查（上传后，通过 imageUrl）
+  const imageUrl = getFullPublicUrl(key);
+  if (imageUrl) {
+    const modResult = await moderateImage(imageUrl, FOLDER_MODERATION_CONTEXT[folder], {
+      contentId: parsedEntityId,
+      userId: moderationOptions?.userId,
+      userIp: moderationOptions?.userIp,
+    });
+    if (!modResult.passed) {
+      // 审查不通过，删除已上传文件
+      await deleteObject(key).catch(() => {});
+      throw new ImageModerationError(modResult.reason ?? "图片包含违规内容", modResult.category);
+    }
+  }
+
   return key;
 }
 
@@ -783,8 +848,9 @@ export async function uploadServerIcon(
   file: Buffer,
   serverId: string,
   mimeType: string,
+  moderationOptions?: ImageUploadModerationOptions,
 ): Promise<string> {
-  return uploadImage(file, serverId, mimeType, "server-icons");
+  return uploadImage(file, serverId, mimeType, "server-icons", moderationOptions);
 }
 
 /**
@@ -794,8 +860,9 @@ export async function uploadAvatar(
   file: Buffer,
   userId: string,
   mimeType: string,
+  moderationOptions?: ImageUploadModerationOptions,
 ): Promise<string> {
-  return uploadImage(file, userId, mimeType, "avatars");
+  return uploadImage(file, userId, mimeType, "avatars", moderationOptions);
 }
 
 /**
@@ -805,8 +872,9 @@ export async function uploadEditorImage(
   file: Buffer,
   userId: string,
   mimeType: string,
+  moderationOptions?: ImageUploadModerationOptions,
 ): Promise<string> {
-  return uploadImage(file, userId, mimeType, "editor-images");
+  return uploadImage(file, userId, mimeType, "editor-images", moderationOptions);
 }
 
 /**
