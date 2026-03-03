@@ -1,9 +1,27 @@
+export const dynamic = "force-dynamic";
+
 import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
 
 const SITE_URL = "https://pudcraft.cn";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  let servers: { id: string; updatedAt: Date }[] = [];
+
+  try {
+    servers = await db.server.findMany({
+      where: {
+        status: "approved",
+      },
+      select: {
+        id: true,
+        updatedAt: true,
+      },
+    });
+  } catch {
+    // DB unavailable (e.g. build time) — return static pages only
+  }
+
   const staticPages: MetadataRoute.Sitemap = [
     {
       url: SITE_URL,
@@ -26,16 +44,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.2,
     },
   ];
-
-  const servers = await db.server.findMany({
-    where: {
-      status: "approved",
-    },
-    select: {
-      id: true,
-      updatedAt: true,
-    },
-  });
 
   const serverPages: MetadataRoute.Sitemap = servers.map((server) => ({
     url: `${SITE_URL}/servers/${server.id}`,
