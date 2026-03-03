@@ -64,6 +64,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     const [richHtml, setRichHtml] = useState(() => markdownToEditorHtml(value ?? ""));
     const [isRichDirty, setIsRichDirty] = useState(false);
     const [isImageUploading, setIsImageUploading] = useState(false);
+    const [richMarkdownLength, setRichMarkdownLength] = useState((value ?? "").length);
 
     const modeRef = useRef<EditorMode>(mode);
     const markdownRef = useRef(markdownText);
@@ -106,6 +107,19 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     useEffect(() => {
       richHtmlRef.current = richHtml;
     }, [richHtml]);
+
+    useEffect(() => {
+      if (mode !== "rich") {
+        return;
+      }
+
+      const timer = setTimeout(() => {
+        const length = editorHtmlToMarkdown(richHtmlRef.current).length;
+        setRichMarkdownLength(length);
+      }, 300);
+
+      return () => clearTimeout(timer);
+    }, [mode, richHtml]);
 
     useEffect(() => {
       const nextMarkdown = value ?? "";
@@ -221,6 +235,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         richHtmlRef.current = nextHtml;
         setRichHtml(nextHtml);
         setRichDirty(false);
+        setRichMarkdownLength(markdownRef.current.length);
       }
 
       setMode(nextMode);
@@ -519,14 +534,25 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           </div>
         )}
 
-        <div className="flex items-center justify-between text-xs text-slate-500">
-          <span>
-            {maxLength ? `${markdownText.length}/${maxLength}` : `${markdownText.length} 字`}
-          </span>
-          {mode === "rich" && isRichDirty && (
-            <span>富文本改动将在切换模式或保存时同步为 Markdown</span>
-          )}
-        </div>
+        {(() => {
+          const displayLength = mode === "rich" ? richMarkdownLength : markdownText.length;
+          const isOverLimit = typeof maxLength === "number" && displayLength > maxLength;
+          return (
+            <div className="flex items-center justify-between text-xs text-slate-500">
+              <span className={isOverLimit ? "font-medium text-red-500" : ""}>
+                {maxLength ? `${displayLength}/${maxLength}` : `${displayLength} 字`}
+              </span>
+              {isOverLimit ? (
+                <span className="font-medium text-red-500">内容超出字数限制</span>
+              ) : (
+                mode === "rich" &&
+                isRichDirty && (
+                  <span>富文本改动将在切换模式或保存时同步为 Markdown</span>
+                )
+              )}
+            </div>
+          );
+        })()}
       </div>
     );
   },

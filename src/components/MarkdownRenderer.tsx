@@ -2,8 +2,14 @@
 
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
-import rehypeSanitize from "rehype-sanitize";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
+
+const sanitizeSchema = {
+  ...defaultSchema,
+  tagNames: [...(defaultSchema.tagNames ?? []), "u"],
+};
 
 interface MarkdownRendererProps {
   content: string;
@@ -18,7 +24,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
     <div className="prose prose-slate max-w-none text-slate-700">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeSanitize, [rehypeHighlight, { detect: true, ignoreMissing: true }]]}
+        rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema], [rehypeHighlight, { detect: true, ignoreMissing: true }]]}
         components={{
           h1: ({ children }) => (
             <h1 className="mb-4 mt-8 text-3xl font-bold tracking-tight text-slate-900">

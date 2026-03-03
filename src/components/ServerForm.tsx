@@ -423,8 +423,8 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
           )}
         </label>
 
-        <label className="block text-sm text-slate-700">
-          详细介绍（选填，支持 Markdown）
+        <div>
+          <p className="text-sm text-slate-700">详细介绍（选填，支持 Markdown）</p>
           <div className="mt-2">
             <MarkdownEditor
               ref={contentEditorRef}
@@ -439,7 +439,7 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
           {fieldErrors.content && (
             <p className="mt-1 text-xs text-red-400">{fieldErrors.content}</p>
           )}
-        </label>
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block text-sm text-slate-700">

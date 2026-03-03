@@ -49,7 +49,7 @@ const SANITIZE_OPTIONS: SanitizeHtmlOptions = {
 };
 
 const markdownParser = new MarkdownIt({
-  html: false,
+  html: true,
   linkify: true,
   breaks: false,
 });
@@ -66,7 +66,7 @@ turndown.use(gfm);
 turndown.addRule("underline", {
   filter: ["u"],
   replacement(content: string) {
-    return content ? `**${content}**` : "";
+    return content ? `<u>${content}</u>` : "";
   },
 });
 
