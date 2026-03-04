@@ -232,6 +232,13 @@ export function MobileNavMenu() {
               >
                 首页
               </Link>
+              <Link
+                href="/changelog"
+                className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                onClick={() => setOpen(false)}
+              >
+                更新日志
+              </Link>
 
               {status === "loading" ? (
                 <p className="px-3 py-2 text-sm text-slate-500">加载中...</p>

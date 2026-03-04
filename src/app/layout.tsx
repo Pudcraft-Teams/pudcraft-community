@@ -57,6 +57,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <Link href="/" className="m3-link">
                   首页
                 </Link>
+                <Link href="/changelog" className="m3-link">
+                  更新日志
+                </Link>
                 <AuthButtons />
               </nav>
               <div className="md:hidden">

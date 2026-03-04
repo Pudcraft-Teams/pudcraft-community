@@ -37,6 +37,7 @@ model User {
   modpacks       Modpack[]
   notifications  Notification[]
   moderationLogs ModerationLog[]
+  changelogs     Changelog[]
 
   @@map("users")
 }
@@ -270,6 +271,24 @@ model ModerationLog {
   @@index([createdAt])
   @@index([reviewed, passed])
   @@map("moderation_logs")
+}
+
+/// 更新日志 —— 管理员发布的平台更新记录
+model Changelog {
+  id          String   @id @default(cuid())
+  title       String
+  content     String   @db.Text
+  type        String   @default("feature") // feature | fix | improvement | other
+  published   Boolean  @default(false)
+  publishedAt DateTime? @map("published_at")
+  authorId    String   @map("author_id")
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([published, publishedAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@map("changelogs")
 }
 
 /// 数字 ID 预留表 —— 确保 PSID/UID 删除后不被复用
