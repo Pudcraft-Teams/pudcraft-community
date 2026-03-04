@@ -265,3 +265,30 @@ export interface AdminModerationStats {
   passed: number;
   unreviewed: number;
 }
+
+// ─── 更新日志类型 ───────────────────────────────
+
+/** 更新日志类型 */
+export type ChangelogType = "feature" | "fix" | "improvement" | "other";
+
+/** 更新日志项（公开页面） */
+export interface ChangelogItem {
+  id: string;
+  title: string;
+  content: string;
+  type: ChangelogType;
+  publishedAt: string;
+}
+
+/** 管理后台 - 更新日志项 */
+export interface AdminChangelogItem {
+  id: string;
+  title: string;
+  content: string;
+  type: ChangelogType;
+  published: boolean;
+  publishedAt: string | null;
+  authorName: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

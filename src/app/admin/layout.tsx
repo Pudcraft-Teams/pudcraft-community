@@ -43,6 +43,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           >
             内容审查
           </Link>
+          <Link
+            href="/admin/changelog"
+            className="block rounded-lg px-3 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-100"
+          >
+            更新日志
+          </Link>
         </nav>
       </aside>
 
@@ -59,6 +65,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </Link>
         <Link href="/admin/moderation" className="m3-chip text-xs">
           审查
+        </Link>
+        <Link href="/admin/changelog" className="m3-chip text-xs">
+          日志
         </Link>
       </div>
 

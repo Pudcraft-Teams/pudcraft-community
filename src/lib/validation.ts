@@ -278,6 +278,35 @@ export const adminModerationLogActionSchema = z.object({
   adminNote: z.string().max(500).optional(),
 });
 
+// ─── 更新日志 Schema ────────────────────────────
+
+/** 更新日志类型枚举 */
+export const changelogTypeSchema = z.enum(["feature", "fix", "improvement", "other"]);
+
+/** 公开更新日志列表查询参数 */
+export const queryChangelogsSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+
+/** 管理后台更新日志列表查询参数 */
+export const adminQueryChangelogsSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  published: z.enum(["all", "published", "draft"]).default("all"),
+});
+
+/** 创建更新日志请求体 */
+export const createChangelogSchema = z.object({
+  title: z.string().trim().min(1, "标题不能为空").max(100, "标题最多 100 字"),
+  content: z.string().trim().min(1, "内容不能为空").max(20000, "内容最多 20000 字"),
+  type: changelogTypeSchema.default("feature"),
+  published: z.boolean().default(false),
+});
+
+/** 更新更新日志请求体 */
+export const updateChangelogSchema = createChangelogSchema.partial();
+
 // ─── 类型导出 ────────────────────────────────
 
 export type CreateServerInput = z.infer<typeof createServerSchema>;
@@ -302,3 +331,7 @@ export type AdminQueryUsersInput = z.infer<typeof adminQueryUsersSchema>;
 export type AdminUserActionInput = z.infer<typeof adminUserActionSchema>;
 export type AdminQueryModerationLogsInput = z.infer<typeof adminQueryModerationLogsSchema>;
 export type AdminModerationLogActionInput = z.infer<typeof adminModerationLogActionSchema>;
+export type QueryChangelogsInput = z.infer<typeof queryChangelogsSchema>;
+export type AdminQueryChangelogsInput = z.infer<typeof adminQueryChangelogsSchema>;
+export type CreateChangelogInput = z.infer<typeof createChangelogSchema>;
+export type UpdateChangelogInput = z.infer<typeof updateChangelogSchema>;
