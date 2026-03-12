@@ -9,7 +9,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { getPublicUrl } from "@/lib/storage";
 import { loginSchema } from "@/lib/validation";
 
-const DUMMY_PASSWORD_HASH = "$2b$12$7MsJQQUhISt6L0QkQlym9eQygPzy5Q89vgzW0fvkYl9wH8r2raVGm";
+const BCRYPT_ROUNDS = 12;
 
 class BannedUserError extends CredentialsSignin {
   code = "banned";
@@ -29,7 +29,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const loginRate = await rateLimit(`login:${clientIp}`, 10, 15 * 60);
         if (!loginRate.allowed) {
           const rawPassword = typeof credentials?.password === "string" ? credentials.password : "";
-          await bcrypt.compare(rawPassword, DUMMY_PASSWORD_HASH);
+          await bcrypt.hash(rawPassword, BCRYPT_ROUNDS);
           return null;
         }
 
@@ -53,7 +53,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         });
 
         if (!user) {
-          await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+          await bcrypt.hash(password, BCRYPT_ROUNDS);
           return null;
         }
 
