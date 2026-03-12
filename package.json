@@ -41,6 +41,7 @@
     "bcryptjs": "^3.0.3",
     "bullmq": "^5.30.0",
     "cropperjs": "^1.6.2",
+    "date-fns": "^4.1.0",
     "graceful-fs": "^4.2.11",
     "ioredis": "^5.4.0",
     "markdown-it": "^14.1.1",
