@@ -253,20 +253,20 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
 
   return (
     <section className="m3-surface p-4 sm:p-5">
-      <h2 className="text-lg font-semibold text-slate-900">邀请码管理</h2>
+      <h2 className="text-lg font-semibold text-warm-800">邀请码管理</h2>
 
       {error && (
-        <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
+        <div className="mt-3 rounded-lg border border-coral-hover/20 bg-coral-light px-3 py-2 text-sm text-coral-hover">
           {error}
         </div>
       )}
 
       {/* Create invite form */}
-      <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <h3 className="text-sm font-medium text-slate-700">创建邀请码</h3>
+      <div className="mt-4 rounded-xl border border-warm-200 bg-warm-50 p-4">
+        <h3 className="text-sm font-medium text-warm-700">创建邀请码</h3>
         <div className="mt-3 flex flex-wrap items-end gap-3">
           <div className="min-w-[120px]">
-            <label htmlFor="invite-max-uses" className="block text-xs text-slate-500">
+            <label htmlFor="invite-max-uses" className="block text-xs text-warm-500">
               最大使用次数
             </label>
             <input
@@ -281,7 +281,7 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
             />
           </div>
           <div className="min-w-[140px]">
-            <label htmlFor="invite-expiry" className="block text-xs text-slate-500">
+            <label htmlFor="invite-expiry" className="block text-xs text-warm-500">
               有效期
             </label>
             <select
@@ -314,7 +314,7 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
 
       {/* Active invites list */}
       <div className="mt-4">
-        <h3 className="text-sm font-medium text-slate-700">
+        <h3 className="text-sm font-medium text-warm-700">
           有效邀请码 ({activeInvites.length})
         </h3>
 
@@ -323,24 +323,24 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
             <LoadingSpinner text="加载中..." />
           </div>
         ) : activeInvites.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-500">暂无有效邀请码</p>
+          <p className="mt-3 text-sm text-warm-500">暂无有效邀请码</p>
         ) : (
           <div className="mt-3 space-y-2">
             {activeInvites.map((invite) => (
               <div
                 key={invite.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warm-200 bg-[#FFFAF6] px-4 py-3"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <code className="rounded bg-slate-100 px-2 py-0.5 font-mono text-sm text-slate-800">
+                    <code className="rounded bg-warm-100 px-2 py-0.5 font-mono text-sm text-warm-800">
                       {invite.code}
                     </code>
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-warm-500">
                       {invite.usedCount}/{invite.maxUses ?? "\u221E"} 次使用
                     </span>
                   </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-warm-500">
                     {invite.creatorName && <span>创建者: {invite.creatorName}</span>}
                     <span>{formatExpiry(invite.expiresAt)}</span>
                     <span>{timeAgo(invite.createdAt)} 创建</span>
@@ -350,7 +350,7 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
                   <button
                     type="button"
                     onClick={() => handleCopy(invite.code)}
-                    className="m3-btn rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 transition-colors hover:bg-slate-50"
+                    className="m3-btn rounded-lg border border-warm-200 bg-[#FFFAF6] px-3 py-1.5 text-xs text-warm-700 transition-colors hover:bg-warm-50"
                   >
                     {copiedCode === invite.code ? "已复制 \u2713" : "复制链接"}
                   </button>
@@ -358,7 +358,7 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
                     type="button"
                     onClick={() => void handleRevoke(invite.code)}
                     disabled={revokingCode === invite.code}
-                    className="m3-btn rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs text-rose-600 transition-colors hover:bg-rose-50"
+                    className="m3-btn rounded-lg border border-coral-hover/20 bg-[#FFFAF6] px-3 py-1.5 text-xs text-coral-hover transition-colors hover:bg-coral-light"
                   >
                     {revokingCode === invite.code ? "撤销中..." : "撤销"}
                   </button>
@@ -372,25 +372,25 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
       {/* Expired invites (collapsed) */}
       {expiredInvites.length > 0 && (
         <div className="mt-4">
-          <h3 className="text-sm font-medium text-slate-500">
+          <h3 className="text-sm font-medium text-warm-500">
             已过期 ({expiredInvites.length})
           </h3>
           <div className="mt-2 space-y-2 opacity-60">
             {expiredInvites.map((invite) => (
               <div
                 key={invite.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warm-100 bg-warm-50 px-4 py-3"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <code className="rounded bg-slate-100 px-2 py-0.5 font-mono text-sm text-slate-500 line-through">
+                    <code className="rounded bg-warm-100 px-2 py-0.5 font-mono text-sm text-warm-500 line-through">
                       {invite.code}
                     </code>
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-warm-400">
                       {invite.usedCount}/{invite.maxUses ?? "\u221E"} 次使用
                     </span>
                   </div>
-                  <div className="mt-1 text-xs text-slate-400">
+                  <div className="mt-1 text-xs text-warm-400">
                     已过期 · {timeAgo(invite.createdAt)} 创建
                   </div>
                 </div>
@@ -398,7 +398,7 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
                   type="button"
                   onClick={() => void handleRevoke(invite.code)}
                   disabled={revokingCode === invite.code}
-                  className="m3-btn rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-500 transition-colors hover:bg-slate-50"
+                  className="m3-btn rounded-lg border border-warm-200 bg-[#FFFAF6] px-3 py-1.5 text-xs text-warm-500 transition-colors hover:bg-warm-50"
                 >
                   {revokingCode === invite.code ? "删除中..." : "删除"}
                 </button>

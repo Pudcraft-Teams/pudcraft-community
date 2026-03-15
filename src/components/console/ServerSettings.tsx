@@ -260,19 +260,19 @@ export function ServerSettings({
 
   return (
     <section className="m3-surface p-4 sm:p-5">
-      <h2 className="text-lg font-semibold text-slate-900">隐私与加入设置</h2>
+      <h2 className="text-lg font-semibold text-warm-800">隐私与加入设置</h2>
 
       {/* ─── Visibility selector ─── */}
       <div className="mt-5">
-        <h3 className="text-sm font-semibold text-slate-900">服务器可见性</h3>
+        <h3 className="text-sm font-semibold text-warm-800">服务器可见性</h3>
         <div className="mt-3 space-y-2">
           {VISIBILITY_OPTIONS.map((option) => (
             <label
               key={option.value}
               className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
                 visibility === option.value
-                  ? "border-teal-300 bg-teal-50/50"
-                  : "border-gray-200 bg-white hover:border-gray-300"
+                  ? "border-coral/30 bg-coral-light/50"
+                  : "border-warm-200 bg-[#FFFAF6] hover:border-warm-300"
               }`}
             >
               <input
@@ -283,17 +283,17 @@ export function ServerSettings({
                 onChange={() => {
                   setVisibility(option.value);
                 }}
-                className="mt-0.5 h-4 w-4 border-gray-300 text-teal-600 focus:ring-teal-500"
+                className="mt-0.5 h-4 w-4 border-warm-300 text-coral focus:ring-coral-hover"
               />
               <div className="min-w-0">
                 <p
                   className={`text-sm font-medium ${
-                    visibility === option.value ? "text-teal-700" : "text-slate-700"
+                    visibility === option.value ? "text-coral" : "text-warm-700"
                   }`}
                 >
                   {option.label}
                 </p>
-                <p className="mt-0.5 text-xs text-slate-500">{option.description}</p>
+                <p className="mt-0.5 text-xs text-warm-500">{option.description}</p>
               </div>
             </label>
           ))}
@@ -303,20 +303,20 @@ export function ServerSettings({
       {/* ─── Discoverable toggle ─── */}
       {showJoinModeSelector && (
         <div className="mt-6">
-          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 bg-white p-3 transition-colors hover:border-gray-300">
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-warm-200 bg-[#FFFAF6] p-3 transition-colors hover:border-warm-300">
             <input
               type="checkbox"
               checked={discoverable}
               onChange={(e) => {
                 setDiscoverable(e.target.checked);
               }}
-              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+              className="mt-0.5 h-4 w-4 rounded border-warm-300 text-coral focus:ring-coral-hover"
             />
             <div className="min-w-0">
-              <p className="text-sm font-medium text-slate-700">
+              <p className="text-sm font-medium text-warm-700">
                 在首页发现中展示
               </p>
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 text-xs text-warm-500">
                 开启后，服务器会出现在首页列表中（地址仍然对非成员隐藏）。关闭则仅通过邀请链接或直接访问可见。
               </p>
             </div>
@@ -327,15 +327,15 @@ export function ServerSettings({
       {/* ─── Join mode selector ─── */}
       {showJoinModeSelector && (
         <div className="mt-6">
-          <h3 className="text-sm font-semibold text-slate-900">加入方式</h3>
+          <h3 className="text-sm font-semibold text-warm-800">加入方式</h3>
           <div className="mt-3 space-y-2">
             {JOIN_MODE_OPTIONS.map((option) => (
               <label
                 key={option.value}
                 className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
                   joinMode === option.value
-                    ? "border-teal-300 bg-teal-50/50"
-                    : "border-gray-200 bg-white hover:border-gray-300"
+                    ? "border-coral/30 bg-coral-light/50"
+                    : "border-warm-200 bg-[#FFFAF6] hover:border-warm-300"
                 }`}
               >
                 <input
@@ -346,17 +346,17 @@ export function ServerSettings({
                   onChange={() => {
                     setJoinMode(option.value);
                   }}
-                  className="mt-0.5 h-4 w-4 border-gray-300 text-teal-600 focus:ring-teal-500"
+                  className="mt-0.5 h-4 w-4 border-warm-300 text-coral focus:ring-coral-hover"
                 />
                 <div className="min-w-0">
                   <p
                     className={`text-sm font-medium ${
-                      joinMode === option.value ? "text-teal-700" : "text-slate-700"
+                      joinMode === option.value ? "text-coral" : "text-warm-700"
                     }`}
                   >
                     {option.label}
                   </p>
-                  <p className="mt-0.5 text-xs text-slate-500">{option.description}</p>
+                  <p className="mt-0.5 text-xs text-warm-500">{option.description}</p>
                 </div>
               </label>
             ))}
@@ -368,12 +368,12 @@ export function ServerSettings({
       {showApplicationForm && (
         <div className="mt-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-900">申请表单</h3>
-            <span className="text-xs text-slate-500">
+            <h3 className="text-sm font-semibold text-warm-800">申请表单</h3>
+            <span className="text-xs text-warm-500">
               {formFields.length}/{MAX_FORM_FIELDS} 个字段
             </span>
           </div>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-warm-500">
             配置玩家提交申请时需要填写的表单字段。
           </p>
 
@@ -382,10 +382,10 @@ export function ServerSettings({
               {formFields.map((field, index) => (
                 <div
                   key={field.key}
-                  className="rounded-xl border border-gray-200 bg-slate-50/50 p-3"
+                  className="rounded-xl border border-warm-200 bg-warm-50/50 p-3"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-medium text-slate-500">
+                    <span className="text-xs font-medium text-warm-500">
                       字段 {index + 1}
                     </span>
                     <button
@@ -393,7 +393,7 @@ export function ServerSettings({
                       onClick={() => {
                         handleRemoveField(field.key);
                       }}
-                      className="text-xs text-rose-500 transition-colors hover:text-rose-700"
+                      className="text-xs text-coral-hover transition-colors hover:text-coral-dark"
                     >
                       移除
                     </button>
@@ -402,7 +402,7 @@ export function ServerSettings({
                   <div className="mt-2 grid gap-3 sm:grid-cols-2">
                     {/* Label */}
                     <div>
-                      <label className="text-xs font-medium text-slate-600">
+                      <label className="text-xs font-medium text-warm-600">
                         字段名称
                       </label>
                       <input
@@ -413,13 +413,13 @@ export function ServerSettings({
                         }}
                         placeholder="例如：游戏 ID"
                         maxLength={100}
-                        className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-teal-400 focus:outline-none focus:ring-1 focus:ring-teal-400"
+                        className="mt-1 w-full rounded-lg border border-warm-200 bg-[#FFFAF6] px-3 py-2 text-sm text-warm-800 placeholder:text-warm-400 focus:border-coral focus:outline-none focus:ring-1 focus:ring-coral"
                       />
                     </div>
 
                     {/* Type */}
                     <div>
-                      <label className="text-xs font-medium text-slate-600">
+                      <label className="text-xs font-medium text-warm-600">
                         字段类型
                       </label>
                       <select
@@ -428,7 +428,7 @@ export function ServerSettings({
                           const newType = e.target.value as ApplicationFormField["type"];
                           handleFieldChange(field.key, { type: newType });
                         }}
-                        className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-teal-400 focus:outline-none focus:ring-1 focus:ring-teal-400"
+                        className="mt-1 w-full rounded-lg border border-warm-200 bg-[#FFFAF6] px-3 py-2 text-sm text-warm-800 focus:border-coral focus:outline-none focus:ring-1 focus:ring-coral"
                       >
                         {FIELD_TYPE_OPTIONS.map((opt) => (
                           <option key={opt.value} value={opt.value}>
@@ -442,7 +442,7 @@ export function ServerSettings({
                   {/* Options for select/multiselect */}
                   {(field.type === "select" || field.type === "multiselect") && (
                     <div className="mt-3">
-                      <label className="text-xs font-medium text-slate-600">
+                      <label className="text-xs font-medium text-warm-600">
                         选项（用逗号分隔）
                       </label>
                       <input
@@ -452,7 +452,7 @@ export function ServerSettings({
                           handleOptionsChange(field.key, e.target.value);
                         }}
                         placeholder="例如：选项一, 选项二, 选项三"
-                        className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-teal-400 focus:outline-none focus:ring-1 focus:ring-teal-400"
+                        className="mt-1 w-full rounded-lg border border-warm-200 bg-[#FFFAF6] px-3 py-2 text-sm text-warm-800 placeholder:text-warm-400 focus:border-coral focus:outline-none focus:ring-1 focus:ring-coral"
                       />
                     </div>
                   )}
@@ -465,9 +465,9 @@ export function ServerSettings({
                       onChange={(e) => {
                         handleFieldChange(field.key, { required: e.target.checked });
                       }}
-                      className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                      className="h-4 w-4 rounded border-warm-300 text-coral focus:ring-coral-hover"
                     />
-                    <span className="text-xs text-slate-600">必填</span>
+                    <span className="text-xs text-warm-600">必填</span>
                   </label>
                 </div>
               ))}
@@ -478,14 +478,14 @@ export function ServerSettings({
             <button
               type="button"
               onClick={handleAddField}
-              className="mt-3 w-full rounded-xl border border-dashed border-gray-300 px-4 py-2.5 text-sm text-slate-500 transition-colors hover:border-teal-400 hover:text-teal-600"
+              className="mt-3 w-full rounded-xl border border-dashed border-warm-300 px-4 py-2.5 text-sm text-warm-500 transition-colors hover:border-coral hover:text-coral"
             >
               + 添加字段
             </button>
           )}
 
           {formFields.length === 0 && (
-            <p className="mt-3 text-xs text-slate-400">
+            <p className="mt-3 text-xs text-warm-400">
               尚未添加任何字段。点击上方按钮添加申请表单字段。
             </p>
           )}
@@ -506,11 +506,11 @@ export function ServerSettings({
         </button>
 
         {saveSuccess && (
-          <span className="text-sm text-emerald-600">设置已保存</span>
+          <span className="text-sm text-forest">设置已保存</span>
         )}
 
         {saveError && (
-          <span className="text-sm text-rose-600">{saveError}</span>
+          <span className="text-sm text-coral-hover">{saveError}</span>
         )}
       </div>
     </section>

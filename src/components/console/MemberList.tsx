@@ -38,13 +38,13 @@ function resolveJoinMethodLabel(joinedVia: "apply" | "invite"): { label: string;
   if (joinedVia === "apply") {
     return {
       label: "申请加入",
-      className: "bg-blue-50 text-blue-700 ring-1 ring-blue-100",
+      className: "bg-coral-light text-coral ring-1 ring-coral/20",
     };
   }
 
   return {
     label: "邀请加入",
-    className: "bg-purple-50 text-purple-700 ring-1 ring-purple-100",
+    className: "bg-[#FDF5ED] text-coral-amber ring-1 ring-coral-amber/20",
   };
 }
 
@@ -56,31 +56,31 @@ function resolveSyncIndicator(status: SyncStatus | null): {
   if (status === "acked") {
     return {
       label: "已同步",
-      dotClassName: "bg-emerald-500",
-      textClassName: "text-emerald-600",
+      dotClassName: "bg-forest",
+      textClassName: "text-forest",
     };
   }
 
   if (status === "pending" || status === "pushed") {
     return {
       label: "同步中",
-      dotClassName: "bg-yellow-500",
-      textClassName: "text-yellow-600",
+      dotClassName: "bg-coral-amber",
+      textClassName: "text-coral-amber",
     };
   }
 
   if (status === "failed") {
     return {
       label: "同步失败",
-      dotClassName: "bg-red-500",
-      textClassName: "text-red-600",
+      dotClassName: "bg-coral-hover",
+      textClassName: "text-coral-hover",
     };
   }
 
   return {
     label: "未同步",
-    dotClassName: "bg-slate-400",
-    textClassName: "text-slate-500",
+    dotClassName: "bg-warm-400",
+    textClassName: "text-warm-500",
   };
 }
 
@@ -203,14 +203,14 @@ export function MemberList({ serverId }: MemberListProps) {
   return (
     <section className="m3-surface p-4 sm:p-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-900">成员管理</h2>
+        <h2 className="text-lg font-semibold text-warm-800">成员管理</h2>
         {total > 0 && (
-          <span className="text-sm text-slate-500">{total} 名成员</span>
+          <span className="text-sm text-warm-500">{total} 名成员</span>
         )}
       </div>
 
       {error && (
-        <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
+        <div className="mt-3 rounded-lg border border-coral-hover/20 bg-coral-light px-3 py-2 text-sm text-coral-hover">
           {error}
         </div>
       )}
@@ -233,7 +233,7 @@ export function MemberList({ serverId }: MemberListProps) {
               return (
                 <div
                   key={member.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warm-200 bg-[#FFFAF6] px-4 py-3"
                 >
                   <div className="flex min-w-0 items-center gap-3">
                     <UserAvatar
@@ -244,11 +244,11 @@ export function MemberList({ serverId }: MemberListProps) {
                     />
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-medium text-slate-800">
+                        <span className="text-sm font-medium text-warm-800">
                           {member.userName ?? "未知用户"}
                         </span>
                         {member.mcUsername && (
-                          <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600">
+                          <span className="rounded bg-warm-100 px-1.5 py-0.5 font-mono text-xs text-warm-600">
                             {member.mcUsername}
                           </span>
                         )}
@@ -267,7 +267,7 @@ export function MemberList({ serverId }: MemberListProps) {
                             {syncIndicator.label}
                           </span>
                         </span>
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-warm-500">
                           {timeAgo(member.createdAt)} 加入
                         </span>
                       </div>
@@ -277,7 +277,7 @@ export function MemberList({ serverId }: MemberListProps) {
                     type="button"
                     onClick={() => void handleRemove(member.id)}
                     disabled={removingId === member.id}
-                    className="m3-btn rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs text-rose-600 transition-colors hover:bg-rose-50"
+                    className="m3-btn rounded-lg border border-coral-hover/20 bg-[#FFFAF6] px-3 py-1.5 text-xs text-coral-hover transition-colors hover:bg-coral-light"
                   >
                     {removingId === member.id ? "移除中..." : "移除"}
                   </button>
@@ -293,18 +293,18 @@ export function MemberList({ serverId }: MemberListProps) {
                 type="button"
                 onClick={() => void fetchMembers(page - 1)}
                 disabled={page <= 1 || isLoading}
-                className="m3-btn rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-40"
+                className="m3-btn rounded-lg border border-warm-200 bg-[#FFFAF6] px-3 py-1.5 text-sm text-warm-700 transition-colors hover:bg-warm-50 disabled:opacity-40"
               >
                 上一页
               </button>
-              <span className="text-sm text-slate-500">
+              <span className="text-sm text-warm-500">
                 {page} / {totalPages}
               </span>
               <button
                 type="button"
                 onClick={() => void fetchMembers(page + 1)}
                 disabled={page >= totalPages || isLoading}
-                className="m3-btn rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-40"
+                className="m3-btn rounded-lg border border-warm-200 bg-[#FFFAF6] px-3 py-1.5 text-sm text-warm-700 transition-colors hover:bg-warm-50 disabled:opacity-40"
               >
                 下一页
               </button>

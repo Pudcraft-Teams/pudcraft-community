@@ -45,19 +45,19 @@ function statusBadge(status: ApplicationStatus) {
   switch (status) {
     case "pending":
       return (
-        <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-amber-200">
+        <span className="inline-flex items-center rounded-full bg-[#FDF5ED] px-2.5 py-0.5 text-xs font-medium text-coral-amber ring-1 ring-coral-amber/20">
           待审核
         </span>
       );
     case "approved":
       return (
-        <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
+        <span className="inline-flex items-center rounded-full bg-forest-light px-2.5 py-0.5 text-xs font-medium text-forest-dark ring-1 ring-forest/20">
           已通过
         </span>
       );
     case "rejected":
       return (
-        <span className="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700 ring-1 ring-rose-200">
+        <span className="inline-flex items-center rounded-full bg-coral-light px-2.5 py-0.5 text-xs font-medium text-coral-hover ring-1 ring-coral-hover/20">
           已拒绝
         </span>
       );
@@ -202,10 +202,10 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
 
   return (
     <section className="m3-surface p-4 sm:p-5">
-      <h2 className="text-lg font-semibold text-slate-900">入服申请管理</h2>
+      <h2 className="text-lg font-semibold text-warm-800">入服申请管理</h2>
 
       {/* Status tabs */}
-      <div className="mt-4 flex gap-1 border-b border-slate-200">
+      <div className="mt-4 flex gap-1 border-b border-warm-200">
         {TABS.map((tab) => (
           <button
             key={tab.key}
@@ -213,13 +213,13 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
             onClick={() => handleTabChange(tab.key)}
             className={`relative px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === tab.key
-                ? "border-b-2 border-teal-600 text-teal-700"
-                : "text-slate-500 hover:text-slate-700"
+                ? "border-b-2 border-coral text-coral"
+                : "text-warm-500 hover:text-warm-700"
             }`}
           >
             {tab.label}
             {tab.key === "pending" && pendingCount > 0 && (
-              <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[11px] font-semibold text-white">
+              <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-coral-amber px-1.5 text-[11px] font-semibold text-white">
                 {pendingCount > 99 ? "99+" : pendingCount}
               </span>
             )}
@@ -229,22 +229,22 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
 
       {/* Error */}
       {error && (
-        <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-600">
+        <div className="mt-4 rounded-lg border border-coral-hover/20 bg-coral-light px-4 py-2 text-sm text-coral-hover">
           {error}
         </div>
       )}
 
       {/* Loading */}
       {isLoading ? (
-        <p className="mt-6 text-center text-sm text-slate-500">加载中...</p>
+        <p className="mt-6 text-center text-sm text-warm-500">加载中...</p>
       ) : applications.length === 0 ? (
-        <p className="mt-6 text-center text-sm text-slate-500">暂无申请</p>
+        <p className="mt-6 text-center text-sm text-warm-500">暂无申请</p>
       ) : (
         <div className="mt-4 space-y-3">
           {applications.map((app) => (
             <div
               key={app.id}
-              className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+              className="rounded-xl border border-warm-200 bg-[#FFFAF6] p-4 shadow-sm"
             >
               {/* Header: user info + status */}
               <div className="flex items-start justify-between gap-3">
@@ -256,13 +256,13 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
                     fallbackClassName="bg-gradient-to-br from-coral to-coral-amber text-white"
                   />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-900">
+                    <p className="text-sm font-medium text-warm-800">
                       {resolveUserName(app)}
                     </p>
                     {app.mcUsername && (
-                      <p className="mt-0.5 text-xs text-slate-500">
+                      <p className="mt-0.5 text-xs text-warm-500">
                         MC 用户名：
-                        <span className="font-mono text-slate-700">{app.mcUsername}</span>
+                        <span className="font-mono text-warm-700">{app.mcUsername}</span>
                       </p>
                     )}
                   </div>
@@ -270,17 +270,17 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
 
                 <div className="flex shrink-0 items-center gap-2">
                   {statusBadge(app.status)}
-                  <span className="text-xs text-slate-400">{timeAgo(app.createdAt)}</span>
+                  <span className="text-xs text-warm-400">{timeAgo(app.createdAt)}</span>
                 </div>
               </div>
 
               {/* Form answers */}
               {app.formData && Object.keys(app.formData).length > 0 && (
-                <div className="mt-3 space-y-1.5 rounded-lg bg-slate-50 p-3">
+                <div className="mt-3 space-y-1.5 rounded-lg bg-warm-50 p-3">
                   {Object.entries(app.formData).map(([key, value]) => (
                     <div key={key} className="flex gap-2 text-sm">
-                      <span className="shrink-0 font-medium text-slate-600">{key}:</span>
-                      <span className="text-slate-700">
+                      <span className="shrink-0 font-medium text-warm-600">{key}:</span>
+                      <span className="text-warm-700">
                         {Array.isArray(value) ? value.join(", ") : value}
                       </span>
                     </div>
@@ -290,11 +290,11 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
 
               {/* Review note (for reviewed applications) */}
               {app.status !== "pending" && app.reviewNote && (
-                <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-3 text-sm">
-                  <span className="font-medium text-slate-600">审核备注：</span>
-                  <span className="text-slate-700">{app.reviewNote}</span>
+                <div className="mt-3 rounded-lg border border-warm-100 bg-warm-50 p-3 text-sm">
+                  <span className="font-medium text-warm-600">审核备注：</span>
+                  <span className="text-warm-700">{app.reviewNote}</span>
                   {app.reviewerName && (
-                    <span className="ml-2 text-xs text-slate-400">
+                    <span className="ml-2 text-xs text-warm-400">
                       — {app.reviewerName}
                     </span>
                   )}
@@ -311,14 +311,14 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
                         onChange={(e) => setRejectNote(e.target.value)}
                         placeholder="填写拒绝原因（可选）"
                         rows={2}
-                        className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                        className="w-full rounded-lg border border-warm-200 bg-[#FFFAF6] px-3 py-2 text-sm text-warm-700 placeholder:text-warm-400 focus:border-coral focus:outline-none focus:ring-1 focus:ring-coral"
                       />
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => void handleReject(app.id)}
                           disabled={actionLoading === app.id}
-                          className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-rose-700 disabled:opacity-50"
+                          className="rounded-lg bg-coral-hover px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-coral-dark disabled:opacity-50"
                         >
                           {actionLoading === app.id ? "处理中..." : "确认拒绝"}
                         </button>
@@ -329,7 +329,7 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
                             setRejectNote("");
                           }}
                           disabled={actionLoading === app.id}
-                          className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+                          className="rounded-lg border border-warm-200 bg-[#FFFAF6] px-3 py-1.5 text-sm font-medium text-warm-600 transition-colors hover:bg-warm-50 disabled:opacity-50"
                         >
                           取消
                         </button>
@@ -341,7 +341,7 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
                         type="button"
                         onClick={() => void handleApprove(app.id)}
                         disabled={actionLoading === app.id}
-                        className="rounded-lg bg-teal-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-teal-700 disabled:opacity-50"
+                        className="rounded-lg bg-coral px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-coral-hover disabled:opacity-50"
                       >
                         {actionLoading === app.id ? "处理中..." : "通过"}
                       </button>
@@ -349,7 +349,7 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
                         type="button"
                         onClick={() => setRejectingId(app.id)}
                         disabled={actionLoading !== null}
-                        className="rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 disabled:opacity-50"
+                        className="rounded-lg border border-coral-hover/20 bg-[#FFFAF6] px-3 py-1.5 text-sm font-medium text-coral-hover transition-colors hover:bg-coral-light disabled:opacity-50"
                       >
                         拒绝
                       </button>

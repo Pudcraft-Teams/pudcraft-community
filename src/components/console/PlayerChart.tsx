@@ -52,11 +52,11 @@ function renderTooltip({ active, label, payload }: TooltipContentProps<number, s
   const labelText = typeof label === "string" || typeof label === "number" ? String(label) : "--";
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-lg">
-      <p className="font-medium text-slate-900">{labelText}</p>
+    <div className="rounded-xl border border-warm-200 bg-[#FFFAF6] px-3 py-2 text-xs text-warm-700 shadow-lg">
+      <p className="font-medium text-warm-800">{labelText}</p>
       <p className="mt-1">在线人数：{playerCount}</p>
       <p>最大容量：{maxPlayers}</p>
-      <p className={isOnline ? "text-emerald-600" : "text-slate-500"}>
+      <p className={isOnline ? "text-forest" : "text-warm-500"}>
         状态：{isOnline ? "在线" : "离线"}
       </p>
     </div>
@@ -85,7 +85,7 @@ export function PlayerChart({
   return (
     <section className="m3-surface p-4 sm:p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-slate-900">在线人数趋势</h2>
+        <h2 className="text-lg font-semibold text-warm-800">在线人数趋势</h2>
         <div className="flex items-center gap-2">
           {PERIOD_OPTIONS.map((option) => (
             <button
@@ -106,11 +106,11 @@ export function PlayerChart({
       </div>
 
       {isLoading ? (
-        <div className="flex h-[300px] items-center justify-center text-sm text-slate-500">
+        <div className="flex h-[300px] items-center justify-center text-sm text-warm-500">
           加载统计中...
         </div>
       ) : noData ? (
-        <div className="flex h-[300px] items-center justify-center text-sm text-slate-500">
+        <div className="flex h-[300px] items-center justify-center text-sm text-warm-500">
           数据收集中，稍后再来查看趋势。
         </div>
       ) : (
@@ -118,19 +118,19 @@ export function PlayerChart({
           <AreaChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="onlineArea" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#0d9488" stopOpacity={0.32} />
-                <stop offset="95%" stopColor="#0d9488" stopOpacity={0.05} />
+                <stop offset="5%" stopColor="#D4715E" stopOpacity={0.32} />
+                <stop offset="95%" stopColor="#D4715E" stopOpacity={0.05} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#E8DDD4" />
             <XAxis
               dataKey="time"
-              tick={{ fontSize: 12, fill: "#64748b" }}
+              tick={{ fontSize: 12, fill: "#8B7355" }}
               tickLine={false}
               axisLine={false}
             />
             <YAxis
-              tick={{ fontSize: 12, fill: "#64748b" }}
+              tick={{ fontSize: 12, fill: "#8B7355" }}
               tickLine={false}
               axisLine={false}
               allowDecimals={false}
@@ -140,7 +140,7 @@ export function PlayerChart({
             <Area
               type="monotone"
               dataKey="onlinePlayerCount"
-              stroke="#0d9488"
+              stroke="#D4715E"
               fill="url(#onlineArea)"
               strokeWidth={2}
               connectNulls={false}
@@ -148,7 +148,7 @@ export function PlayerChart({
             <Area
               type="monotone"
               dataKey="offlinePlayerCount"
-              stroke="#94a3b8"
+              stroke="#B8A99A"
               strokeDasharray="5 4"
               fillOpacity={0}
               strokeWidth={2}

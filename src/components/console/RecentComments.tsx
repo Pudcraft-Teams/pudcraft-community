@@ -38,7 +38,7 @@ function resolveAuthorName(comment: ServerComment): string {
 
 /**
  * 最近评论摘要。
- * 拉取该服务器最新 5 条评论并提供“查看全部评论”入口。
+ * 拉取该服务器最新 5 条评论并提供"查看全部评论"入口。
  */
 export function RecentComments({ serverId }: RecentCommentsProps) {
   const [comments, setComments] = useState<ServerComment[]>([]);
@@ -86,20 +86,20 @@ export function RecentComments({ serverId }: RecentCommentsProps) {
 
   return (
     <section className="m3-surface p-4 sm:p-5">
-      <h2 className="text-lg font-semibold text-slate-900">最近评论</h2>
+      <h2 className="text-lg font-semibold text-warm-800">最近评论</h2>
 
       {isLoading ? (
-        <p className="mt-4 text-sm text-slate-500">评论加载中...</p>
+        <p className="mt-4 text-sm text-warm-500">评论加载中...</p>
       ) : error ? (
-        <p className="mt-4 text-sm text-rose-600">{error}</p>
+        <p className="mt-4 text-sm text-coral-hover">{error}</p>
       ) : comments.length === 0 ? (
-        <p className="mt-4 text-sm text-slate-500">暂无评论，欢迎引导玩家留下第一条反馈。</p>
+        <p className="mt-4 text-sm text-warm-500">暂无评论，欢迎引导玩家留下第一条反馈。</p>
       ) : (
         <div className="mt-4 space-y-3">
           {comments.map((comment) => (
             <div
               key={comment.id}
-              className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3 last:border-none last:pb-0"
+              className="flex items-start justify-between gap-3 border-b border-warm-100 pb-3 last:border-none last:pb-0"
             >
               <div className="flex min-w-0 items-start gap-2">
                 <UserAvatar
@@ -109,11 +109,11 @@ export function RecentComments({ serverId }: RecentCommentsProps) {
                   fallbackClassName="bg-gradient-to-br from-coral to-coral-amber text-white"
                 />
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-slate-800">{resolveAuthorName(comment)}</p>
-                  <p className="line-clamp-1 text-sm text-slate-600">{comment.content}</p>
+                  <p className="text-sm font-medium text-warm-800">{resolveAuthorName(comment)}</p>
+                  <p className="line-clamp-1 text-sm text-warm-600">{comment.content}</p>
                 </div>
               </div>
-              <span className="shrink-0 text-xs text-slate-500">{timeAgo(comment.createdAt)}</span>
+              <span className="shrink-0 text-xs text-warm-500">{timeAgo(comment.createdAt)}</span>
             </div>
           ))}
         </div>

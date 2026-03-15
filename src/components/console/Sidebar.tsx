@@ -54,7 +54,7 @@ export function Sidebar({ servers }: SidebarProps) {
   return (
     <>
       <div className="m3-surface mb-4 p-3 md:hidden">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">我的服务器</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-warm-500">我的服务器</p>
         {hasServers ? (
           <div className="mt-2 flex items-center gap-2">
             <select
@@ -80,7 +80,7 @@ export function Sidebar({ servers }: SidebarProps) {
           </div>
         ) : (
           <div className="mt-2 flex items-center justify-between gap-2">
-            <p className="text-sm text-slate-500">你还没有服务器，去提交一个</p>
+            <p className="text-sm text-warm-500">你还没有服务器，去提交一个</p>
             <Link href="/submit" className="m3-btn m3-btn-primary px-3 py-2 text-xs">
               去提交
             </Link>
@@ -90,7 +90,7 @@ export function Sidebar({ servers }: SidebarProps) {
 
       <aside className="hidden w-64 shrink-0 md:block">
         <div className="m3-surface sticky top-20 flex max-h-[calc(100vh-8rem)] flex-col p-3">
-          <h2 className="mb-3 px-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <h2 className="mb-3 px-2 text-xs font-semibold uppercase tracking-wider text-warm-500">
             我的服务器
           </h2>
 
@@ -106,21 +106,21 @@ export function Sidebar({ servers }: SidebarProps) {
                     href={`/console/${server.id}`}
                     className={`block rounded-xl border px-3 py-2 transition-colors ${
                       isActive
-                        ? "border-teal-200 bg-teal-50"
-                        : "border-transparent hover:border-slate-200 hover:bg-slate-50"
+                        ? "border-coral/30 bg-coral-light"
+                        : "border-transparent hover:border-warm-200 hover:bg-warm-50"
                     }`}
                   >
-                    <p className="flex items-center gap-2 text-sm font-medium text-slate-800">
+                    <p className="flex items-center gap-2 text-sm font-medium text-warm-800">
                       <span
                         className={`h-2 w-2 rounded-full ${
-                          server.isOnline ? "bg-emerald-500" : "bg-slate-400"
+                          server.isOnline ? "bg-forest" : "bg-warm-400"
                         }`}
                       />
                       <span className="truncate">{server.name}</span>
-                      {server.isVerified && <span className="text-xs text-teal-700">✓</span>}
+                      {server.isVerified && <span className="text-xs text-coral">✓</span>}
                     </p>
-                    <p className="mt-1 truncate text-xs text-slate-500">{address}</p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 truncate text-xs text-warm-500">{address}</p>
+                    <p className="mt-1 text-xs text-warm-500">
                       在线 {server.playerCount}/{server.maxPlayers}
                     </p>
                   </Link>
@@ -128,7 +128,7 @@ export function Sidebar({ servers }: SidebarProps) {
               })}
             </div>
           ) : (
-            <div className="min-h-0 flex-1 rounded-xl border border-dashed border-slate-200 p-3 text-sm text-slate-500">
+            <div className="min-h-0 flex-1 rounded-xl border border-dashed border-warm-200 p-3 text-sm text-warm-500">
               你还没有服务器，去提交一个。
             </div>
           )}

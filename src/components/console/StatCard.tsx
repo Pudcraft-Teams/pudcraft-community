@@ -10,14 +10,14 @@ function resolveTrendStyle(trend: StatCardProps["trend"]): {
   className: string;
 } {
   if (trend === "up") {
-    return { icon: "↑", className: "text-emerald-600" };
+    return { icon: "↑", className: "text-forest" };
   }
 
   if (trend === "down") {
-    return { icon: "↓", className: "text-rose-600" };
+    return { icon: "↓", className: "text-coral-hover" };
   }
 
-  return { icon: "→", className: "text-slate-500" };
+  return { icon: "→", className: "text-warm-500" };
 }
 
 /**
@@ -29,8 +29,8 @@ export function StatCard({ label, value, subtext, trend = "neutral" }: StatCardP
 
   return (
     <div className="m3-surface p-4">
-      <p className="text-sm font-medium text-slate-500">{label}</p>
-      <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900">{value}</p>
+      <p className="text-sm font-medium text-warm-500">{label}</p>
+      <p className="mt-2 text-3xl font-bold tracking-tight text-warm-800">{value}</p>
       {(subtext || trend !== "neutral") && (
         <p className={`mt-2 flex items-center gap-1 text-xs ${trendStyle.className}`}>
           <span>{trendStyle.icon}</span>
