@@ -81,6 +81,27 @@
     color: var(--m3-primary-hover);
   }
 
+  .nav-link {
+    @apply relative rounded-lg px-3 py-1.5 text-sm font-medium transition-colors;
+    color: #9C8577;
+  }
+
+  .nav-link:hover {
+    color: #8B4533;
+    background-color: rgba(212, 113, 94, 0.06);
+  }
+
+  .nav-link::after {
+    @apply absolute bottom-0 left-1/2 h-0.5 w-0 rounded-full transition-all;
+    content: "";
+    background-color: #D4715E;
+    transform: translateX(-50%);
+  }
+
+  .nav-link:hover::after {
+    @apply w-4;
+  }
+
   .m3-input {
     @apply rounded-xl border px-3 py-2.5 text-sm outline-none transition-all;
     background-color: var(--m3-surface);

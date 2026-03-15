@@ -264,33 +264,42 @@ export function HomePageClient({
 
   return (
     <div>
-      <section className="bg-gradient-to-b from-warm-100 to-transparent -mx-4 px-4 pt-6 pb-8 mb-8 rounded-b-2xl">
-        <h1 className="text-3xl font-bold tracking-tight text-warm-800">发现服务器</h1>
-        <p className="mt-2 text-sm text-warm-600">
-          浏览国内优质 Minecraft 私人服务器，找到适合你的社区
+      {/* Hero */}
+      <section className="-mx-4 -mt-8 mb-10 bg-gradient-to-b from-[#FBEEE6] via-[#FDF6F0] to-transparent px-4 pb-2 pt-10 sm:-mx-6 sm:px-6">
+        <h1
+          className="text-[clamp(1.75rem,5vw,2.5rem)] font-extrabold leading-tight tracking-tight text-[#8B4533]"
+        >
+          发现你的下一个
+          <br />
+          <span className="bg-gradient-to-r from-[#D4715E] to-[#D4956A] bg-clip-text text-transparent">Minecraft 社区</span>
+        </h1>
+        <p className="mt-3 max-w-md text-[15px] leading-relaxed text-[#9C8577]">
+          浏览国内优质私人服务器，找到志同道合的玩家
         </p>
+
+        {/* 搜索 + 筛选 */}
+        <div className="mt-6 max-w-xl">
+          <SearchBar onSearch={handleSearch} initialValue={query.search} />
+        </div>
+
+        <div className="scrollbar-hide mt-4 flex gap-1.5 overflow-x-auto whitespace-nowrap pb-2">
+          {TAG_FILTERS.map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => {
+                updateQuery({ tag: tag === "全部" ? "" : tag }, { resetPage: true });
+              }}
+              className={`m3-chip ${tag === activeTag ? "m3-chip-active" : ""}`}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
       </section>
 
-      <div className="mb-4">
-        <SearchBar onSearch={handleSearch} initialValue={query.search} />
-      </div>
-
-      <div className="scrollbar-hide mb-6 flex gap-2 overflow-x-auto whitespace-nowrap pb-2">
-        {TAG_FILTERS.map((tag) => (
-          <button
-            key={tag}
-            type="button"
-            onClick={() => {
-              updateQuery({ tag: tag === "全部" ? "" : tag }, { resetPage: true });
-            }}
-            className={`m3-chip ${tag === activeTag ? "m3-chip-active" : ""}`}
-          >
-            {tag}
-          </button>
-        ))}
-      </div>
-
-      <div className="mb-6">
+      {/* 排序 + 结果 */}
+      <div className="mb-5 flex items-center justify-between">
         <SortButtons
           value={sort}
           onChange={(nextSort) => {
@@ -309,7 +318,7 @@ export function HomePageClient({
             <ServerCard
               key={server.id}
               server={server}
-              style={{ animationDelay: `${index * 50}ms` }}
+              style={{ animationDelay: `${index * 60}ms` }}
               initialFavorited={favoriteServerIds.includes(server.id)}
               onFavoriteChange={(serverId, favorited) => {
                 setFavoriteServerIds((previous) => {
