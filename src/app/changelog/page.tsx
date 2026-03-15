@@ -38,8 +38,8 @@ export default async function ChangelogPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="mb-2 text-2xl font-bold tracking-tight text-slate-900">更新日志</h1>
-      <p className="mb-8 text-sm text-slate-500">了解 PudCraft Community 的最新变化</p>
+      <h1 className="mb-2 text-2xl font-bold tracking-tight text-warm-800">更新日志</h1>
+      <p className="mb-8 text-sm text-warm-500">了解 PudCraft Community 的最新变化</p>
       <ChangelogList initialData={data} initialTotal={total} />
     </div>
   );

@@ -155,19 +155,19 @@ export default function ProfileSettingsPage() {
   }
 
   if (status === "unauthenticated") {
-    return <div className="py-12 text-center text-sm text-slate-500">正在跳转到登录页...</div>;
+    return <div className="py-12 text-center text-sm text-warm-500">正在跳转到登录页...</div>;
   }
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4">
       <div className="m3-surface p-6">
-        <h1 className="text-2xl font-semibold text-slate-900">个人资料设置</h1>
-        <p className="mt-2 text-sm text-slate-600">设置头像、昵称和一句话简介。</p>
+        <h1 className="text-2xl font-semibold text-warm-800">个人资料设置</h1>
+        <p className="mt-2 text-sm text-warm-600">设置头像、昵称和一句话简介。</p>
 
         <form className="mt-6 space-y-5" onSubmit={handleSaveProfile} noValidate>
           <fieldset disabled={isSaving} className="space-y-5 disabled:opacity-90">
             <div>
-              <p className="text-sm text-slate-700">头像</p>
+              <p className="text-sm text-warm-700">头像</p>
               <div className="mt-2">
                 <ImageUpload
                   key={`profile-avatar-upload-${avatarUploadResetKey}`}
@@ -190,7 +190,7 @@ export default function ProfileSettingsPage() {
               </div>
             </div>
 
-            <label className="block text-sm text-slate-700">
+            <label className="block text-sm text-warm-700">
               昵称
               <input
                 type="text"
@@ -202,17 +202,17 @@ export default function ProfileSettingsPage() {
               />
             </label>
 
-            <label className="block text-sm text-slate-700">
+            <label className="block text-sm text-warm-700">
               邮箱（不可修改）
               <input
                 type="text"
                 value={email}
                 readOnly
-                className="m3-input mt-2 w-full cursor-not-allowed bg-slate-100 text-slate-500"
+                className="m3-input mt-2 w-full cursor-not-allowed bg-warm-100 text-warm-500"
               />
             </label>
 
-            <label className="block text-sm text-slate-700">
+            <label className="block text-sm text-warm-700">
               个人简介
               <textarea
                 value={bio}
@@ -222,7 +222,7 @@ export default function ProfileSettingsPage() {
                 className="m3-input mt-2 min-h-[120px] w-full"
                 placeholder="一句话介绍自己..."
               />
-              <p className="mt-1 text-right text-xs text-slate-500">{bio.length}/200</p>
+              <p className="mt-1 text-right text-xs text-warm-500">{bio.length}/200</p>
             </label>
 
             <div className="flex justify-end">

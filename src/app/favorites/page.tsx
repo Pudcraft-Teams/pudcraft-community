@@ -77,14 +77,14 @@ export default function FavoritesPage() {
   }
 
   if (status === "unauthenticated") {
-    return <div className="py-12 text-center text-sm text-slate-500">正在跳转到登录页...</div>;
+    return <div className="py-12 text-center text-sm text-warm-500">正在跳转到登录页...</div>;
   }
 
   return (
     <div>
       <section className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">我的收藏</h1>
-        <p className="mt-2 text-sm text-slate-600">你标记的服务器会展示在这里</p>
+        <h1 className="text-3xl font-bold tracking-tight text-warm-800">我的收藏</h1>
+        <p className="mt-2 text-sm text-warm-600">你标记的服务器会展示在这里</p>
       </section>
 
       {isLoading ? (

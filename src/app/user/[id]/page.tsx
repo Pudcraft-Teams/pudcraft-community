@@ -139,14 +139,14 @@ export default async function UserProfilePage({ params }: PageProps) {
               className="h-20 w-20"
             />
             <div>
-              <h1 className="text-2xl font-semibold text-slate-900">{displayName}</h1>
+              <h1 className="text-2xl font-semibold text-warm-800">{displayName}</h1>
               <div className="mt-1">
                 <CopyIdBadge label="UID" value={String(user.uid)} />
               </div>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-warm-600">
                 {user.bio?.trim() || "这个用户还没有填写个人简介。"}
               </p>
-              <p className="mt-2 text-xs text-slate-500">注册于 {formatJoinTime(user.createdAt)}</p>
+              <p className="mt-2 text-xs text-warm-500">注册于 {formatJoinTime(user.createdAt)}</p>
             </div>
           </div>
 
@@ -159,7 +159,7 @@ export default async function UserProfilePage({ params }: PageProps) {
       </section>
 
       <section className="mt-8">
-        <h2 className="text-xl font-semibold text-slate-900">提交的服务器</h2>
+        <h2 className="text-xl font-semibold text-warm-800">提交的服务器</h2>
         {servers.length === 0 ? (
           <div className="mt-4">
             <EmptyState title="暂无服务器" description="该用户还没有提交服务器" />

@@ -109,18 +109,18 @@ export default function SubmitServerPage() {
   }
 
   if (status === "unauthenticated") {
-    return <div className="py-12 text-center text-sm text-slate-500">正在跳转到登录页...</div>;
+    return <div className="py-12 text-center text-sm text-warm-500">正在跳转到登录页...</div>;
   }
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4">
       <div className="m3-surface p-6">
-        <h1 className="text-2xl font-semibold text-slate-900">提交服务器</h1>
-        <p className="mt-2 text-sm text-slate-600">
+        <h1 className="text-2xl font-semibold text-warm-800">提交服务器</h1>
+        <p className="mt-2 text-sm text-warm-600">
           提交你自己的 Minecraft 服务器信息，提交后将由管理员审核
         </p>
         {duplicateServer && (
-          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="mt-4 rounded-xl border border-coral-amber/30 bg-coral-amber/10 px-4 py-3 text-sm text-coral-amber">
             <p>
               该服务器地址已被收录为「{duplicateServer.name}」。
               {duplicateServer.hint}

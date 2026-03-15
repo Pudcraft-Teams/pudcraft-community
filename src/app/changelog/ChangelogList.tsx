@@ -7,11 +7,11 @@ import type { ChangelogItem, ChangelogType, PaginationInfo } from "@/lib/types";
 const TYPE_LABELS: Record<ChangelogType, { label: string; className: string }> = {
   feature: {
     label: "新功能",
-    className: "bg-teal-50 text-teal-700 ring-teal-200",
+    className: "bg-coral-light text-coral-dark ring-coral/20",
   },
   fix: {
     label: "修复",
-    className: "bg-rose-50 text-rose-700 ring-rose-200",
+    className: "bg-coral-hover/10 text-coral-hover ring-coral-hover/20",
   },
   improvement: {
     label: "优化",
@@ -19,7 +19,7 @@ const TYPE_LABELS: Record<ChangelogType, { label: string; className: string }> =
   },
   other: {
     label: "其他",
-    className: "bg-slate-50 text-slate-600 ring-slate-200",
+    className: "bg-warm-50 text-warm-600 ring-warm-200",
   },
 };
 
@@ -59,7 +59,7 @@ export function ChangelogList({ initialData, initialTotal }: ChangelogListProps)
 
   if (items.length === 0) {
     return (
-      <div className="py-16 text-center text-sm text-slate-500">暂无更新日志</div>
+      <div className="py-16 text-center text-sm text-warm-500">暂无更新日志</div>
     );
   }
 
@@ -71,23 +71,23 @@ export function ChangelogList({ initialData, initialTotal }: ChangelogListProps)
           <div key={item.id} className="relative flex gap-4 pb-8">
             {/* 时间线 */}
             <div className="flex flex-col items-center">
-              <div className="mt-1.5 h-3 w-3 shrink-0 rounded-full bg-teal-500 ring-4 ring-white" />
+              <div className="mt-1.5 h-3 w-3 shrink-0 rounded-full bg-coral ring-4 ring-[#FFFAF6]" />
               {index < items.length - 1 && (
-                <div className="w-px flex-1 bg-slate-200" />
+                <div className="w-px flex-1 bg-warm-200" />
               )}
             </div>
 
             {/* 内容 */}
             <div className="min-w-0 flex-1 pb-2">
               <div className="mb-2 flex flex-wrap items-center gap-2">
-                <span className="text-xs text-slate-500">{formatDate(item.publishedAt)}</span>
+                <span className="text-xs text-warm-500">{formatDate(item.publishedAt)}</span>
                 <span
                   className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ring-1 ${typeInfo.className}`}
                 >
                   {typeInfo.label}
                 </span>
               </div>
-              <h2 className="mb-2 text-lg font-semibold text-slate-900">{item.title}</h2>
+              <h2 className="mb-2 text-lg font-semibold text-warm-800">{item.title}</h2>
               <div className="m3-surface p-4">
                 <MarkdownRenderer content={item.content} />
               </div>

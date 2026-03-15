@@ -19,15 +19,15 @@ const PAGE_SIZE = 20;
 function getTypeIcon(type: NotificationType): { icon: string; className: string } {
   switch (type) {
     case "comment_reply":
-      return { icon: "💬", className: "text-teal-600" };
+      return { icon: "💬", className: "text-coral" };
     case "server_online":
-      return { icon: "🟢", className: "text-emerald-600" };
+      return { icon: "🟢", className: "text-forest" };
     case "server_approved":
-      return { icon: "✓", className: "text-emerald-600" };
+      return { icon: "✓", className: "text-forest" };
     case "server_rejected":
-      return { icon: "✗", className: "text-rose-600" };
+      return { icon: "✗", className: "text-coral-hover" };
     default:
-      return { icon: "•", className: "text-slate-500" };
+      return { icon: "•", className: "text-warm-500" };
   }
 }
 
@@ -173,15 +173,15 @@ export default function NotificationsPage() {
   }
 
   if (status === "unauthenticated") {
-    return <div className="py-12 text-center text-sm text-slate-500">正在跳转到登录页...</div>;
+    return <div className="py-12 text-center text-sm text-warm-500">正在跳转到登录页...</div>;
   }
 
   return (
     <div className="mx-auto max-w-3xl">
       <section className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">通知中心</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="text-3xl font-bold tracking-tight text-warm-800">通知中心</h1>
+          <p className="mt-1 text-sm text-warm-600">
             共 {total} 条通知，未读 {unreadCount} 条
           </p>
         </div>
@@ -217,22 +217,22 @@ export default function NotificationsPage() {
                   onClick={() => {
                     void handleOpenNotification(notification);
                   }}
-                  className="flex w-full items-start gap-3 border-b border-slate-100 px-4 py-4 text-left transition-colors last:border-b-0 hover:bg-slate-50"
+                  className="flex w-full items-start gap-3 border-b border-warm-100 px-4 py-4 text-left transition-colors last:border-b-0 hover:bg-warm-50"
                 >
                   <span className={`mt-0.5 text-base ${meta.className}`}>{meta.icon}</span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2">
-                      <span className="line-clamp-1 text-sm font-semibold text-slate-900">
+                      <span className="line-clamp-1 text-sm font-semibold text-warm-800">
                         {notification.title}
                       </span>
                       {!notification.readAt && (
                         <span className="inline-block h-2 w-2 rounded-full bg-sky-500" />
                       )}
                     </span>
-                    <span className="mt-1 line-clamp-2 block text-sm text-slate-600">
+                    <span className="mt-1 line-clamp-2 block text-sm text-warm-600">
                       {notification.message}
                     </span>
-                    <span className="mt-1 block text-xs text-slate-400">
+                    <span className="mt-1 block text-xs text-warm-400">
                       {timeAgo(notification.createdAt)}
                     </span>
                   </span>
