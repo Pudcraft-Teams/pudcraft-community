@@ -4,32 +4,27 @@
 
 @layer base {
   :root {
-    --m3-bg: #f3f6f8;
-    --m3-surface: #ffffff;
-    --m3-surface-variant: #f8fbfc;
-    --m3-outline: #d6e0e5;
-    --m3-outline-strong: #c5d3da;
-    --m3-text: #1f2937;
-    --m3-text-muted: #64748b;
-    --m3-primary: #0d9488;
-    --m3-primary-hover: #14b8a6;
-    --m3-primary-active: #0f766e;
+    --m3-bg: #FDF6F0;
+    --m3-surface: #FFFAF6;
+    --m3-surface-variant: #FBEEE6;
+    --m3-outline: #E8DDD4;
+    --m3-outline-strong: #D6C8BC;
+    --m3-text: #4A3728;
+    --m3-text-muted: #9C8577;
+    --m3-primary: #D4715E;
+    --m3-primary-hover: #C4604D;
+    --m3-primary-active: #B8533F;
     --m3-on-primary: #ffffff;
-    --m3-link: #0d9488;
-    --m3-accent-soft: #e2f4f7;
+    --m3-link: #D4715E;
+    --m3-accent-soft: #FBEEE6;
+    --m3-accent-dark: #8B4533;
   }
 
   body {
     background-color: var(--m3-bg);
     color: var(--m3-text);
     font-family:
-      var(--font-inter),
-      -apple-system,
-      BlinkMacSystemFont,
-      "Segoe UI",
-      Roboto,
-      "Helvetica Neue",
-      Arial,
+      var(--font-nunito),
       "PingFang SC",
       "Hiragino Sans GB",
       "Microsoft YaHei",
@@ -41,30 +36,34 @@
     height: auto;
   }
 
-  /* 自定义滚动条（Webkit 浏览器） */
   ::-webkit-scrollbar {
     @apply w-2;
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-slate-100;
+    background: #FBEEE6;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply rounded-full bg-slate-300 hover:bg-slate-400;
+    @apply rounded-full;
+    background: #D6C8BC;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #C4B5A8;
   }
 }
 
 @layer components {
   .m3-surface {
-    @apply rounded-xl border;
+    @apply rounded-2xl border;
     background-color: var(--m3-surface);
     border-color: var(--m3-outline);
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    box-shadow: 0 2px 8px rgba(139, 69, 51, 0.06);
   }
 
   .m3-surface-soft {
-    @apply rounded-xl border;
+    @apply rounded-2xl border;
     background-color: var(--m3-surface-variant);
     border-color: var(--m3-outline);
   }
@@ -79,23 +78,23 @@
   }
 
   .m3-link:hover {
-    color: #0f766e;
+    color: var(--m3-primary-hover);
   }
 
   .m3-input {
     @apply rounded-xl border px-3 py-2.5 text-sm outline-none transition-all;
-    background-color: var(--m3-surface-variant);
+    background-color: var(--m3-surface);
     border-color: var(--m3-outline);
     color: var(--m3-text);
   }
 
   .m3-input::placeholder {
-    color: #94a3b8;
+    color: var(--m3-text-muted);
   }
 
   .m3-input:focus {
-    border-color: var(--m3-outline-strong);
-    box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.18);
+    border-color: var(--m3-primary);
+    box-shadow: 0 0 0 3px rgba(212, 113, 94, 0.18);
   }
 
   .m3-btn {
@@ -110,70 +109,76 @@
 
   .m3-btn-primary:hover {
     background-color: var(--m3-primary-hover);
+    border-color: var(--m3-primary-hover);
   }
 
   .m3-btn-primary:active {
     background-color: var(--m3-primary-active);
+    border-color: var(--m3-primary-active);
+    transform: scale(0.97);
   }
 
   .m3-btn-tonal {
-    background-color: var(--m3-surface-variant);
+    background-color: var(--m3-surface);
     border: 1px solid var(--m3-outline);
-    color: #334155;
+    color: var(--m3-text);
   }
 
   .m3-btn-tonal:hover {
     border-color: var(--m3-outline-strong);
-    background-color: #f1f5f9;
+    background-color: var(--m3-surface-variant);
   }
 
   .m3-btn-danger {
     @apply text-white;
-    background-color: #ef4444;
-    border: 1px solid #ef4444;
+    background-color: #C4604D;
+    border: 1px solid #C4604D;
   }
 
   .m3-btn-danger:hover {
-    background-color: #dc2626;
-    border-color: #dc2626;
+    background-color: #B8533F;
+    border-color: #B8533F;
+  }
+
+  .m3-btn-danger:active {
+    transform: scale(0.97);
   }
 
   .m3-chip {
     @apply rounded-full border px-3 py-1 text-xs font-medium transition-colors;
     border-color: var(--m3-outline);
-    background-color: #f3f4f6;
-    color: #4b5563;
+    background-color: var(--m3-surface-variant);
+    color: var(--m3-accent-dark);
   }
 
   .m3-chip:hover {
     border-color: var(--m3-outline-strong);
-    color: #374151;
-    background-color: #e5e7eb;
+    background-color: var(--m3-outline);
   }
 
   .m3-chip-active {
-    border-color: #99d9d1;
-    background-color: var(--m3-accent-soft);
-    color: #0f766e;
+    border-color: #D4715E;
+    background-color: #D4715E;
+    color: #ffffff;
   }
 
   .m3-alert-error {
     @apply rounded-xl border px-3 py-2 text-sm;
-    border-color: rgb(248 113 113 / 0.35);
-    background-color: rgb(254 242 242);
-    color: #dc2626;
+    border-color: rgba(196, 96, 77, 0.3);
+    background-color: #FDF0ED;
+    color: #8B4533;
   }
 
   .m3-alert-success {
     @apply rounded-xl border px-3 py-2 text-sm;
-    border-color: #99d9d1;
-    background-color: var(--m3-accent-soft);
-    color: #0f766e;
+    border-color: rgba(91, 154, 110, 0.3);
+    background-color: #EEF6EF;
+    color: #2D5A3A;
   }
 
   .hljs {
-    color: #1f2937;
-    background: #f8fafc;
+    color: #4A3728;
+    background: #FFFAF6;
   }
 
   .hljs-keyword,
@@ -181,25 +186,25 @@
   .hljs-literal,
   .hljs-title,
   .hljs-section {
-    color: #dc2626;
+    color: #C4604D;
   }
 
   .hljs-string,
   .hljs-attr,
   .hljs-template-variable {
-    color: #0f766e;
+    color: #5B9A6E;
   }
 
   .hljs-number,
   .hljs-meta,
   .hljs-symbol,
   .hljs-built_in {
-    color: #0369a1;
+    color: #D4956A;
   }
 
   .hljs-comment,
   .hljs-quote {
-    color: #64748b;
+    color: #9C8577;
     font-style: italic;
   }
 }
@@ -217,16 +222,37 @@
   .animate-toast-in {
     animation: toast-in 220ms ease-out;
   }
+
+  .animate-card-in {
+    animation: card-in 400ms ease-out both;
+  }
 }
 
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateX(20px);
   }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
 
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-toast-in,
+  .animate-card-in {
+    animation: none !important;
   }
 }
