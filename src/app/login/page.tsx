@@ -106,12 +106,12 @@ export default function LoginPage() {
   return (
     <div className="mx-auto w-full max-w-md px-4">
       <div className="m3-surface p-6">
-        <h1 className="text-2xl font-semibold text-slate-900">登录 PudCraft</h1>
-        <p className="mt-2 text-sm text-slate-600">使用邮箱和密码登录你的账号</p>
+        <h1 className="text-2xl font-semibold text-warm-800">登录 PudCraft</h1>
+        <p className="mt-2 text-sm text-warm-600">使用邮箱和密码登录你的账号</p>
 
         <form className="mt-5 space-y-4" onSubmit={handleLogin} noValidate>
           <fieldset disabled={isSubmitting} className="space-y-4 disabled:opacity-90">
-            <label className="block text-sm text-slate-700">
+            <label className="block text-sm text-warm-700">
               邮箱
               <input
                 type="email"
@@ -122,11 +122,11 @@ export default function LoginPage() {
                 autoComplete="email"
               />
               {fieldErrors.email && (
-                <p className="mt-1 text-xs text-red-400">{fieldErrors.email}</p>
+                <p className="mt-1 text-xs text-coral-hover">{fieldErrors.email}</p>
               )}
             </label>
 
-            <label className="block text-sm text-slate-700">
+            <label className="block text-sm text-warm-700">
               密码
               <div className="relative mt-2">
                 <input
@@ -139,13 +139,13 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs text-warm-500 hover:bg-warm-100 hover:text-warm-700"
                 >
                   {showPassword ? "隐藏" : "显示"}
                 </button>
               </div>
               {fieldErrors.password && (
-                <p className="mt-1 text-xs text-red-400">{fieldErrors.password}</p>
+                <p className="mt-1 text-xs text-coral-hover">{fieldErrors.password}</p>
               )}
             </label>
           </fieldset>
@@ -165,7 +165,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-slate-600">
+        <p className="mt-6 text-center text-sm text-warm-600">
           没有账号？
           <Link href="/register" className="m3-link ml-1">
             去注册

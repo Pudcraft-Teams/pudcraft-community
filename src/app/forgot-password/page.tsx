@@ -209,10 +209,10 @@ export default function ForgotPasswordPage() {
   return (
     <div className="mx-auto w-full max-w-md px-4">
       <div className="m3-surface p-6">
-        <h1 className="text-2xl font-semibold text-slate-900">
+        <h1 className="text-2xl font-semibold text-warm-800">
           {step === 1 ? "找回密码" : "重置密码"}
         </h1>
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-2 text-sm text-warm-600">
           {step === 1
             ? "请输入你的注册邮箱，我们会发送验证码帮你重置密码。"
             : `验证码已发送到 ${email}`}
@@ -221,7 +221,7 @@ export default function ForgotPasswordPage() {
         {step === 1 ? (
           <form className="mt-5 space-y-4" onSubmit={handleSendCode} noValidate>
             <fieldset disabled={isSendingCode} className="space-y-4 disabled:opacity-90">
-              <label className="block text-sm text-slate-700">
+              <label className="block text-sm text-warm-700">
                 邮箱
                 <input
                   type="email"
@@ -232,7 +232,7 @@ export default function ForgotPasswordPage() {
                   autoComplete="email"
                 />
                 {fieldErrors.email && (
-                  <p className="mt-1 text-xs text-red-400">{fieldErrors.email}</p>
+                  <p className="mt-1 text-xs text-coral-hover">{fieldErrors.email}</p>
                 )}
               </label>
 
@@ -251,7 +251,7 @@ export default function ForgotPasswordPage() {
               disabled={isResetting || isSendingCode}
               className="space-y-4 disabled:opacity-90"
             >
-              <label className="block text-sm text-slate-700">
+              <label className="block text-sm text-warm-700">
                 验证码
                 <input
                   type="text"
@@ -264,11 +264,11 @@ export default function ForgotPasswordPage() {
                   autoComplete="one-time-code"
                 />
                 {fieldErrors.code && (
-                  <p className="mt-1 text-xs text-red-400">{fieldErrors.code}</p>
+                  <p className="mt-1 text-xs text-coral-hover">{fieldErrors.code}</p>
                 )}
               </label>
 
-              <label className="block text-sm text-slate-700">
+              <label className="block text-sm text-warm-700">
                 新密码
                 <div className="relative mt-2">
                   <input
@@ -282,17 +282,17 @@ export default function ForgotPasswordPage() {
                   <button
                     type="button"
                     onClick={() => setShowNewPassword((prev) => !prev)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs text-warm-500 hover:bg-warm-100 hover:text-warm-700"
                   >
                     {showNewPassword ? "隐藏" : "显示"}
                   </button>
                 </div>
                 {fieldErrors.newPassword && (
-                  <p className="mt-1 text-xs text-red-400">{fieldErrors.newPassword}</p>
+                  <p className="mt-1 text-xs text-coral-hover">{fieldErrors.newPassword}</p>
                 )}
               </label>
 
-              <label className="block text-sm text-slate-700">
+              <label className="block text-sm text-warm-700">
                 确认密码
                 <div className="relative mt-2">
                   <input
@@ -306,13 +306,13 @@ export default function ForgotPasswordPage() {
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword((prev) => !prev)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs text-warm-500 hover:bg-warm-100 hover:text-warm-700"
                   >
                     {showConfirmPassword ? "隐藏" : "显示"}
                   </button>
                 </div>
                 {fieldErrors.confirmPassword && (
-                  <p className="mt-1 text-xs text-red-400">{fieldErrors.confirmPassword}</p>
+                  <p className="mt-1 text-xs text-coral-hover">{fieldErrors.confirmPassword}</p>
                 )}
               </label>
 
@@ -341,7 +341,7 @@ export default function ForgotPasswordPage() {
           </form>
         )}
 
-        <p className="mt-6 text-center text-sm text-slate-600">
+        <p className="mt-6 text-center text-sm text-warm-600">
           想起密码了？
           <Link href="/login" className="m3-link ml-1">
             去登录
