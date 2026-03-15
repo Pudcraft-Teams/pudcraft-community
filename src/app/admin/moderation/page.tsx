@@ -106,28 +106,28 @@ export default function AdminModerationPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold tracking-tight text-slate-900">内容审查</h1>
+      <h1 className="mb-6 text-2xl font-bold tracking-tight text-warm-700">内容审查</h1>
 
       {/* 统计卡片 */}
       {stats && (
         <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div className="m3-surface p-4">
-            <p className="text-sm text-slate-500">近 7 天审查</p>
-            <p className="mt-1 text-3xl font-bold text-blue-600">{stats.total}</p>
+            <p className="text-sm text-warm-500">近 7 天审查</p>
+            <p className="mt-1 text-3xl font-bold text-coral">{stats.total}</p>
           </div>
           <div className="m3-surface p-4">
-            <p className="text-sm text-slate-500">已拦截</p>
-            <p className="mt-1 text-3xl font-bold text-rose-600">{stats.failed}</p>
+            <p className="text-sm text-warm-500">已拦截</p>
+            <p className="mt-1 text-3xl font-bold text-coral-hover">{stats.failed}</p>
           </div>
           <div className="m3-surface p-4">
-            <p className="text-sm text-slate-500">拦截率</p>
-            <p className="mt-1 text-3xl font-bold text-amber-600">
+            <p className="text-sm text-warm-500">拦截率</p>
+            <p className="mt-1 text-3xl font-bold text-coral-amber">
               {stats.total > 0 ? `${Math.round((stats.failed / stats.total) * 100)}%` : "—"}
             </p>
           </div>
           <div className="m3-surface p-4">
-            <p className="text-sm text-slate-500">待处理</p>
-            <p className="mt-1 text-3xl font-bold text-orange-600">{stats.unreviewed}</p>
+            <p className="text-sm text-warm-500">待处理</p>
+            <p className="mt-1 text-3xl font-bold text-warm-800">{stats.unreviewed}</p>
           </div>
         </div>
       )}
@@ -161,8 +161,8 @@ export default function AdminModerationPage() {
             }}
             className={`rounded-md px-2.5 py-1 text-xs transition-colors ${
               type === tab.key
-                ? "bg-teal-100 font-medium text-teal-800"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                ? "bg-coral-light font-medium text-coral-dark"
+                : "bg-warm-100 text-warm-600 hover:bg-warm-200"
             }`}
           >
             {tab.label}
@@ -173,14 +173,14 @@ export default function AdminModerationPage() {
       {isLoading ? (
         <PageLoading />
       ) : logs.length === 0 ? (
-        <div className="py-12 text-center text-sm text-slate-500">暂无审查记录</div>
+        <div className="py-12 text-center text-sm text-warm-500">暂无审查记录</div>
       ) : (
         <>
           {/* 日志表格 */}
           <div className="m3-surface overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-xs text-slate-500">
+                <tr className="border-b border-warm-200 text-xs text-warm-500">
                   <th className="px-4 py-3 font-medium">时间</th>
                   <th className="px-4 py-3 font-medium">类型</th>
                   <th className="px-4 py-3 font-medium">内容预览</th>
@@ -195,39 +195,39 @@ export default function AdminModerationPage() {
                 {logs.map((log) => (
                   <tr
                     key={log.id}
-                    className={`border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50 ${
-                      !log.passed && !log.reviewed ? "bg-rose-50/50" : ""
+                    className={`border-b border-warm-100 transition-colors last:border-0 hover:bg-warm-50 ${
+                      !log.passed && !log.reviewed ? "bg-coral-light/50" : ""
                     }`}
                   >
-                    <td className="whitespace-nowrap px-4 py-3 text-xs text-slate-500">
+                    <td className="whitespace-nowrap px-4 py-3 text-xs text-warm-500">
                       {timeAgo(log.createdAt)}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="inline-block rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+                      <span className="inline-block rounded-md bg-warm-100 px-2 py-0.5 text-xs font-medium text-warm-700">
                         {CONTENT_TYPE_LABELS[log.contentType] ?? log.contentType}
                       </span>
                     </td>
-                    <td className="max-w-48 truncate px-4 py-3 text-xs text-slate-700">
+                    <td className="max-w-48 truncate px-4 py-3 text-xs text-warm-700">
                       {log.contentSnippet}
                     </td>
                     <td className="px-4 py-3">
                       {log.passed ? (
-                        <span className="inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
+                        <span className="inline-block rounded-full bg-forest-light px-2 py-0.5 text-xs font-medium text-forest-dark ring-1 ring-forest-light">
                           通过
                         </span>
                       ) : (
-                        <span className="inline-block rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 ring-1 ring-rose-200">
+                        <span className="inline-block rounded-full bg-coral-light px-2 py-0.5 text-xs font-medium text-coral-hover ring-1 ring-coral-hover/20">
                           拦截
                         </span>
                       )}
                     </td>
-                    <td className="hidden px-4 py-3 text-xs text-slate-600 md:table-cell">
+                    <td className="hidden px-4 py-3 text-xs text-warm-600 md:table-cell">
                       {log.aiCategory ?? "—"}
                     </td>
-                    <td className="hidden max-w-32 truncate px-4 py-3 text-xs text-slate-600 lg:table-cell">
+                    <td className="hidden max-w-32 truncate px-4 py-3 text-xs text-warm-600 lg:table-cell">
                       {log.aiReason ?? "—"}
                     </td>
-                    <td className="hidden px-4 py-3 text-xs text-slate-600 sm:table-cell">
+                    <td className="hidden px-4 py-3 text-xs text-warm-600 sm:table-cell">
                       {log.userName ?? log.userIp ?? "匿名"}
                     </td>
                     <td className="px-4 py-3">
@@ -236,12 +236,12 @@ export default function AdminModerationPage() {
                           type="button"
                           disabled={actionLoading === log.id}
                           onClick={() => markReviewed(log.id)}
-                          className="rounded bg-teal-50 px-2 py-1 text-xs font-medium text-teal-700 transition-colors hover:bg-teal-100 disabled:opacity-50"
+                          className="rounded bg-coral-light px-2 py-1 text-xs font-medium text-coral transition-colors hover:bg-coral-light/80 disabled:opacity-50"
                         >
                           标记已阅
                         </button>
                       ) : log.reviewed ? (
-                        <span className="text-xs text-slate-400">已处理</span>
+                        <span className="text-xs text-warm-400">已处理</span>
                       ) : null}
                     </td>
                   </tr>
@@ -252,7 +252,7 @@ export default function AdminModerationPage() {
 
           {/* 分页 */}
           {pagination && pagination.totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
+            <div className="mt-4 flex items-center justify-between text-sm text-warm-500">
               <span>
                 共 {pagination.total} 条，第 {pagination.page}/{pagination.totalPages} 页
               </span>

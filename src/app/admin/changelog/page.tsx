@@ -21,10 +21,10 @@ const TYPE_OPTIONS: { value: ChangelogType; label: string }[] = [
 ];
 
 const TYPE_LABELS: Record<ChangelogType, { label: string; className: string }> = {
-  feature: { label: "新功能", className: "bg-teal-50 text-teal-700 ring-teal-200" },
-  fix: { label: "修复", className: "bg-rose-50 text-rose-700 ring-rose-200" },
-  improvement: { label: "优化", className: "bg-sky-50 text-sky-700 ring-sky-200" },
-  other: { label: "其他", className: "bg-slate-50 text-slate-600 ring-slate-200" },
+  feature: { label: "新功能", className: "bg-coral-light text-coral-dark ring-coral/20" },
+  fix: { label: "修复", className: "bg-coral-light text-coral-hover ring-coral-hover/20" },
+  improvement: { label: "优化", className: "bg-forest-light text-forest-dark ring-forest/20" },
+  other: { label: "其他", className: "bg-warm-50 text-warm-600 ring-warm-200" },
 };
 
 function timeAgo(dateStr: string): string {
@@ -219,7 +219,7 @@ export default function AdminChangelogPage() {
     return (
       <div>
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-2xl font-bold tracking-tight text-warm-700">
             {editor.mode === "create" ? "新建更新日志" : "编辑更新日志"}
           </h1>
           <button
@@ -233,7 +233,7 @@ export default function AdminChangelogPage() {
 
         <div className="space-y-4">
           <div>
-            <label htmlFor="changelog-title" className="mb-1 block text-sm font-medium text-slate-700">
+            <label htmlFor="changelog-title" className="mb-1 block text-sm font-medium text-warm-700">
               标题
             </label>
             <input
@@ -249,7 +249,7 @@ export default function AdminChangelogPage() {
 
           <div className="flex flex-wrap gap-4">
             <div>
-              <label htmlFor="changelog-type" className="mb-1 block text-sm font-medium text-slate-700">
+              <label htmlFor="changelog-type" className="mb-1 block text-sm font-medium text-warm-700">
                 类型
               </label>
               <select
@@ -268,14 +268,14 @@ export default function AdminChangelogPage() {
               </select>
             </div>
             <div className="flex items-end">
-              <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-warm-700">
                 <input
                   type="checkbox"
                   checked={editor.published}
                   onChange={(e) =>
                     setEditor((prev) => ({ ...prev, published: e.target.checked }))
                   }
-                  className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                  className="h-4 w-4 rounded border-warm-300 text-coral focus:ring-coral"
                 />
                 立即发布
               </label>
@@ -317,7 +317,7 @@ export default function AdminChangelogPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">更新日志管理</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-warm-700">更新日志管理</h1>
         <button
           type="button"
           onClick={openCreate}
@@ -347,13 +347,13 @@ export default function AdminChangelogPage() {
       {isLoading ? (
         <PageLoading />
       ) : items.length === 0 ? (
-        <div className="py-12 text-center text-sm text-slate-500">暂无数据</div>
+        <div className="py-12 text-center text-sm text-warm-500">暂无数据</div>
       ) : (
         <>
           <div className="m3-surface overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-xs text-slate-500">
+                <tr className="border-b border-warm-200 text-xs text-warm-500">
                   <th className="px-4 py-3 font-medium">标题</th>
                   <th className="hidden px-4 py-3 font-medium sm:table-cell">类型</th>
                   <th className="px-4 py-3 font-medium">状态</th>
@@ -368,13 +368,13 @@ export default function AdminChangelogPage() {
                   return (
                     <tr
                       key={item.id}
-                      className="border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50"
+                      className="border-b border-warm-100 transition-colors last:border-0 hover:bg-warm-50"
                     >
                       <td className="px-4 py-3">
                         <button
                           type="button"
                           onClick={() => openEdit(item)}
-                          className="max-w-48 truncate font-medium text-slate-900 underline decoration-slate-300 underline-offset-2 transition-colors hover:text-teal-700 hover:decoration-teal-400"
+                          className="max-w-48 truncate font-medium text-warm-700 underline decoration-warm-300 underline-offset-2 transition-colors hover:text-coral hover:decoration-coral"
                           title="点击编辑"
                         >
                           {item.title}
@@ -389,19 +389,19 @@ export default function AdminChangelogPage() {
                       </td>
                       <td className="px-4 py-3">
                         {item.published ? (
-                          <span className="inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
+                          <span className="inline-block rounded-full bg-forest-light px-2 py-0.5 text-xs font-medium text-forest-dark ring-1 ring-forest-light">
                             已发布
                           </span>
                         ) : (
-                          <span className="inline-block rounded-full bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
+                          <span className="inline-block rounded-full bg-warm-50 px-2 py-0.5 text-xs font-medium text-warm-600 ring-1 ring-warm-200">
                             草稿
                           </span>
                         )}
                       </td>
-                      <td className="hidden px-4 py-3 text-xs text-slate-600 md:table-cell">
+                      <td className="hidden px-4 py-3 text-xs text-warm-600 md:table-cell">
                         {item.authorName || "—"}
                       </td>
-                      <td className="hidden px-4 py-3 text-xs text-slate-500 lg:table-cell">
+                      <td className="hidden px-4 py-3 text-xs text-warm-500 lg:table-cell">
                         {timeAgo(item.createdAt)}
                       </td>
                       <td className="px-4 py-3">
@@ -409,7 +409,7 @@ export default function AdminChangelogPage() {
                           <button
                             type="button"
                             onClick={() => openEdit(item)}
-                            className="rounded bg-slate-50 px-2 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100"
+                            className="rounded bg-warm-50 px-2 py-1 text-xs font-medium text-warm-700 transition-colors hover:bg-warm-100"
                           >
                             编辑
                           </button>
@@ -419,8 +419,8 @@ export default function AdminChangelogPage() {
                             onClick={() => handleTogglePublished(item)}
                             className={`rounded px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
                               item.published
-                                ? "bg-amber-50 text-amber-700 hover:bg-amber-100"
-                                : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                ? "bg-coral-amber/10 text-coral-amber hover:bg-coral-amber/20"
+                                : "bg-forest-light text-forest-dark hover:bg-forest-light/80"
                             }`}
                           >
                             {item.published ? "取消发布" : "发布"}
@@ -429,7 +429,7 @@ export default function AdminChangelogPage() {
                             type="button"
                             disabled={actionLoading === item.id}
                             onClick={() => handleDelete(item)}
-                            className="rounded bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700 transition-colors hover:bg-rose-100 disabled:opacity-50"
+                            className="rounded bg-coral-light px-2 py-1 text-xs font-medium text-coral-hover transition-colors hover:bg-coral-light/80 disabled:opacity-50"
                           >
                             删除
                           </button>
@@ -444,7 +444,7 @@ export default function AdminChangelogPage() {
 
           {/* 分页 */}
           {pagination && pagination.totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
+            <div className="mt-4 flex items-center justify-between text-sm text-warm-500">
               <span>
                 共 {pagination.total} 条，第 {pagination.page}/{pagination.totalPages} 页
               </span>

@@ -124,7 +124,7 @@ export default function AdminUsersPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold tracking-tight text-slate-900">用户管理</h1>
+      <h1 className="mb-6 text-2xl font-bold tracking-tight text-warm-700">用户管理</h1>
 
       {/* 状态筛选 */}
       <div className="mb-4 flex flex-wrap gap-2">
@@ -160,14 +160,14 @@ export default function AdminUsersPage() {
       {isLoading ? (
         <PageLoading />
       ) : users.length === 0 ? (
-        <div className="py-12 text-center text-sm text-slate-500">暂无数据</div>
+        <div className="py-12 text-center text-sm text-warm-500">暂无数据</div>
       ) : (
         <>
           {/* 用户表格 */}
           <div className="m3-surface overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-xs text-slate-500">
+                <tr className="border-b border-warm-200 text-xs text-warm-500">
                   <th className="px-4 py-3 font-medium">用户</th>
                   <th className="hidden px-4 py-3 font-medium sm:table-cell">邮箱</th>
                   <th className="hidden px-4 py-3 font-medium md:table-cell">服务器</th>
@@ -181,7 +181,7 @@ export default function AdminUsersPage() {
                 {users.map((user) => (
                   <tr
                     key={user.id}
-                    className="border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50"
+                    className="border-b border-warm-100 transition-colors last:border-0 hover:bg-warm-50"
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -192,33 +192,33 @@ export default function AdminUsersPage() {
                           className="h-7 w-7"
                           fallbackClassName="bg-gradient-to-br from-coral to-coral-amber text-white"
                         />
-                        <span className="max-w-24 truncate font-medium text-slate-900">
+                        <span className="max-w-24 truncate font-medium text-warm-700">
                           {user.name || "未设置"}
                         </span>
                       </div>
                     </td>
-                    <td className="hidden px-4 py-3 text-xs text-slate-500 sm:table-cell">
+                    <td className="hidden px-4 py-3 text-xs text-warm-500 sm:table-cell">
                       {user.email}
                     </td>
-                    <td className="hidden px-4 py-3 text-xs text-slate-600 md:table-cell">
+                    <td className="hidden px-4 py-3 text-xs text-warm-600 md:table-cell">
                       {user.serverCount}
                     </td>
-                    <td className="hidden px-4 py-3 text-xs text-slate-600 md:table-cell">
+                    <td className="hidden px-4 py-3 text-xs text-warm-600 md:table-cell">
                       {user.commentCount}
                     </td>
-                    <td className="hidden px-4 py-3 text-xs text-slate-500 lg:table-cell">
+                    <td className="hidden px-4 py-3 text-xs text-warm-500 lg:table-cell">
                       {timeAgo(user.createdAt)}
                     </td>
                     <td className="px-4 py-3">
                       {user.isBanned ? (
                         <span
-                          className="inline-block rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 ring-1 ring-rose-200"
+                          className="inline-block rounded-full bg-coral-light px-2 py-0.5 text-xs font-medium text-coral-hover ring-1 ring-coral-hover/20"
                           title={user.banReason ?? undefined}
                         >
                           已封禁
                         </span>
                       ) : (
-                        <span className="inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
+                        <span className="inline-block rounded-full bg-forest-light px-2 py-0.5 text-xs font-medium text-forest-dark ring-1 ring-forest-light">
                           正常
                         </span>
                       )}
@@ -230,7 +230,7 @@ export default function AdminUsersPage() {
                             type="button"
                             disabled={actionLoading === user.id}
                             onClick={() => handleUnban(user.id)}
-                            className="rounded bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-50"
+                            className="rounded bg-forest-light px-2 py-1 text-xs font-medium text-forest-dark transition-colors hover:bg-forest-light/80 disabled:opacity-50"
                           >
                             解封
                           </button>
@@ -242,14 +242,14 @@ export default function AdminUsersPage() {
                               setBanningId(user.id);
                               setBanReason("");
                             }}
-                            className="rounded bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700 transition-colors hover:bg-rose-100 disabled:opacity-50"
+                            className="rounded bg-coral-light px-2 py-1 text-xs font-medium text-coral-hover transition-colors hover:bg-coral-light/80 disabled:opacity-50"
                           >
                             封禁
                           </button>
                         ) : null}
                         <Link
                           href={`/user/${user.uid}`}
-                          className="rounded bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100"
+                          className="rounded bg-warm-50 px-2 py-1 text-xs font-medium text-warm-600 transition-colors hover:bg-warm-100"
                         >
                           查看
                         </Link>
@@ -271,14 +271,14 @@ export default function AdminUsersPage() {
                               type="button"
                               disabled={actionLoading === user.id}
                               onClick={() => handleBan(user.id)}
-                              className="rounded bg-rose-600 px-2 py-1 text-xs text-white hover:bg-rose-700 disabled:opacity-50"
+                              className="rounded bg-coral-hover px-2 py-1 text-xs text-white hover:bg-coral-hover/80 disabled:opacity-50"
                             >
                               确认封禁
                             </button>
                             <button
                               type="button"
                               onClick={() => setBanningId(null)}
-                              className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-600 hover:bg-slate-200"
+                              className="rounded bg-warm-100 px-2 py-1 text-xs text-warm-600 hover:bg-warm-200"
                             >
                               取消
                             </button>
@@ -294,7 +294,7 @@ export default function AdminUsersPage() {
 
           {/* 分页 */}
           {pagination && pagination.totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
+            <div className="mt-4 flex items-center justify-between text-sm text-warm-500">
               <span>
                 共 {pagination.total} 条，第 {pagination.page}/{pagination.totalPages} 页
               </span>

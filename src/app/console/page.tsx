@@ -27,8 +27,8 @@ export default async function ConsoleRootPage() {
 
   return (
     <div className="m3-surface p-8 text-center">
-      <h1 className="text-2xl font-semibold text-slate-900">欢迎使用服主控制台</h1>
-      <p className="mx-auto mt-3 max-w-xl text-sm text-slate-600">
+      <h1 className="text-2xl font-semibold text-warm-700">欢迎使用服主控制台</h1>
+      <p className="mx-auto mt-3 max-w-xl text-sm text-warm-600">
         你目前还没有可管理的服务器。先提交一个服务器，审核通过后即可在控制台查看趋势数据和管理操作。
       </p>
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">

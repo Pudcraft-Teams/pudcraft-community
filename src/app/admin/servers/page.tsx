@@ -17,19 +17,19 @@ function statusBadge(status: string) {
   switch (status) {
     case "pending":
       return (
-        <span className="inline-block rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-amber-200">
+        <span className="inline-block rounded-full bg-coral-amber/10 px-2 py-0.5 text-xs font-medium text-coral-amber ring-1 ring-coral-amber/20">
           待审核
         </span>
       );
     case "approved":
       return (
-        <span className="inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
+        <span className="inline-block rounded-full bg-forest-light px-2 py-0.5 text-xs font-medium text-forest-dark ring-1 ring-forest-light">
           已通过
         </span>
       );
     case "rejected":
       return (
-        <span className="inline-block rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 ring-1 ring-rose-200">
+        <span className="inline-block rounded-full bg-coral-light px-2 py-0.5 text-xs font-medium text-coral-hover ring-1 ring-coral-hover/20">
           已拒绝
         </span>
       );
@@ -171,7 +171,7 @@ export default function AdminServersPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold tracking-tight text-slate-900">服务器管理</h1>
+      <h1 className="mb-6 text-2xl font-bold tracking-tight text-warm-700">服务器管理</h1>
 
       {/* 状态筛选 */}
       <div className="mb-4 flex flex-wrap gap-2">
@@ -207,14 +207,14 @@ export default function AdminServersPage() {
       {isLoading ? (
         <PageLoading />
       ) : servers.length === 0 ? (
-        <div className="py-12 text-center text-sm text-slate-500">暂无数据</div>
+        <div className="py-12 text-center text-sm text-warm-500">暂无数据</div>
       ) : (
         <>
           {/* 服务器表格 */}
           <div className="m3-surface overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-xs text-slate-500">
+                <tr className="border-b border-warm-200 text-xs text-warm-500">
                   <th className="px-4 py-3 font-medium">名称</th>
                   <th className="px-4 py-3 font-medium">地址</th>
                   <th className="hidden px-4 py-3 font-medium md:table-cell">提交者</th>
@@ -228,7 +228,7 @@ export default function AdminServersPage() {
                 {servers.map((server) => (
                   <Fragment key={server.id}>
                   <tr
-                    className="border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50"
+                    className="border-b border-warm-100 transition-colors last:border-0 hover:bg-warm-50"
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -244,19 +244,19 @@ export default function AdminServersPage() {
                           onClick={() =>
                             setExpandedId(expandedId === server.id ? null : server.id)
                           }
-                          className="max-w-32 truncate font-medium text-slate-900 underline decoration-slate-300 underline-offset-2 transition-colors hover:text-teal-700 hover:decoration-teal-400"
+                          className="max-w-32 truncate font-medium text-warm-700 underline decoration-warm-300 underline-offset-2 transition-colors hover:text-coral hover:decoration-coral"
                           title="点击展开/收起详情"
                         >
                           {server.name}
                         </button>
                       </div>
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-slate-500">
+                    <td className="px-4 py-3 font-mono text-xs text-warm-500">
                       {server.host}
                       {server.port !== 25565 ? `:${server.port}` : ""}
                     </td>
                     <td className="hidden px-4 py-3 md:table-cell">
-                      <span className="text-xs text-slate-600">
+                      <span className="text-xs text-warm-600">
                         {server.ownerName || server.ownerEmail || "—"}
                       </span>
                     </td>
@@ -264,7 +264,7 @@ export default function AdminServersPage() {
                       {statusBadge(server.status)}
                       {server.status === "rejected" && server.rejectReason && (
                         <p
-                          className="mt-1 max-w-52 truncate text-xs text-rose-600"
+                          className="mt-1 max-w-52 truncate text-xs text-coral-hover"
                           title={server.rejectReason}
                         >
                           原因：{server.rejectReason}
@@ -274,13 +274,13 @@ export default function AdminServersPage() {
                     <td className="hidden px-4 py-3 sm:table-cell">
                       <span
                         className={`text-xs ${
-                          server.isVerified ? "font-medium text-teal-700" : "text-slate-400"
+                          server.isVerified ? "font-medium text-coral" : "text-warm-400"
                         }`}
                       >
                         {server.isVerified ? "已认领" : "未认领"}
                       </span>
                     </td>
-                    <td className="hidden px-4 py-3 text-xs text-slate-500 lg:table-cell">
+                    <td className="hidden px-4 py-3 text-xs text-warm-500 lg:table-cell">
                       {timeAgo(server.createdAt)}
                     </td>
                     <td className="px-4 py-3">
@@ -290,7 +290,7 @@ export default function AdminServersPage() {
                             type="button"
                             disabled={actionLoading === server.id}
                             onClick={() => handleApprove(server.id)}
-                            className="rounded bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-50"
+                            className="rounded bg-forest-light px-2 py-1 text-xs font-medium text-forest-dark transition-colors hover:bg-forest-light/80 disabled:opacity-50"
                           >
                             通过
                           </button>
@@ -303,7 +303,7 @@ export default function AdminServersPage() {
                               setRejectingId(server.id);
                               setRejectReason("");
                             }}
-                            className="rounded bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-50"
+                            className="rounded bg-coral-amber/10 px-2 py-1 text-xs font-medium text-coral-amber transition-colors hover:bg-coral-amber/20 disabled:opacity-50"
                           >
                             拒绝
                           </button>
@@ -312,7 +312,7 @@ export default function AdminServersPage() {
                           type="button"
                           disabled={actionLoading === server.id}
                           onClick={() => handleDelete(server.id, server.name)}
-                          className="rounded bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700 transition-colors hover:bg-rose-100 disabled:opacity-50"
+                          className="rounded bg-coral-light px-2 py-1 text-xs font-medium text-coral-hover transition-colors hover:bg-coral-light/80 disabled:opacity-50"
                         >
                           删除
                         </button>
@@ -334,14 +334,14 @@ export default function AdminServersPage() {
                               type="button"
                               disabled={actionLoading === server.id}
                               onClick={() => handleReject(server.id)}
-                              className="rounded bg-amber-600 px-2 py-1 text-xs text-white hover:bg-amber-700 disabled:opacity-50"
+                              className="rounded bg-coral-amber px-2 py-1 text-xs text-white hover:bg-coral-amber/80 disabled:opacity-50"
                             >
                               确认拒绝
                             </button>
                             <button
                               type="button"
                               onClick={() => setRejectingId(null)}
-                              className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-600 hover:bg-slate-200"
+                              className="rounded bg-warm-100 px-2 py-1 text-xs text-warm-600 hover:bg-warm-200"
                             >
                               取消
                             </button>
@@ -353,23 +353,23 @@ export default function AdminServersPage() {
 
                   {/* 展开详情行 */}
                   {expandedId === server.id && (
-                    <tr className="bg-slate-50">
+                    <tr className="bg-warm-50">
                       <td colSpan={7} className="px-4 py-3">
                         <div className="space-y-2 text-sm">
                           <div>
-                            <span className="font-medium text-slate-700">简介：</span>
-                            <span className="text-slate-600">
+                            <span className="font-medium text-warm-700">简介：</span>
+                            <span className="text-warm-600">
                               {server.description || "（未填写）"}
                             </span>
                           </div>
                           <div>
-                            <span className="font-medium text-slate-700">详介：</span>
+                            <span className="font-medium text-warm-700">详介：</span>
                             {server.content ? (
-                              <pre className="mt-1 max-h-60 overflow-auto whitespace-pre-wrap rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-600">
+                              <pre className="mt-1 max-h-60 overflow-auto whitespace-pre-wrap rounded-lg border border-warm-200 bg-[#FFFAF6] p-3 text-xs text-warm-600">
                                 {server.content}
                               </pre>
                             ) : (
-                              <span className="text-slate-600">（未填写）</span>
+                              <span className="text-warm-600">（未填写）</span>
                             )}
                           </div>
                         </div>
@@ -384,7 +384,7 @@ export default function AdminServersPage() {
 
           {/* 分页 */}
           {pagination && pagination.totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
+            <div className="mt-4 flex items-center justify-between text-sm text-warm-500">
               <span>
                 共 {pagination.total} 条，第 {pagination.page}/{pagination.totalPages} 页
               </span>

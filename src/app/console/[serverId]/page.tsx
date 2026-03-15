@@ -282,7 +282,7 @@ export default function ConsoleServerPage() {
   }
 
   if (status === "unauthenticated") {
-    return <p className="py-10 text-center text-sm text-slate-500">正在跳转到登录页...</p>;
+    return <p className="py-10 text-center text-sm text-warm-500">正在跳转到登录页...</p>;
   }
 
   if (error && !server) {
@@ -305,21 +305,21 @@ export default function ConsoleServerPage() {
       <section className="m3-surface p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">{server.name}</h1>
-            <p className="mt-1 font-mono text-sm text-slate-500">{serverAddress}</p>
+            <h1 className="text-2xl font-bold tracking-tight text-warm-700">{server.name}</h1>
+            <p className="mt-1 font-mono text-sm text-warm-500">{serverAddress}</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <span
               className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-medium ${
                 server.status.online
-                  ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"
-                  : "bg-slate-100 text-slate-500 ring-1 ring-slate-200"
+                  ? "bg-forest-light text-forest-dark ring-1 ring-forest-light"
+                  : "bg-warm-100 text-warm-500 ring-1 ring-warm-200"
               }`}
             >
               <span
                 className={`h-1.5 w-1.5 rounded-full ${
-                  server.status.online ? "bg-emerald-500" : "bg-slate-400"
+                  server.status.online ? "bg-forest" : "bg-warm-400"
                 }`}
               />
               {server.status.online ? "在线" : "离线"}
@@ -327,8 +327,8 @@ export default function ConsoleServerPage() {
             <span
               className={`inline-flex items-center rounded-full px-2.5 py-1 font-medium ${
                 server.isVerified
-                  ? "bg-teal-50 text-teal-700 ring-1 ring-teal-100"
-                  : "bg-amber-50 text-amber-700 ring-1 ring-amber-100"
+                  ? "bg-coral-light text-coral-dark ring-1 ring-coral-light"
+                  : "bg-coral-amber/10 text-coral-amber ring-1 ring-coral-amber/20"
               }`}
             >
               {server.isVerified ? "✓ 已认领" : "未认领"}
@@ -336,10 +336,10 @@ export default function ConsoleServerPage() {
             <span
               className={`inline-flex items-center rounded-full px-2.5 py-1 font-medium ${
                 reviewStatus === "approved"
-                  ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"
+                  ? "bg-forest-light text-forest-dark ring-1 ring-forest-light"
                   : reviewStatus === "pending"
-                    ? "bg-amber-50 text-amber-700 ring-1 ring-amber-100"
-                    : "bg-rose-50 text-rose-700 ring-1 ring-rose-100"
+                    ? "bg-coral-amber/10 text-coral-amber ring-1 ring-coral-amber/20"
+                    : "bg-coral-light text-coral-hover ring-1 ring-coral-light"
               }`}
             >
               {reviewStatus === "approved"
@@ -353,13 +353,13 @@ export default function ConsoleServerPage() {
       </section>
 
       {reviewStatus === "pending" && (
-        <section className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+        <section className="rounded-xl border border-coral-amber/20 bg-coral-amber/10 px-4 py-3 text-sm text-coral-amber">
           当前服务器正在审核中，暂时不会出现在公开列表。
         </section>
       )}
 
       {reviewStatus === "rejected" && (
-        <section className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <section className="rounded-xl border border-coral-hover/20 bg-coral-light px-4 py-3 text-sm text-coral-hover">
           <p className="font-medium">审核未通过</p>
           <p className="mt-1 text-xs">
             原因：{server.rejectReason?.trim() || "管理员未填写具体原因，请修改后重新提交。"}
