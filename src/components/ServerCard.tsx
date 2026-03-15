@@ -88,7 +88,7 @@ export function ServerCard({
             {!isStale && (
               <span
                 className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#FFFAF6] ${
-                  isOnline ? "bg-[#5B9A6E]" : "bg-[#C4B5A8]"
+                  isOnline ? "bg-[#5B9A6E]" : "bg-[#9C8577]"
                 }`}
               />
             )}
@@ -112,9 +112,9 @@ export function ServerCard({
             </div>
             {/* 地址 */}
             {isAddressHidden ? (
-              <p className="mt-0.5 text-xs text-[#C4B5A8] italic">地址隐藏</p>
+              <p className="mt-0.5 text-xs text-[#9C8577] italic">地址隐藏</p>
             ) : (
-              <p className="mt-0.5 break-all font-mono text-xs text-[#9C8577]">
+              <p className="mt-0.5 break-all font-mono text-xs text-[#7A6B5F]">
                 {host}
                 {port !== 25565 ? `:${port}` : ""}
               </p>
@@ -124,7 +124,7 @@ export function ServerCard({
 
         {/* 2. 描述 */}
         {description && (
-          <p className="mb-4 line-clamp-2 text-[13px] leading-relaxed text-[#6B5344]">{description}</p>
+          <p className="mb-4 line-clamp-2 text-[13px] leading-relaxed text-[#4A3728]">{description}</p>
         )}
 
         {/* 3. 底部信息栏 */}
@@ -158,7 +158,7 @@ export function ServerCard({
             </span>
           )}
           {(isStale || !isOnline) && (
-            <span className="shrink-0 text-xs text-[#C4B5A8]">{statusText}</span>
+            <span className="shrink-0 text-xs text-[#9C8577]">{statusText}</span>
           )}
         </div>
       </div>

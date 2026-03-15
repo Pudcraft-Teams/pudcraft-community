@@ -10,7 +10,7 @@
     --m3-outline: #E8DDD4;
     --m3-outline-strong: #D6C8BC;
     --m3-text: #4A3728;
-    --m3-text-muted: #9C8577;
+    --m3-text-muted: #7A6B5F;
     --m3-primary: #D4715E;
     --m3-primary-hover: #C4604D;
     --m3-primary-active: #B8533F;
@@ -88,7 +88,7 @@
 
   .nav-link:hover {
     color: #8B4533;
-    background-color: rgba(212, 113, 94, 0.06);
+    background-color: rgba(212, 113, 94, 0.1);
   }
 
   .nav-link::after {
@@ -166,10 +166,10 @@
   }
 
   .m3-chip {
-    @apply rounded-full border px-3 py-1 text-xs font-medium transition-colors;
+    @apply rounded-full border px-3 py-1 text-xs font-semibold transition-colors;
     border-color: var(--m3-outline);
     background-color: var(--m3-surface-variant);
-    color: var(--m3-accent-dark);
+    color: #4A3728;
   }
 
   .m3-chip:hover {
@@ -178,8 +178,8 @@
   }
 
   .m3-chip-active {
-    border-color: #D4715E;
-    background-color: #D4715E;
+    border-color: #B8533F;
+    background-color: #B8533F;
     color: #ffffff;
   }
 

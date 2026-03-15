@@ -218,7 +218,7 @@ export function MobileNavMenu() {
         <div className="fixed inset-0 z-[100] md:hidden">
           <button
             type="button"
-            className="absolute inset-0 bg-warm-900/30"
+            className="absolute inset-0 bg-warm-900/50 backdrop-blur-sm"
             onClick={() => setOpen(false)}
             aria-label="关闭菜单"
           />

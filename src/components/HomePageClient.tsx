@@ -267,13 +267,13 @@ export function HomePageClient({
       {/* Hero */}
       <section className="-mx-[calc((100vw-100%)/2+1rem)] -mt-8 mb-10 bg-gradient-to-b from-[#FBEEE6] via-[#FDF6F0] to-transparent px-[calc((100vw-100%)/2+1rem)] pb-2 pt-10 sm:-mx-[calc((100vw-100%)/2+1.5rem)] sm:px-[calc((100vw-100%)/2+1.5rem)]">
         <h1
-          className="text-[clamp(1.75rem,5vw,2.5rem)] font-extrabold leading-tight tracking-tight text-[#8B4533]"
+          className="text-[clamp(1.75rem,5vw,2.5rem)] font-extrabold leading-tight tracking-tight text-[#4A3728]"
         >
           发现你的下一个
           <br />
           <span className="bg-gradient-to-r from-[#D4715E] to-[#D4956A] bg-clip-text text-transparent">Minecraft 社区</span>
         </h1>
-        <p className="mt-3 max-w-md text-[15px] leading-relaxed text-[#9C8577]">
+        <p className="mt-3 max-w-md text-[15px] leading-relaxed text-[#6B5344]">
           浏览国内优质私人服务器，找到志同道合的玩家
         </p>
 

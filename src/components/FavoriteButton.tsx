@@ -132,7 +132,7 @@ export function FavoriteButton({
   };
 
   const baseSizeClass = size === "sm" ? "h-7 w-7 text-sm" : "h-8 w-8 text-base";
-  const colorClass = favorited ? "text-coral" : "text-warm-400";
+  const colorClass = favorited ? "text-coral" : "text-warm-500";
 
   return (
     <button
