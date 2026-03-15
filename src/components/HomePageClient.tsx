@@ -264,9 +264,9 @@ export function HomePageClient({
 
   return (
     <div>
-      <section className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">发现服务器</h1>
-        <p className="mt-2 text-sm text-slate-600">
+      <section className="bg-gradient-to-b from-warm-100 to-transparent -mx-4 px-4 pt-6 pb-8 mb-8 rounded-b-2xl">
+        <h1 className="text-3xl font-bold tracking-tight text-warm-800">发现服务器</h1>
+        <p className="mt-2 text-sm text-warm-600">
           浏览国内优质 Minecraft 私人服务器，找到适合你的社区
         </p>
       </section>
@@ -304,11 +304,12 @@ export function HomePageClient({
       ) : servers.length === 0 ? (
         <EmptyState title="暂无服务器" description="试试其他筛选条件或搜索关键词" />
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {servers.map((server) => (
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {servers.map((server, index) => (
             <ServerCard
               key={server.id}
               server={server}
+              style={{ animationDelay: `${index * 50}ms` }}
               initialFavorited={favoriteServerIds.includes(server.id)}
               onFavoriteChange={(serverId, favorited) => {
                 setFavoriteServerIds((previous) => {

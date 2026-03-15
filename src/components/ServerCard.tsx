@@ -11,6 +11,8 @@ interface ServerCardProps {
   initialFavorited?: boolean;
   showFavoriteButton?: boolean;
   onFavoriteChange?: (serverId: string, favorited: boolean) => void;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
 /**
@@ -22,6 +24,8 @@ export function ServerCard({
   initialFavorited,
   showFavoriteButton = true,
   onFavoriteChange,
+  className,
+  style,
 }: ServerCardProps) {
   const {
     name,
@@ -63,7 +67,8 @@ export function ServerCard({
   return (
     <Link
       href={`/servers/${server.psid}`}
-      className="m3-surface group block cursor-pointer p-4 transition-all hover:-translate-y-0.5 hover:border-warm-300 hover:shadow-[0_4px_16px_rgba(139,69,51,0.1)] sm:p-5"
+      className={`m3-surface group block cursor-pointer p-4 transition-all hover:-translate-y-0.5 hover:border-warm-300 hover:shadow-[0_4px_16px_rgba(139,69,51,0.1)] sm:p-5 animate-card-in${className ? ` ${className}` : ""}`}
+      style={style}
     >
       {/* 1. 名称 + 在线状态 */}
       <div className="mb-3 flex items-start justify-between gap-2">
