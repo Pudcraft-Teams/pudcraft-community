@@ -125,7 +125,7 @@ export function CommentItem({
   };
 
   return (
-    <div id={`comment-${comment.id}`} className="border-b border-slate-200 py-4">
+    <div id={`comment-${comment.id}`} className="border-b border-warm-200 py-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <UserAvatar
@@ -138,10 +138,10 @@ export function CommentItem({
             {displayAuthorName(comment.author)}
           </Link>
         </div>
-        <span className="text-sm text-slate-500">{timeAgo(comment.createdAt)}</span>
+        <span className="text-sm text-warm-500">{timeAgo(comment.createdAt)}</span>
       </div>
 
-      <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-700">
+      <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-warm-700">
         {comment.content}
       </p>
 
@@ -151,7 +151,7 @@ export function CommentItem({
           onClick={() => {
             onToggleReply();
           }}
-          className="text-sm text-slate-500 transition-colors hover:text-slate-700"
+          className="text-sm text-warm-500 transition-colors hover:text-warm-700"
         >
           回复
         </button>
@@ -162,7 +162,7 @@ export function CommentItem({
             onClick={() =>
               handleDelete(comment.id, null, "确定删除这条评论吗？删除后其下所有回复也会一起删除。")
             }
-            className="text-sm text-slate-500 transition-colors hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+            className="text-sm text-warm-500 transition-colors hover:text-coral-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             {deletingId === comment.id ? "删除中..." : "删除"}
           </button>
@@ -182,7 +182,7 @@ export function CommentItem({
                 className="m3-input w-full"
               />
               <div className="mt-2 flex items-center justify-between">
-                <span className="text-xs text-slate-500">{replyContent.length}/1000</span>
+                <span className="text-xs text-warm-500">{replyContent.length}/1000</span>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -203,7 +203,7 @@ export function CommentItem({
               </div>
             </>
           ) : (
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-warm-600">
               请先
               <Link
                 href={`/login?callbackUrl=${encodeURIComponent(`/servers/${serverId}`)}`}
@@ -218,7 +218,7 @@ export function CommentItem({
       )}
 
       {comment.replies.length > 0 && (
-        <div className="ml-8 mt-3 space-y-3 border-l-2 border-slate-200 pl-4">
+        <div className="ml-8 mt-3 space-y-3 border-l-2 border-warm-200 pl-4">
           {comment.replies.map((reply) => (
             <div id={`comment-${reply.id}`} key={reply.id} className="m3-surface-soft p-3">
               <div className="flex items-center justify-between gap-3">
@@ -233,9 +233,9 @@ export function CommentItem({
                     {displayAuthorName(reply.author)}
                   </Link>
                 </div>
-                <span className="text-sm text-slate-500">{timeAgo(reply.createdAt)}</span>
+                <span className="text-sm text-warm-500">{timeAgo(reply.createdAt)}</span>
               </div>
-              <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-700">
+              <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-warm-700">
                 {reply.content}
               </p>
 
@@ -245,7 +245,7 @@ export function CommentItem({
                     type="button"
                     disabled={deletingId === reply.id}
                     onClick={() => handleDelete(reply.id, comment.id, "确定删除这条回复吗？")}
-                    className="text-sm text-slate-500 transition-colors hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="text-sm text-warm-500 transition-colors hover:text-coral-hover disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {deletingId === reply.id ? "删除中..." : "删除"}
                   </button>

@@ -40,13 +40,13 @@ export function CopyIdBadge({ label, value }: CopyIdBadgeProps) {
     <button
       type="button"
       onClick={handleCopy}
-      className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-700 ring-1 ring-teal-100 transition-colors hover:bg-teal-100"
+      className="inline-flex items-center gap-1.5 rounded-full bg-coral-light px-2.5 py-1 text-xs font-medium text-coral ring-1 ring-coral-light transition-colors hover:bg-coral-light/80"
       title={`点击复制 ${label}`}
     >
       <span>
         {label}: {value}
       </span>
-      <span className="text-teal-500">{copied ? "✓" : "⎘"}</span>
+      <span className="text-coral">{copied ? "✓" : "⎘"}</span>
     </button>
   );
 }

@@ -21,35 +21,35 @@ interface MarkdownRendererProps {
  */
 export function MarkdownRenderer({ content }: MarkdownRendererProps) {
   return (
-    <div className="prose prose-slate max-w-none text-slate-700">
+    <div className="prose prose-stone max-w-none text-warm-700">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema], [rehypeHighlight, { detect: true, ignoreMissing: true }]]}
         components={{
           h1: ({ children }) => (
-            <h1 className="mb-4 mt-8 text-3xl font-bold tracking-tight text-slate-900">
+            <h1 className="mb-4 mt-8 text-3xl font-bold tracking-tight text-warm-800">
               {children}
             </h1>
           ),
           h2: ({ children }) => (
-            <h2 className="mb-3 mt-7 text-2xl font-semibold text-slate-900">{children}</h2>
+            <h2 className="mb-3 mt-7 text-2xl font-semibold text-warm-800">{children}</h2>
           ),
           h3: ({ children }) => (
-            <h3 className="mb-3 mt-6 text-xl font-semibold text-slate-900">{children}</h3>
+            <h3 className="mb-3 mt-6 text-xl font-semibold text-warm-800">{children}</h3>
           ),
-          p: ({ children }) => <p className="my-3 leading-7 text-slate-700">{children}</p>,
+          p: ({ children }) => <p className="my-3 leading-7 text-warm-700">{children}</p>,
           a: ({ href, children }) => (
             <a
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="m3-link font-medium underline decoration-[#2c6d78]/30 underline-offset-4"
+              className="m3-link font-medium underline decoration-coral/30 underline-offset-4"
             >
               {children}
             </a>
           ),
           pre: ({ children }) => (
-            <pre className="my-4 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+            <pre className="my-4 overflow-x-auto rounded-xl border border-warm-200 bg-warm-50 p-4 text-sm">
               {children}
             </pre>
           ),
@@ -59,7 +59,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
               <code
                 className={
                   isInline
-                    ? "rounded-md bg-[#e2f4f7] px-1 py-0.5 text-sm text-[#12373e]"
+                    ? "rounded-md bg-[#FBEEE6] px-1 py-0.5 text-sm text-[#8B4533]"
                     : `font-mono text-sm ${className ?? ""}`
                 }
               >
@@ -69,22 +69,22 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
           },
           table: ({ children }) => (
             <div className="my-4 overflow-x-auto">
-              <table className="w-full border-collapse text-sm text-slate-700">{children}</table>
+              <table className="w-full border-collapse text-sm text-warm-700">{children}</table>
             </div>
           ),
           th: ({ children }) => (
-            <th className="border border-slate-200 bg-slate-100 px-3 py-2 text-left font-semibold text-slate-900">
+            <th className="border border-warm-200 bg-warm-100 px-3 py-2 text-left font-semibold text-warm-800">
               {children}
             </th>
           ),
-          td: ({ children }) => <td className="border border-slate-200 px-3 py-2">{children}</td>,
+          td: ({ children }) => <td className="border border-warm-200 px-3 py-2">{children}</td>,
           img: ({ src, alt }) => (
             // react-markdown 已配合 rehype-sanitize 过滤，src/alt 在此仅做展示。
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={src ?? ""}
               alt={alt ?? "图片"}
-              className="my-4 h-auto max-w-full rounded-xl border border-slate-200"
+              className="my-4 h-auto max-w-full rounded-xl border border-warm-200"
               loading="lazy"
             />
           ),

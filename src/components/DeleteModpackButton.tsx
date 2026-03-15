@@ -33,7 +33,7 @@ export function DeleteModpackButton({
   modpackId,
   modpackName,
   onDeleted,
-  className = "rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50",
+  className = "rounded-lg border border-coral-hover/30 px-3 py-1.5 text-xs font-medium text-coral-hover transition-colors hover:bg-coral-light",
 }: DeleteModpackButtonProps) {
   const router = useRouter();
   const pathname = usePathname();

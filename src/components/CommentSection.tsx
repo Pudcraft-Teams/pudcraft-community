@@ -221,10 +221,10 @@ export function CommentSection({
   };
 
   return (
-    <section className="mt-8 border-t border-slate-200 pt-6">
+    <section className="mt-8 border-t border-warm-200 pt-6">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-slate-900">评论区</h2>
-        <span className="text-sm text-slate-500">{total} 条评论</span>
+        <h2 className="text-xl font-semibold text-warm-800">评论区</h2>
+        <span className="text-sm text-warm-500">{total} 条评论</span>
       </div>
 
       {status === "authenticated" ? (
@@ -238,7 +238,7 @@ export function CommentSection({
             className="m3-input w-full"
           />
           <div className="mt-2 flex items-center justify-between">
-            <span className="text-xs text-slate-500">{content.length}/1000</span>
+            <span className="text-xs text-warm-500">{content.length}/1000</span>
             <button
               type="button"
               onClick={handleSubmitComment}
@@ -250,7 +250,7 @@ export function CommentSection({
           </div>
         </div>
       ) : (
-        <div className="m3-surface-soft px-4 py-3 text-sm text-slate-600">
+        <div className="m3-surface-soft px-4 py-3 text-sm text-warm-600">
           <Link
             href={`/login?callbackUrl=${encodeURIComponent(`/servers/${serverId}`)}`}
             className="m3-link"

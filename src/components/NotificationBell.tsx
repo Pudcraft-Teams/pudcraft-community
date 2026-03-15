@@ -205,7 +205,7 @@ export function NotificationBell() {
     <div ref={containerRef} className="relative">
       <button
         type="button"
-        className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50"
+        className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-warm-200 bg-[#FFFAF6] text-warm-600 transition-colors hover:bg-warm-50"
         onClick={() => setOpen((prev) => !prev)}
         aria-label="通知"
         aria-expanded={open}
@@ -226,21 +226,21 @@ export function NotificationBell() {
           />
         </svg>
         {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
+          <span className="absolute -right-1 -top-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-coral px-1 text-[10px] font-semibold leading-none text-white">
             {formatUnreadCount(unreadCount)}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-12 z-50 w-80 rounded-xl border border-gray-200 bg-white shadow-lg">
-          <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-            <h3 className="text-sm font-semibold text-slate-900">通知</h3>
+        <div className="absolute right-0 top-12 z-50 w-80 rounded-xl border border-warm-200 bg-[#FFFAF6] shadow-lg">
+          <div className="flex items-center justify-between border-b border-warm-200 px-4 py-3">
+            <h3 className="text-sm font-semibold text-warm-800">通知</h3>
             <button
               type="button"
               onClick={markAllAsRead}
               disabled={isMarkingAll || unreadCount === 0}
-              className="text-xs font-medium text-teal-700 transition-colors hover:text-teal-800 disabled:cursor-not-allowed disabled:text-slate-400"
+              className="text-xs font-medium text-coral transition-colors hover:text-coral-hover disabled:cursor-not-allowed disabled:text-warm-400"
             >
               {isMarkingAll ? "处理中..." : "全部标记已读"}
             </button>
@@ -248,9 +248,9 @@ export function NotificationBell() {
 
           <div className="max-h-96 overflow-y-auto">
             {isLoading ? (
-              <div className="px-4 py-6 text-center text-sm text-slate-500">加载中...</div>
+              <div className="px-4 py-6 text-center text-sm text-warm-500">加载中...</div>
             ) : notifications.length === 0 ? (
-              <div className="px-4 py-6 text-center text-sm text-slate-500">暂无通知</div>
+              <div className="px-4 py-6 text-center text-sm text-warm-500">暂无通知</div>
             ) : (
               notifications.map((notification) => (
                 <button
@@ -259,22 +259,22 @@ export function NotificationBell() {
                   onClick={() => {
                     void handleNotificationClick(notification);
                   }}
-                  className="flex w-full items-start gap-3 border-b border-slate-100 px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-slate-50"
+                  className="flex w-full items-start gap-3 border-b border-warm-100 px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-warm-50"
                 >
                   <span
                     className={`mt-2 h-2.5 w-2.5 shrink-0 rounded-full ${
-                      notification.readAt ? "bg-transparent" : "bg-sky-500"
+                      notification.readAt ? "bg-transparent" : "bg-coral"
                     }`}
                     aria-hidden="true"
                   />
                   <span className="min-w-0 flex-1">
-                    <span className="line-clamp-1 text-sm font-medium text-slate-900">
+                    <span className="line-clamp-1 text-sm font-medium text-warm-800">
                       {notification.title}
                     </span>
-                    <span className="mt-1 line-clamp-2 block text-xs text-slate-600">
+                    <span className="mt-1 line-clamp-2 block text-xs text-warm-600">
                       {notification.message}
                     </span>
-                    <span className="mt-1 block text-xs text-slate-400">
+                    <span className="mt-1 block text-xs text-warm-400">
                       {timeAgo(notification.createdAt)}
                     </span>
                   </span>
@@ -283,11 +283,11 @@ export function NotificationBell() {
             )}
           </div>
 
-          <div className="border-t border-slate-200 px-4 py-3 text-center">
+          <div className="border-t border-warm-200 px-4 py-3 text-center">
             <Link
               href="/notifications"
               onClick={() => setOpen(false)}
-              className="text-sm font-medium text-teal-700 transition-colors hover:text-teal-800"
+              className="text-sm font-medium text-coral transition-colors hover:text-coral-hover"
             >
               查看全部通知 →
             </Link>
