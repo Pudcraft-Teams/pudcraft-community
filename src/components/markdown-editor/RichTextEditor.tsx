@@ -32,8 +32,8 @@ function ToolbarButton({ label, onClick, active = false, disabled = false }: Too
       disabled={disabled}
       className={`inline-flex h-8 min-w-8 items-center justify-center rounded-lg border px-2 text-xs font-medium transition-colors ${
         active
-          ? "border-teal-300 bg-teal-50 text-teal-700"
-          : "border-gray-200 bg-white text-slate-600 hover:bg-slate-100"
+          ? "border-coral/30 bg-coral-light text-coral"
+          : "border-warm-200 bg-[#FFFAF6] text-warm-600 hover:bg-warm-100"
       } disabled:cursor-not-allowed disabled:opacity-50`}
     >
       {label}
@@ -81,7 +81,7 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "min-h-[220px] w-full rounded-b-xl px-4 py-3 text-sm leading-7 text-slate-700 focus:outline-none",
+          "min-h-[220px] w-full rounded-b-xl px-4 py-3 text-sm leading-7 text-warm-700 focus:outline-none",
       },
       transformPastedHTML: (pastedHtml) => sanitizeEditorHtml(pastedHtml),
     },
@@ -216,7 +216,7 @@ export function RichTextEditor({
   const buttonDisabled = disabled || !editor || isUploadingImage;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+    <div className="overflow-hidden rounded-xl border border-warm-200 bg-[#FFFAF6]">
       <input
         ref={imageInputRef}
         type="file"
@@ -225,7 +225,7 @@ export function RichTextEditor({
         onChange={handleImageInputChange}
       />
 
-      <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 bg-gray-50 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2 border-b border-warm-200 bg-warm-100 px-3 py-2">
         <ToolbarButton
           label="H2"
           disabled={buttonDisabled}
@@ -318,10 +318,10 @@ export function RichTextEditor({
       <div className="relative">
         <EditorContent editor={editor} />
         {!editor && (
-          <div className="min-h-[220px] px-4 py-3 text-sm text-slate-500">编辑器加载中...</div>
+          <div className="min-h-[220px] px-4 py-3 text-sm text-warm-500">编辑器加载中...</div>
         )}
         {placeholder && editor?.isEmpty && (
-          <span className="pointer-events-none absolute left-4 top-3 text-sm text-slate-400">
+          <span className="pointer-events-none absolute left-4 top-3 text-sm text-warm-400">
             {placeholder}
           </span>
         )}

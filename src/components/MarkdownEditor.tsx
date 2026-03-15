@@ -20,7 +20,7 @@ const RichTextEditor = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="min-h-[220px] rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-slate-500">
+      <div className="min-h-[220px] rounded-xl border border-warm-200 bg-[#FFFAF6] px-4 py-3 text-sm text-warm-500">
         编辑器加载中...
       </div>
     ),
@@ -380,18 +380,18 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
 
     return (
       <div className="space-y-2">
-        {label && <p className="text-sm text-slate-700">{label}</p>}
+        {label && <p className="text-sm text-warm-700">{label}</p>}
 
-        <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2">
-          <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1">
+        <div className="flex items-center justify-between rounded-xl border border-warm-200 bg-[#FFFAF6] px-3 py-2">
+          <div className="inline-flex rounded-lg border border-warm-200 bg-warm-100 p-1">
             <button
               type="button"
               onClick={() => switchMode("rich")}
               disabled={disabled}
               className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
                 mode === "rich"
-                  ? "bg-white text-teal-700 shadow-sm"
-                  : "text-slate-600 hover:bg-white hover:text-slate-900"
+                  ? "bg-[#FFFAF6] text-coral shadow-sm"
+                  : "text-warm-600 hover:bg-[#FFFAF6] hover:text-warm-800"
               }`}
             >
               富文本
@@ -402,14 +402,14 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
               disabled={disabled}
               className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
                 mode === "markdown"
-                  ? "bg-white text-teal-700 shadow-sm"
-                  : "text-slate-600 hover:bg-white hover:text-slate-900"
+                  ? "bg-[#FFFAF6] text-coral shadow-sm"
+                  : "text-warm-600 hover:bg-[#FFFAF6] hover:text-warm-800"
               }`}
             >
               Markdown
             </button>
           </div>
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-warm-500">
             当前模式：{mode === "rich" ? "富文本" : "Markdown"}
           </span>
         </div>
@@ -423,7 +423,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             onUploadImage={uploadEditorImage}
           />
         ) : (
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+          <div className="overflow-hidden rounded-xl border border-warm-200 bg-[#FFFAF6]">
             <input
               ref={markdownImageInputRef}
               type="file"
@@ -432,14 +432,14 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
               onChange={handleMarkdownImageChange}
             />
 
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 bg-gray-50 px-3 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-warm-200 bg-warm-100 px-3 py-2">
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => wrapMarkdownSelection("**", "**", "粗体文本")}
                   disabled={disabled}
-                  className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-gray-200 bg-white px-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-warm-200 bg-[#FFFAF6] px-2 text-xs font-medium text-warm-600 transition-colors hover:bg-warm-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   B
                 </button>
@@ -448,7 +448,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => wrapMarkdownSelection("*", "*", "斜体文本")}
                   disabled={disabled}
-                  className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-gray-200 bg-white px-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-warm-200 bg-[#FFFAF6] px-2 text-xs font-medium text-warm-600 transition-colors hover:bg-warm-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   I
                 </button>
@@ -457,7 +457,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={insertMarkdownLink}
                   disabled={disabled}
-                  className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-gray-200 bg-white px-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-warm-200 bg-[#FFFAF6] px-2 text-xs font-medium text-warm-600 transition-colors hover:bg-warm-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   链接
                 </button>
@@ -466,20 +466,20 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => markdownImageInputRef.current?.click()}
                   disabled={disabled || isImageUploading}
-                  className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-gray-200 bg-white px-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-warm-200 bg-[#FFFAF6] px-2 text-xs font-medium text-warm-600 transition-colors hover:bg-warm-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isImageUploading ? "上传中..." : "图片"}
                 </button>
               </div>
 
-              <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 md:hidden">
+              <div className="inline-flex rounded-lg border border-warm-200 bg-[#FFFAF6] p-1 md:hidden">
                 <button
                   type="button"
                   onClick={() => setMarkdownMobileTab("edit")}
                   className={`rounded-md px-2 py-1 text-xs font-medium ${
                     markdownMobileTab === "edit"
-                      ? "bg-slate-100 text-slate-900"
-                      : "text-slate-500 hover:text-slate-700"
+                      ? "bg-warm-100 text-warm-800"
+                      : "text-warm-500 hover:text-warm-700"
                   }`}
                 >
                   编辑
@@ -489,8 +489,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
                   onClick={() => setMarkdownMobileTab("preview")}
                   className={`rounded-md px-2 py-1 text-xs font-medium ${
                     markdownMobileTab === "preview"
-                      ? "bg-slate-100 text-slate-900"
-                      : "text-slate-500 hover:text-slate-700"
+                      ? "bg-warm-100 text-warm-800"
+                      : "text-warm-500 hover:text-warm-700"
                   }`}
                 >
                   预览
@@ -502,14 +502,14 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
               <div
                 className={`${
                   markdownMobileTab === "preview" ? "hidden md:block" : "block"
-                } border-b border-gray-200 md:border-b-0 md:border-r`}
+                } border-b border-warm-200 md:border-b-0 md:border-r`}
               >
                 <textarea
                   ref={markdownTextareaRef}
                   value={markdownText}
                   onChange={handleMarkdownChange}
                   onKeyDown={handleMarkdownKeyDown}
-                  className="min-h-[220px] w-full resize-y border-0 bg-white px-4 py-3 text-sm leading-7 text-slate-700 outline-none"
+                  className="min-h-[220px] w-full resize-y border-0 bg-[#FFFAF6] px-4 py-3 text-sm leading-7 text-warm-700 outline-none"
                   placeholder={placeholder}
                   maxLength={maxLength}
                   disabled={disabled}
@@ -517,16 +517,16 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
               </div>
 
               <div
-                className={`${markdownMobileTab === "edit" ? "hidden md:block" : "block"} bg-slate-50/70`}
+                className={`${markdownMobileTab === "edit" ? "hidden md:block" : "block"} bg-warm-50/70`}
               >
-                <div className="border-b border-gray-200 px-4 py-2 text-xs text-slate-500">
+                <div className="border-b border-warm-200 px-4 py-2 text-xs text-warm-500">
                   预览
                 </div>
                 <div className="max-h-[460px] overflow-y-auto px-4 py-3">
                   {markdownText.trim() ? (
                     <MarkdownRenderer content={markdownText} />
                   ) : (
-                    <p className="text-sm text-slate-500">暂无可预览内容</p>
+                    <p className="text-sm text-warm-500">暂无可预览内容</p>
                   )}
                 </div>
               </div>
@@ -538,12 +538,12 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           const displayLength = mode === "rich" ? richMarkdownLength : markdownText.length;
           const isOverLimit = typeof maxLength === "number" && displayLength > maxLength;
           return (
-            <div className="flex items-center justify-between text-xs text-slate-500">
-              <span className={isOverLimit ? "font-medium text-red-500" : ""}>
+            <div className="flex items-center justify-between text-xs text-warm-500">
+              <span className={isOverLimit ? "font-medium text-coral-hover" : ""}>
                 {maxLength ? `${displayLength}/${maxLength}` : `${displayLength} 字`}
               </span>
               {isOverLimit ? (
-                <span className="font-medium text-red-500">内容超出字数限制</span>
+                <span className="font-medium text-coral-hover">内容超出字数限制</span>
               ) : (
                 mode === "rich" &&
                 isRichDirty && (

@@ -339,7 +339,7 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
   return (
     <form className="mt-6 space-y-5" onSubmit={handleSubmit} noValidate>
       <fieldset disabled={isSubmitting} className="space-y-5 disabled:opacity-90">
-        <label className="block text-sm text-slate-700">
+        <label className="block text-sm text-warm-700">
           服务器名称
           <input
             type="text"
@@ -348,11 +348,11 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
             className="m3-input mt-2 w-full"
             placeholder="例如：PudCraft 生存服"
           />
-          {fieldErrors.name && <p className="mt-1 text-xs text-red-400">{fieldErrors.name}</p>}
+          {fieldErrors.name && <p className="mt-1 text-xs text-coral-hover">{fieldErrors.name}</p>}
         </label>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-warm-700">
             服务器地址
             <input
               type="text"
@@ -362,11 +362,11 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
               placeholder="play.example.com"
             />
             {fieldErrors.address && (
-              <p className="mt-1 text-xs text-red-400">{fieldErrors.address}</p>
+              <p className="mt-1 text-xs text-coral-hover">{fieldErrors.address}</p>
             )}
           </label>
 
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-warm-700">
             端口
             <input
               type="number"
@@ -376,11 +376,11 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
               min={1}
               max={65535}
             />
-            {fieldErrors.port && <p className="mt-1 text-xs text-red-400">{fieldErrors.port}</p>}
+            {fieldErrors.port && <p className="mt-1 text-xs text-coral-hover">{fieldErrors.port}</p>}
           </label>
         </div>
 
-        <label className="block text-sm text-slate-700">
+        <label className="block text-sm text-warm-700">
           游戏版本
           <input
             type="text"
@@ -390,12 +390,12 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
             placeholder="例如：1.20.4"
           />
           {fieldErrors.version && (
-            <p className="mt-1 text-xs text-red-400">{fieldErrors.version}</p>
+            <p className="mt-1 text-xs text-coral-hover">{fieldErrors.version}</p>
           )}
         </label>
 
         <div>
-          <p className="text-sm text-slate-700">服务器类型</p>
+          <p className="text-sm text-warm-700">服务器类型</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {availableTags.map((tag) => {
               const active = selectedTags.includes(tag);
@@ -411,10 +411,10 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
               );
             })}
           </div>
-          {fieldErrors.tags && <p className="mt-1 text-xs text-red-400">{fieldErrors.tags}</p>}
+          {fieldErrors.tags && <p className="mt-1 text-xs text-coral-hover">{fieldErrors.tags}</p>}
         </div>
 
-        <label className="block text-sm text-slate-700">
+        <label className="block text-sm text-warm-700">
           简短描述（选填）
           <textarea
             value={description}
@@ -423,14 +423,14 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
             placeholder="显示在卡片中的简介（最多 200 字）"
             maxLength={200}
           />
-          <p className="mt-1 text-xs text-slate-500">{description.length}/200</p>
+          <p className="mt-1 text-xs text-warm-500">{description.length}/200</p>
           {fieldErrors.description && (
-            <p className="mt-1 text-xs text-red-400">{fieldErrors.description}</p>
+            <p className="mt-1 text-xs text-coral-hover">{fieldErrors.description}</p>
           )}
         </label>
 
         <div>
-          <p className="text-sm text-slate-700">详细介绍（选填，支持 Markdown）</p>
+          <p className="text-sm text-warm-700">详细介绍（选填，支持 Markdown）</p>
           <div className="mt-2">
             <MarkdownEditor
               ref={contentEditorRef}
@@ -443,12 +443,12 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
             />
           </div>
           {fieldErrors.content && (
-            <p className="mt-1 text-xs text-red-400">{fieldErrors.content}</p>
+            <p className="mt-1 text-xs text-coral-hover">{fieldErrors.content}</p>
           )}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-warm-700">
             最大玩家数（选填）
             <input
               type="number"
@@ -459,11 +459,11 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
               max={10000}
             />
             {fieldErrors.maxPlayers && (
-              <p className="mt-1 text-xs text-red-400">{fieldErrors.maxPlayers}</p>
+              <p className="mt-1 text-xs text-coral-hover">{fieldErrors.maxPlayers}</p>
             )}
           </label>
 
-          <label className="block text-sm text-slate-700">
+          <label className="block text-sm text-warm-700">
             QQ 群号（选填）
             <input
               type="text"
@@ -473,25 +473,25 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
               placeholder="5-11 位数字"
             />
             {fieldErrors.qqGroup && (
-              <p className="mt-1 text-xs text-red-400">{fieldErrors.qqGroup}</p>
+              <p className="mt-1 text-xs text-coral-hover">{fieldErrors.qqGroup}</p>
             )}
           </label>
         </div>
 
         {mode === "create" && isPrivateServersEnabled() && (
           <div>
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300">
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-warm-200 bg-[#FFFAF6] p-4 transition-colors hover:border-warm-300">
               <input
                 type="checkbox"
                 checked={isPrivate}
                 onChange={(e) => setIsPrivate(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                className="mt-0.5 h-4 w-4 rounded border-warm-300 text-coral focus:ring-coral"
               />
               <div className="min-w-0">
-                <p className="text-sm font-medium text-slate-700">
+                <p className="text-sm font-medium text-warm-700">
                   设为私密服务器
                 </p>
-                <p className="mt-0.5 text-xs text-slate-500">
+                <p className="mt-0.5 text-xs text-warm-500">
                   开启后服务器不会出现在首页列表，仅通过邀请或申请可加入。你可以稍后在控制台中配置加入方式等详细设置。
                 </p>
               </div>
@@ -500,7 +500,7 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
         )}
 
         <div>
-          <p className="text-sm text-slate-700">服务器图标（选填）</p>
+          <p className="text-sm text-warm-700">服务器图标（选填）</p>
           <div className="mt-2">
             <ImageUpload
               key={`server-icon-upload-${iconUploadResetKey}`}
@@ -517,7 +517,7 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
               outputSize={512}
               maxFileSize={10 * 1024 * 1024}
               placeholder={
-                <div className="flex flex-col items-center gap-1 text-slate-500">
+                <div className="flex flex-col items-center gap-1 text-warm-500">
                   <span className="text-lg">+</span>
                   <span className="text-xs">点击上传服务器图标</span>
                 </div>
@@ -534,7 +534,7 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
                   setIconFile(null);
                   setIconUploadResetKey((prev) => prev + 1);
                 }}
-                className="m3-btn rounded-lg border border-rose-200 bg-white px-2.5 py-1 text-xs text-rose-600 transition-colors hover:bg-rose-50"
+                className="m3-btn rounded-lg border border-coral-hover/30 bg-[#FFFAF6] px-2.5 py-1 text-xs text-coral-hover transition-colors hover:bg-coral-light"
               >
                 删除当前图标
               </button>
@@ -554,7 +554,7 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
             )}
           </div>
 
-          {fieldErrors.icon && <p className="mt-1 text-xs text-red-400">{fieldErrors.icon}</p>}
+          {fieldErrors.icon && <p className="mt-1 text-xs text-coral-hover">{fieldErrors.icon}</p>}
         </div>
 
         <div className="flex items-center justify-end gap-3">

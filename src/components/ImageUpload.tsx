@@ -116,10 +116,10 @@ export function ImageUpload({
         >
           +
         </div>
-        <span className="text-xs text-slate-600">点击上传头像</span>
+        <span className="text-xs text-warm-600">点击上传头像</span>
       </div>
     ) : (
-      <div className="flex flex-col items-center gap-1 text-slate-500">
+      <div className="flex flex-col items-center gap-1 text-warm-500">
         <span className="text-lg">⬆</span>
         <span className="text-xs">点击上传</span>
       </div>
@@ -149,7 +149,7 @@ export function ImageUpload({
             : `cursor-pointer rounded-xl border border-dashed px-4 py-6 text-center transition-colors ${
                 isDragActive
                   ? "border-[#cbe5eb] bg-[#e2f4f7]"
-                  : "border-slate-300 bg-slate-50 hover:border-slate-400"
+                  : "border-warm-300 bg-warm-50 hover:border-warm-400"
               }`
         }
       >
@@ -219,7 +219,7 @@ export function ImageUpload({
         </div>
       )}
 
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+      {error && <p className="mt-1 text-xs text-coral-hover">{error}</p>}
 
       <ImageCropDialog
         open={openCropDialog}
