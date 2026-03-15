@@ -265,7 +265,7 @@ export function HomePageClient({
   return (
     <div>
       {/* Hero */}
-      <section className="-mx-4 -mt-8 mb-10 bg-gradient-to-b from-[#FBEEE6] via-[#FDF6F0] to-transparent px-4 pb-2 pt-10 sm:-mx-6 sm:px-6">
+      <section className="-mx-[calc((100vw-100%)/2+1rem)] -mt-8 mb-10 bg-gradient-to-b from-[#FBEEE6] via-[#FDF6F0] to-transparent px-[calc((100vw-100%)/2+1rem)] pb-2 pt-10 sm:-mx-[calc((100vw-100%)/2+1.5rem)] sm:px-[calc((100vw-100%)/2+1.5rem)]">
         <h1
           className="text-[clamp(1.75rem,5vw,2.5rem)] font-extrabold leading-tight tracking-tight text-[#8B4533]"
         >
