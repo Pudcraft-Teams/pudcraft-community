@@ -43,7 +43,7 @@ export function SearchBar({ onSearch, initialValue = "" }: SearchBarProps) {
         <button
           type="button"
           onClick={() => setValue("")}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 transition-colors hover:text-slate-700"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-warm-500 transition-colors hover:text-warm-700"
         >
           &times;
         </button>

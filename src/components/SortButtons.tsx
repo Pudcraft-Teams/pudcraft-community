@@ -18,7 +18,7 @@ export function SortButtons({ value, onChange }: SortButtonsProps) {
   return (
     <>
       <div className="md:hidden">
-        <label className="block text-sm text-slate-600">
+        <label className="block text-sm text-warm-600">
           排序
           <select
             value={value}
@@ -40,7 +40,7 @@ export function SortButtons({ value, onChange }: SortButtonsProps) {
       </div>
 
       <div className="hidden flex-wrap items-center gap-2 md:flex">
-        <span className="text-sm text-slate-600">排序：</span>
+        <span className="text-sm text-warm-600">排序：</span>
         {SORT_OPTIONS.map((option) => (
           <button
             key={option.value}

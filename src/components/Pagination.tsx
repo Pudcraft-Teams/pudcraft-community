@@ -56,7 +56,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
         >
           上一页
         </button>
-        <span className="text-sm text-slate-600">
+        <span className="text-sm text-warm-600">
           {currentPage} / {totalPages}
         </span>
         <button
@@ -82,7 +82,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
         {pageItems.map((item, index) => {
           if (item === "ellipsis") {
             return (
-              <span key={`ellipsis-${index}`} className="px-2 text-sm text-slate-500">
+              <span key={`ellipsis-${index}`} className="px-2 text-sm text-warm-500">
                 ...
               </span>
             );

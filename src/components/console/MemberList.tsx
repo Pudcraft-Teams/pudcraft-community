@@ -240,7 +240,7 @@ export function MemberList({ serverId }: MemberListProps) {
                       src={member.userImage}
                       name={member.userName}
                       className="h-10 w-10"
-                      fallbackClassName="bg-teal-600 text-white"
+                      fallbackClassName="bg-gradient-to-br from-coral to-coral-amber text-white"
                     />
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">

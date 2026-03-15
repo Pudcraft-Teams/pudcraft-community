@@ -46,8 +46,8 @@ export const ToastContext = createContext<ToastContextValue | null>(null);
 function Toast({ item, onClose }: ToastProps) {
   const colorClass =
     item.type === "success"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-      : "border-rose-200 bg-rose-50 text-rose-700";
+      ? "border-forest/30 bg-forest-light text-forest-dark"
+      : "border-coral/30 bg-[#FDF0ED] text-warm-800";
 
   return (
     <div

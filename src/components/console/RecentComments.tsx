@@ -106,7 +106,7 @@ export function RecentComments({ serverId }: RecentCommentsProps) {
                   src={comment.author.image}
                   name={comment.author.name}
                   className="h-8 w-8"
-                  fallbackClassName="bg-teal-600 text-white"
+                  fallbackClassName="bg-gradient-to-br from-coral to-coral-amber text-white"
                 />
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-slate-800">{resolveAuthorName(comment)}</p>

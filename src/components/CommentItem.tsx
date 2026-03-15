@@ -132,7 +132,7 @@ export function CommentItem({
             src={comment.author.image}
             name={comment.author.name}
             className="h-8 w-8"
-            fallbackClassName="bg-teal-600 text-white"
+            fallbackClassName="bg-gradient-to-br from-coral to-coral-amber text-white"
           />
           <Link href={`/user/${comment.author.uid}`} className="m3-link text-sm font-medium">
             {displayAuthorName(comment.author)}
@@ -227,7 +227,7 @@ export function CommentItem({
                     src={reply.author.image}
                     name={reply.author.name}
                     className="h-8 w-8"
-                    fallbackClassName="bg-teal-600 text-white"
+                    fallbackClassName="bg-gradient-to-br from-coral to-coral-amber text-white"
                   />
                   <Link href={`/user/${reply.author.uid}`} className="m3-link text-sm font-medium">
                     {displayAuthorName(reply.author)}

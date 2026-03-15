@@ -190,7 +190,7 @@ export default function AdminUsersPage() {
                           name={user.name}
                           email={user.email}
                           className="h-7 w-7"
-                          fallbackClassName="bg-teal-600 text-white"
+                          fallbackClassName="bg-gradient-to-br from-coral to-coral-amber text-white"
                         />
                         <span className="max-w-24 truncate font-medium text-slate-900">
                           {user.name || "未设置"}

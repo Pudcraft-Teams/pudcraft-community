@@ -95,7 +95,7 @@ export function AuthButtons() {
           name={session.user.name}
           email={session.user.email}
           className="h-6 w-6"
-          fallbackClassName="bg-teal-600 text-white"
+          fallbackClassName="bg-gradient-to-br from-coral to-coral-amber text-white"
         />
         <span className="max-w-32 truncate text-sm">{displayName}</span>
       </button>
@@ -299,7 +299,7 @@ export function MobileNavMenu() {
                       name={session.user.name}
                       email={session.user.email}
                       className="h-6 w-6"
-                      fallbackClassName="bg-teal-600 text-white"
+                      fallbackClassName="bg-gradient-to-br from-coral to-coral-amber text-white"
                     />
                     <span className="min-w-0 flex-1 truncate">用户信息 · {displayName}</span>
                   </Link>

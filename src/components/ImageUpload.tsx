@@ -111,7 +111,7 @@ export function ImageUpload({
     shape === "circle" ? (
       <div className="flex flex-col items-center gap-2">
         <div
-          className={`flex items-center justify-center bg-teal-600 text-xl font-semibold text-white ${shapeClass}`}
+          className={`flex items-center justify-center bg-gradient-to-br from-coral to-coral-amber text-xl font-semibold text-white ${shapeClass}`}
           style={{ width: size, height: size }}
         >
           +

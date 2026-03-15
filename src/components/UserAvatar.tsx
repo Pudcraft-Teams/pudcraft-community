@@ -29,7 +29,7 @@ export function UserAvatar({
   email,
   alt,
   className = "h-10 w-10",
-  fallbackClassName = "bg-teal-600 text-white",
+  fallbackClassName = "bg-gradient-to-br from-coral to-coral-amber text-white",
   showInitialFallback = false,
 }: UserAvatarProps) {
   const initial = resolveInitial(name, email);

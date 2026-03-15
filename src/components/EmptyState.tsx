@@ -22,9 +22,9 @@ interface EmptyStateProps {
 export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
     <div className="m3-surface-soft px-6 py-12 text-center">
-      {icon && <div className="mb-3 flex justify-center text-slate-500">{icon}</div>}
-      <h3 className="text-base font-semibold text-slate-900">{title}</h3>
-      {description && <p className="mt-2 text-sm text-slate-600">{description}</p>}
+      {icon && <div className="mb-3 flex justify-center text-warm-500">{icon}</div>}
+      <h3 className="text-base font-semibold text-warm-800">{title}</h3>
+      {description && <p className="mt-2 text-sm text-warm-600">{description}</p>}
       {action && (
         <Link href={action.href} className="m3-btn m3-btn-primary mt-4 inline-flex">
           {action.label}

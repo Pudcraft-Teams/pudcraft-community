@@ -37,7 +37,7 @@ function renderText(text: string | undefined, size: "sm" | "md" | "lg"): ReactNo
     return null;
   }
 
-  return <span className={`text-slate-600 ${textClassMap(size)}`}>{text}</span>;
+  return <span className={`text-warm-600 ${textClassMap(size)}`}>{text}</span>;
 }
 
 /**
@@ -49,7 +49,7 @@ export function LoadingSpinner({ size = "md", text, className = "" }: LoadingSpi
     <div className={`inline-flex items-center gap-2 ${className}`}>
       <span
         aria-hidden
-        className={`animate-spin rounded-full border-teal-500 border-t-transparent ${sizeClassMap(size)}`}
+        className={`animate-spin rounded-full border-coral border-t-transparent ${sizeClassMap(size)}`}
       />
       {renderText(text, size)}
     </div>

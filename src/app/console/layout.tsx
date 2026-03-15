@@ -78,7 +78,7 @@ export default async function ConsoleLayout({ children }: ConsoleLayoutProps) {
               name={session?.user?.name}
               email={session?.user?.email}
               className="h-6 w-6"
-              fallbackClassName="bg-teal-600 text-white"
+              fallbackClassName="bg-gradient-to-br from-coral to-coral-amber text-white"
             />
             <span className="max-w-24 truncate text-xs">{displayName}</span>
           </Link>

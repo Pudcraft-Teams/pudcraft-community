@@ -183,7 +183,7 @@ export default function ProfileSettingsPage() {
                       name={name || session?.user?.name}
                       email={email || session?.user?.email}
                       className="h-24 w-24"
-                      fallbackClassName="bg-teal-600 text-white"
+                      fallbackClassName="bg-gradient-to-br from-coral to-coral-amber text-white"
                     />
                   }
                 />

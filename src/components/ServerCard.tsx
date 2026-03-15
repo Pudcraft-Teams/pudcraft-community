@@ -63,12 +63,12 @@ export function ServerCard({
   return (
     <Link
       href={`/servers/${server.psid}`}
-      className="m3-surface group block cursor-pointer p-4 transition-all hover:-translate-y-0.5 hover:border-slate-300 sm:p-5"
+      className="m3-surface group block cursor-pointer p-4 transition-all hover:-translate-y-0.5 hover:border-warm-300 hover:shadow-[0_4px_16px_rgba(139,69,51,0.1)] sm:p-5"
     >
       {/* 1. 名称 + 在线状态 */}
       <div className="mb-3 flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-1 items-start gap-3">
-          <span className="inline-flex h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+          <span className="inline-flex h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-warm-200 bg-warm-100">
             <Image
               src={iconUrl || "/default-server-icon.png"}
               alt={`${name} 图标`}
@@ -79,13 +79,13 @@ export function ServerCard({
           </span>
 
           <div className="min-w-0 flex-1">
-            <h3 className="truncate text-base font-semibold text-slate-900 transition-colors group-hover:text-slate-700">
+            <h3 className="truncate text-base font-semibold text-warm-800 transition-colors group-hover:text-warm-700">
               {name}
             </h3>
             <div className="flex flex-wrap items-center gap-1">
               {isVerified && (
                 <span
-                  className="inline-flex items-center rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-medium text-teal-700 ring-1 ring-teal-100"
+                  className="inline-flex items-center rounded-full bg-coral-light px-2 py-0.5 text-[11px] font-medium text-coral ring-1 ring-coral/20"
                   title="已认领 - 管理员已验证"
                 >
                   ✓ 已认领
@@ -93,7 +93,7 @@ export function ServerCard({
               )}
               {isUnlisted && (
                 <span
-                  className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-amber-200"
+                  className="inline-flex items-center rounded-full bg-[#FDF5ED] px-2 py-0.5 text-[11px] font-medium text-coral-amber ring-1 ring-coral-amber/30"
                   title="半公开服务器 - 地址需申请后可见"
                 >
                   需申请
@@ -101,7 +101,7 @@ export function ServerCard({
               )}
               {showApplyBadge && (
                 <span
-                  className="inline-flex items-center gap-0.5 rounded-full bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600 ring-1 ring-slate-200"
+                  className="inline-flex items-center gap-0.5 rounded-full bg-warm-100 px-2 py-0.5 text-[11px] font-medium text-warm-600 ring-1 ring-warm-200"
                   title="申请制 - 需要提交申请加入"
                 >
                   <svg
@@ -123,7 +123,7 @@ export function ServerCard({
               )}
               {showInviteBadge && (
                 <span
-                  className="inline-flex items-center gap-0.5 rounded-full bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600 ring-1 ring-slate-200"
+                  className="inline-flex items-center gap-0.5 rounded-full bg-warm-100 px-2 py-0.5 text-[11px] font-medium text-warm-600 ring-1 ring-warm-200"
                   title="邀请制 - 需要邀请链接加入"
                 >
                   <svg
@@ -159,15 +159,15 @@ export function ServerCard({
             <span
               className={`inline-block h-2 w-2 rounded-full ${
                 isStale
-                  ? "bg-slate-300"
+                  ? "bg-warm-300"
                   : isOnline
-                    ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.35)]"
-                    : "bg-slate-400"
+                    ? "bg-forest shadow-[0_0_6px_rgba(91,154,110,0.35)]"
+                    : "bg-warm-400"
               }`}
             />
             <span
               className={
-                isStale ? "text-slate-400" : isOnline ? "text-emerald-600" : "text-slate-500"
+                isStale ? "text-warm-400" : isOnline ? "text-forest" : "text-warm-500"
               }
             >
               {statusText}
@@ -178,9 +178,9 @@ export function ServerCard({
 
       {/* 2. 服务器地址 */}
       {isAddressHidden ? (
-        <p className="mb-2 text-xs text-slate-400 italic">地址隐藏</p>
+        <p className="mb-2 text-xs text-warm-400 italic">地址隐藏</p>
       ) : (
-        <p className="mb-2 break-all font-mono text-xs text-slate-500">
+        <p className="mb-2 break-all font-mono text-xs text-warm-500">
           {host}
           {port !== 25565 ? `:${port}` : ""}
         </p>
@@ -188,20 +188,20 @@ export function ServerCard({
 
       {/* 3. 简短描述（最多 2 行） */}
       {description && (
-        <p className="mb-3 line-clamp-2 text-sm leading-relaxed text-slate-600">{description}</p>
+        <p className="mb-3 line-clamp-2 text-sm leading-relaxed text-warm-600">{description}</p>
       )}
 
       {/* 4. 在线人数 + 延迟 */}
       {!isStale && isOnline && (
         <div className="mb-3 flex items-center gap-3 text-xs">
-          <span className="text-slate-600">
-            <span className="font-medium text-slate-800">{status.playerCount}</span>
+          <span className="text-warm-600">
+            <span className="font-medium text-warm-700">{status.playerCount}</span>
             <span> / {status.maxPlayers} 在线</span>
           </span>
           {pingMs !== null && (
             <span
               className={
-                pingMs < 50 ? "text-emerald-600" : pingMs < 100 ? "text-amber-600" : "text-rose-600"
+                pingMs < 50 ? "text-forest" : pingMs < 100 ? "text-coral-amber" : "text-coral-hover"
               }
             >
               {pingMs}ms
@@ -216,7 +216,7 @@ export function ServerCard({
           {tags.map((tag) => (
             <span
               key={tag}
-              className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs text-slate-600"
+              className="rounded-full border border-warm-200 bg-warm-100 px-2.5 py-0.5 text-xs text-warm-800"
             >
               {tag}
             </span>
