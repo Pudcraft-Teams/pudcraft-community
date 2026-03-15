@@ -183,7 +183,7 @@ export default function EditServerPage() {
   }
 
   if (status === "unauthenticated") {
-    return <div className="py-12 text-center text-sm text-slate-500">正在跳转到登录页...</div>;
+    return <div className="py-12 text-center text-sm text-warm-500">正在跳转到登录页...</div>;
   }
 
   if (isForbidden) {
@@ -207,12 +207,12 @@ export default function EditServerPage() {
       <div className="m3-surface p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold text-slate-900">编辑服务器</h1>
-            <p className="mt-2 text-sm text-slate-600">更新服务器信息并保存修改</p>
+            <h1 className="text-2xl font-semibold text-warm-800">编辑服务器</h1>
+            <p className="mt-2 text-sm text-warm-600">更新服务器信息并保存修改</p>
           </div>
           <Link
             href={`/servers/${id}/modpacks`}
-            className="rounded-xl border border-teal-600 px-3 py-1.5 text-xs font-medium text-teal-600 transition-colors hover:bg-teal-50"
+            className="rounded-xl border border-coral px-3 py-1.5 text-xs font-medium text-coral transition-colors hover:bg-coral-light"
           >
             管理整合包
           </Link>

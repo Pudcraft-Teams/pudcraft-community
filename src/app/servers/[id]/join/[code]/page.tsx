@@ -211,7 +211,7 @@ export default function InviteJoinPage() {
 
   if (status === "unauthenticated") {
     return (
-      <div className="py-12 text-center text-sm text-slate-500">
+      <div className="py-12 text-center text-sm text-warm-500">
         正在跳转到登录页...
       </div>
     );
@@ -231,11 +231,11 @@ export default function InviteJoinPage() {
   return (
     <div className="mx-auto max-w-md px-4">
       <div className="m3-surface p-6">
-        <h1 className="text-2xl font-semibold text-slate-900">
+        <h1 className="text-2xl font-semibold text-warm-800">
           加入服务器
         </h1>
         {serverInfo && (
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="mt-2 text-sm text-warm-600">
             你正在通过邀请码加入「{serverInfo.name}」
           </p>
         )}
@@ -258,7 +258,7 @@ export default function InviteJoinPage() {
         {!successMessage && (
           <form className="mt-5 space-y-4" onSubmit={handleSubmit} noValidate>
             <fieldset disabled={isSubmitting} className="space-y-4 disabled:opacity-90">
-              <label className="block text-sm text-slate-700">
+              <label className="block text-sm text-warm-700">
                 MC 用户名
                 <input
                   type="text"
@@ -273,7 +273,7 @@ export default function InviteJoinPage() {
                   maxLength={16}
                 />
                 {fieldError && (
-                  <p className="mt-1 text-xs text-red-400">{fieldError}</p>
+                  <p className="mt-1 text-xs text-coral-hover">{fieldError}</p>
                 )}
               </label>
             </fieldset>

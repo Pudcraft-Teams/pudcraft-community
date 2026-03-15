@@ -128,7 +128,7 @@ export default function ApplyPage() {
 
   if (authStatus === "unauthenticated") {
     return (
-      <div className="py-12 text-center text-sm text-slate-500">
+      <div className="py-12 text-center text-sm text-warm-500">
         正在跳转到登录页...
       </div>
     );
@@ -138,7 +138,7 @@ export default function ApplyPage() {
     return (
       <div className="mx-auto max-w-md px-4">
         <div className="m3-surface p-6 text-center">
-          <p className="text-sm text-slate-600">{pageError}</p>
+          <p className="text-sm text-warm-600">{pageError}</p>
           <Link href="/" className="m3-link mt-4 inline-block text-sm">
             &larr; 返回首页
           </Link>
@@ -156,9 +156,9 @@ export default function ApplyPage() {
     return (
       <div className="mx-auto max-w-md px-4">
         <div className="m3-surface p-6 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-forest-light">
             <svg
-              className="h-6 w-6 text-emerald-600"
+              className="h-6 w-6 text-forest"
               fill="none"
               viewBox="0 0 24 24"
               strokeWidth={2}
@@ -167,8 +167,8 @@ export default function ApplyPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
             </svg>
           </div>
-          <h2 className="text-lg font-semibold text-slate-900">你已是该服务器成员</h2>
-          <p className="mt-1 text-sm text-slate-500">无需再次申请</p>
+          <h2 className="text-lg font-semibold text-warm-800">你已是该服务器成员</h2>
+          <p className="mt-1 text-sm text-warm-500">无需再次申请</p>
           <Link href={serverDetailUrl} className="m3-link mt-4 inline-block text-sm">
             返回服务器详情
           </Link>
@@ -182,9 +182,9 @@ export default function ApplyPage() {
     return (
       <div className="mx-auto max-w-md px-4">
         <div className="m3-surface p-6 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-coral-amber">
             <svg
-              className="h-6 w-6 text-amber-600"
+              className="h-6 w-6 text-coral-amber"
               fill="none"
               viewBox="0 0 24 24"
               strokeWidth={2}
@@ -193,8 +193,8 @@ export default function ApplyPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h2 className="text-lg font-semibold text-slate-900">申请审核中</h2>
-          <p className="mt-1 text-sm text-slate-500">你已提交过申请，请等待服主审核</p>
+          <h2 className="text-lg font-semibold text-warm-800">申请审核中</h2>
+          <p className="mt-1 text-sm text-warm-500">你已提交过申请，请等待服主审核</p>
           <Link href={serverDetailUrl} className="m3-link mt-4 inline-block text-sm">
             返回服务器详情
           </Link>
@@ -205,7 +205,7 @@ export default function ApplyPage() {
 
   return (
     <div className="mx-auto max-w-md px-4">
-      <nav className="mb-4 text-sm text-slate-500">
+      <nav className="mb-4 text-sm text-warm-500">
         <Link href={serverDetailUrl} className="m3-link">
           &larr; {serverInfo.name}
         </Link>

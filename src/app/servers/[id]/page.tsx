@@ -369,7 +369,7 @@ export default async function ServerDetailPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: serializeJsonForScript(gameServerSchema) }}
       />
 
-      <nav className="mb-6 flex items-center gap-2 text-sm text-slate-500">
+      <nav className="mb-6 flex items-center gap-2 text-sm text-warm-500">
         <Link href="/" className="m3-link">
           &larr; 返回
         </Link>
@@ -378,7 +378,7 @@ export default async function ServerDetailPage({ params }: Props) {
           首页
         </Link>
         <span>/</span>
-        <span className="text-slate-700">服务器详情</span>
+        <span className="text-warm-700">服务器详情</span>
       </nav>
 
       <section className="m3-surface mb-6 p-4 sm:p-6">
@@ -396,7 +396,7 @@ export default async function ServerDetailPage({ params }: Props) {
             {isOwner && (
               <Link
                 href={`/servers/${server.psid}/modpacks`}
-                className="m3-btn m3-btn-tonal rounded-lg px-3 py-1.5 text-xs text-teal-700"
+                className="m3-btn m3-btn-tonal rounded-lg px-3 py-1.5 text-xs text-coral"
               >
                 整合包管理
               </Link>
@@ -405,7 +405,7 @@ export default async function ServerDetailPage({ params }: Props) {
             {canClaimUnverified && (
               <Link
                 href={`/servers/${server.psid}/verify`}
-                className="m3-btn m3-btn-tonal rounded-lg px-3 py-1.5 text-xs text-teal-700"
+                className="m3-btn m3-btn-tonal rounded-lg px-3 py-1.5 text-xs text-coral"
               >
                 认领此服务器
               </Link>
@@ -414,7 +414,7 @@ export default async function ServerDetailPage({ params }: Props) {
             {isOwner && (
               <Link
                 href={`/console/${server.id}`}
-                className="m3-btn m3-btn-tonal rounded-lg px-3 py-1.5 text-xs text-teal-700"
+                className="m3-btn m3-btn-tonal rounded-lg px-3 py-1.5 text-xs text-coral"
               >
                 打开控制台
               </Link>
@@ -423,7 +423,7 @@ export default async function ServerDetailPage({ params }: Props) {
             {!isLoggedIn && !server.isVerified && (
               <Link
                 href={`/login?callbackUrl=${encodeURIComponent(`/servers/${server.psid}/verify`)}`}
-                className="text-xs text-slate-500 underline underline-offset-4"
+                className="text-xs text-warm-500 underline underline-offset-4"
               >
                 登录后认领
               </Link>
@@ -433,7 +433,7 @@ export default async function ServerDetailPage({ params }: Props) {
 
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="inline-flex h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+            <span className="inline-flex h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-warm-200 bg-warm-100">
               <Image
                 src={getPublicUrl(server.iconUrl) ?? "/default-server-icon.png"}
                 alt={`${server.name} 图标`}
@@ -445,16 +445,16 @@ export default async function ServerDetailPage({ params }: Props) {
 
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="truncate text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                <h1 className="truncate text-2xl font-bold tracking-tight text-warm-800 sm:text-3xl">
                   {server.name}
                 </h1>
                 {server.visibility === "unlisted" && (
-                  <span className="inline-flex shrink-0 items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-100">
+                  <span className="inline-flex shrink-0 items-center rounded-full bg-coral-amber px-2.5 py-1 text-xs font-semibold text-coral-amber ring-1 ring-coral-amber">
                     需申请加入
                   </span>
                 )}
                 {server.visibility === "private" && (
-                  <span className="inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
+                  <span className="inline-flex shrink-0 items-center rounded-full bg-warm-100 px-2.5 py-1 text-xs font-semibold text-warm-500 ring-1 ring-warm-200">
                     私密服务器
                   </span>
                 )}
@@ -462,7 +462,7 @@ export default async function ServerDetailPage({ params }: Props) {
               {server.isVerified && (
                 <div className="mt-1 inline-flex items-center gap-2">
                   <span
-                    className="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-700 ring-1 ring-teal-100"
+                    className="inline-flex items-center rounded-full bg-coral-light px-2.5 py-1 text-xs font-semibold text-coral ring-1 ring-coral/20"
                     title="已认领 - 管理员已验证"
                   >
                     已认领
@@ -470,19 +470,19 @@ export default async function ServerDetailPage({ params }: Props) {
                   {(canReclaimVerified || !isLoggedIn) && (
                     <details className="group relative">
                       <summary
-                        className="cursor-pointer list-none rounded-md px-1.5 py-0.5 text-xs text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                        className="cursor-pointer list-none rounded-md px-1.5 py-0.5 text-xs text-warm-500 transition-colors hover:bg-warm-100 hover:text-warm-700"
                         aria-label="更多操作"
                       >
                         ...
                       </summary>
-                      <div className="absolute left-0 top-6 z-10 whitespace-nowrap rounded-md border border-slate-200 bg-white px-2 py-1 shadow-md">
+                      <div className="absolute left-0 top-6 z-10 whitespace-nowrap rounded-md border border-warm-200 bg-[#FFFAF6] px-2 py-1 shadow-md">
                         <Link
                           href={
                             isLoggedIn
                               ? `/servers/${server.id}/verify`
                               : `/login?callbackUrl=${encodeURIComponent(`/servers/${server.id}/verify`)}`
                           }
-                          className="text-xs text-slate-600 underline underline-offset-4"
+                          className="text-xs text-warm-600 underline underline-offset-4"
                         >
                           {isLoggedIn ? "我是服主，重新认领" : "登录后认领"}
                         </Link>
@@ -499,15 +499,15 @@ export default async function ServerDetailPage({ params }: Props) {
         </div>
 
         {server.isVerified && verifiedAtLabel && (
-          <p className="mb-4 text-xs text-teal-700">已于 {verifiedAtLabel} 通过认领验证</p>
+          <p className="mb-4 text-xs text-coral">已于 {verifiedAtLabel} 通过认领验证</p>
         )}
 
         {isOwner && server.status !== "approved" && (
           <div
             className={`mb-4 rounded-xl border px-3 py-2 text-sm ${
               server.status === "rejected"
-                ? "border-rose-200 bg-rose-50 text-rose-700"
-                : "border-amber-200 bg-amber-50 text-amber-700"
+                ? "border-coral-hover bg-coral-hover text-coral-hover"
+                : "border-coral-amber bg-coral-amber text-coral-amber"
             }`}
           >
             <p className="font-medium">
@@ -531,31 +531,31 @@ export default async function ServerDetailPage({ params }: Props) {
           <span
             className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
               isOnline
-                ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"
-                : "bg-slate-100 text-slate-500 ring-1 ring-slate-200"
+                ? "bg-forest-light text-forest ring-1 ring-forest-light"
+                : "bg-warm-100 text-warm-500 ring-1 ring-warm-200"
             }`}
           >
             <span
-              className={`h-1.5 w-1.5 rounded-full ${isOnline ? "bg-emerald-500" : "bg-slate-400"}`}
+              className={`h-1.5 w-1.5 rounded-full ${isOnline ? "bg-forest-light0" : "bg-warm-400"}`}
             />
             {isOnline ? "在线" : "离线"}
           </span>
-          <span className="text-slate-600">
+          <span className="text-warm-600">
             当前在线 {server.playerCount} / {server.maxPlayers}
           </span>
-          <span className="text-slate-600">{favoriteCount} 人收藏</span>
-          <span className="text-slate-500">最后检测：{lastPingLabel}</span>
+          <span className="text-warm-600">{favoriteCount} 人收藏</span>
+          <span className="text-warm-500">最后检测：{lastPingLabel}</span>
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-3">
           {addressHidden ? (
             <>
-              <p className="text-sm text-slate-400">地址隐藏</p>
-              <span className="text-xs text-slate-400">加入后可见</span>
+              <p className="text-sm text-warm-400">地址隐藏</p>
+              <span className="text-xs text-warm-400">加入后可见</span>
             </>
           ) : (
             <>
-              <p className="font-mono text-sm text-slate-500">{serverAddress}</p>
+              <p className="font-mono text-sm text-warm-500">{serverAddress}</p>
               <CopyServerIpButton address={serverAddress} />
             </>
           )}
@@ -566,7 +566,7 @@ export default async function ServerDetailPage({ params }: Props) {
           {server.tags.map((tag) => (
             <span
               key={tag}
-              className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs text-slate-600"
+              className="rounded-full border border-warm-200 bg-warm-50 px-2.5 py-0.5 text-xs text-warm-600"
             >
               {tag}
             </span>
@@ -575,35 +575,35 @@ export default async function ServerDetailPage({ params }: Props) {
 
         {/* ─── Membership status & join mode (non-public servers, non-owner) ─── */}
         {server.visibility !== "public" && !isOwner && (
-          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <div className="mt-4 rounded-xl border border-warm-200 bg-warm-50 px-4 py-3">
             {/* Membership status */}
             {isMember ? (
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                <span className="inline-flex items-center rounded-full bg-forest-light px-2.5 py-1 text-xs font-semibold text-forest ring-1 ring-forest-light">
                   已加入
                 </span>
-                <span className="text-xs text-slate-500">你已是该服务器成员</span>
+                <span className="text-xs text-warm-500">你已是该服务器成员</span>
               </div>
             ) : isLoggedIn ? (
               <div className="space-y-2">
                 {/* Latest application status */}
                 {latestApplicationStatus === "pending" && (
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-100">
+                    <span className="inline-flex items-center rounded-full bg-coral-amber px-2.5 py-1 text-xs font-semibold text-coral-amber ring-1 ring-coral-amber">
                       申请审核中
                     </span>
-                    <span className="text-xs text-slate-500">请等待服主审核</span>
+                    <span className="text-xs text-warm-500">请等待服主审核</span>
                   </div>
                 )}
                 {latestApplicationStatus === "rejected" && (
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600 ring-1 ring-rose-100">
+                    <span className="inline-flex items-center rounded-full bg-coral-hover px-2.5 py-1 text-xs font-semibold text-coral-hover ring-1 ring-coral-hover">
                       申请被拒绝
                     </span>
                     {(server.joinMode === "apply" || server.joinMode === "apply_and_invite") && (
                       <Link
                         href={`/servers/${server.psid}/apply`}
-                        className="text-xs text-teal-600 underline underline-offset-4 hover:text-teal-700"
+                        className="text-xs text-coral underline underline-offset-4 hover:text-coral"
                       >
                         重新申请
                       </Link>
@@ -618,16 +618,16 @@ export default async function ServerDetailPage({ params }: Props) {
                       latestApplicationStatus !== "rejected" && (
                         <Link
                           href={`/servers/${server.psid}/apply`}
-                          className="m3-btn m3-btn-tonal rounded-lg px-3 py-1.5 text-xs text-teal-700"
+                          className="m3-btn m3-btn-tonal rounded-lg px-3 py-1.5 text-xs text-coral"
                         >
                           申请加入
                         </Link>
                       )}
                     {(server.joinMode === "invite" || server.joinMode === "apply_and_invite") && (
-                      <span className="text-xs text-slate-500">需要邀请码加入</span>
+                      <span className="text-xs text-warm-500">需要邀请码加入</span>
                     )}
                     {server.joinMode === "open" && (
-                      <span className="text-xs text-slate-500">该服务器为开放加入</span>
+                      <span className="text-xs text-warm-500">该服务器为开放加入</span>
                     )}
                   </div>
                 )}
@@ -636,7 +636,7 @@ export default async function ServerDetailPage({ params }: Props) {
               <div className="flex items-center gap-2">
                 <Link
                   href={`/login?callbackUrl=${encodeURIComponent(`/servers/${server.psid}`)}`}
-                  className="text-xs text-teal-600 underline underline-offset-4 hover:text-teal-700"
+                  className="text-xs text-coral underline underline-offset-4 hover:text-coral"
                 >
                   登录后查看加入方式
                 </Link>
@@ -648,7 +648,7 @@ export default async function ServerDetailPage({ params }: Props) {
 
       {server.content && (
         <section className="m3-surface p-4 sm:p-6">
-          <h2 className="mb-4 text-lg font-semibold text-slate-900">服务器介绍</h2>
+          <h2 className="mb-4 text-lg font-semibold text-warm-800">服务器介绍</h2>
           <MarkdownRenderer
             content={
               canSeeAddress
@@ -660,13 +660,13 @@ export default async function ServerDetailPage({ params }: Props) {
       )}
 
       {canViewModpacks && (
-        <section className="mt-6 rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
+        <section className="mt-6 rounded-xl border border-warm-200 bg-[#FFFAF6] p-4 sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-slate-900">整合包</h2>
+            <h2 className="text-lg font-semibold text-warm-800">整合包</h2>
             {isOwner && (
               <Link
                 href={`/servers/${server.psid}/modpacks`}
-                className="rounded-xl border border-teal-600 px-3 py-1.5 text-xs font-medium text-teal-600 transition-colors hover:bg-teal-50"
+                className="rounded-xl border border-coral px-3 py-1.5 text-xs font-medium text-coral transition-colors hover:bg-coral-light"
               >
                 上传 / 管理
               </Link>
@@ -674,21 +674,21 @@ export default async function ServerDetailPage({ params }: Props) {
           </div>
 
           {modpacks.length === 0 ? (
-            <p className="text-sm text-slate-500">当前暂无整合包版本。</p>
+            <p className="text-sm text-warm-500">当前暂无整合包版本。</p>
           ) : (
             <div className="space-y-3">
               {modpacks.map((modpack, index) => (
-                <div key={modpack.id} className="rounded-xl border border-gray-200 bg-white p-4">
+                <div key={modpack.id} className="rounded-xl border border-warm-200 bg-[#FFFAF6] p-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-base font-semibold text-slate-900">{modpack.name}</h3>
+                    <h3 className="text-base font-semibold text-warm-800">{modpack.name}</h3>
                     {index === 0 && (
-                      <span className="rounded-full border border-teal-600 px-2 py-0.5 text-xs font-medium text-teal-600">
+                      <span className="rounded-full border border-coral px-2 py-0.5 text-xs font-medium text-coral">
                         最新版本
                       </span>
                     )}
                   </div>
 
-                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-warm-600">
                     <span>版本：{modpack.version ?? "--"}</span>
                     <span>加载器：{modpack.loader ?? "--"}</span>
                     <span>游戏版本：{modpack.gameVersion ?? "--"}</span>
@@ -699,13 +699,13 @@ export default async function ServerDetailPage({ params }: Props) {
                   </div>
 
                   {modpack.summary && (
-                    <p className="mt-2 text-sm text-slate-600">{modpack.summary}</p>
+                    <p className="mt-2 text-sm text-warm-600">{modpack.summary}</p>
                   )}
 
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <a
                       href={`/api/modpacks/${modpack.id}/download`}
-                      className="rounded-xl border border-teal-600 px-3 py-1.5 text-xs font-medium text-teal-600 transition-colors hover:bg-teal-50"
+                      className="rounded-xl border border-coral px-3 py-1.5 text-xs font-medium text-coral transition-colors hover:bg-coral-light"
                     >
                       下载
                     </a>
@@ -713,7 +713,7 @@ export default async function ServerDetailPage({ params }: Props) {
                       <DeleteModpackButton
                         modpackId={modpack.id}
                         modpackName={modpack.name}
-                        className="rounded-xl border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50"
+                        className="rounded-xl border border-coral-hover px-3 py-1.5 text-xs font-medium text-coral-hover transition-colors hover:bg-coral-hover"
                       />
                     )}
                   </div>
