@@ -349,6 +349,8 @@ export async function POST(request: Request) {
             ownerId: userId,
             maxPlayers: typeof maxPlayers === "number" ? maxPlayers : 0,
             visibility: visibility ?? "public",
+            status: "approved",
+            reviewStatus: "unreviewed",
           },
         });
       });
@@ -409,7 +411,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         success: true,
-        message: "服务器已提交，等待管理员审核",
+        message: "服务器已成功发布",
         warning: iconWarning,
         data: {
           id: server.id,
