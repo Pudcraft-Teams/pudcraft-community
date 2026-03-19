@@ -223,12 +223,14 @@ export interface AdminServerItem {
   description: string | null;
   content: string | null;
   status: string;
+  reviewStatus: string;
   rejectReason: string | null;
   isVerified: boolean;
   ownerId: string | null;
   ownerName: string | null;
   ownerEmail: string | null;
   createdAt: string;
+  reportCount?: number;
 }
 
 /** 管理后台 - 用户列表项 */

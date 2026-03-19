@@ -80,8 +80,53 @@ export async function GET(request: Request) {
     const offset = (page - 1) * limit;
     let total = 0;
     let servers: ServerWithOwner[] = [];
+    let reportCountMap: Map<string, number> | null = null;
 
-    if (status !== "all") {
+    if (status === "unreviewed") {
+      const where: Prisma.ServerWhereInput = {
+        ...baseWhere,
+        status: "approved",
+        reviewStatus: "unreviewed",
+      };
+      [total, servers] = await Promise.all([
+        prisma.server.count({ where }),
+        findServersWithOwner(where, offset, limit),
+      ]);
+    } else if (status === "reviewed") {
+      const where: Prisma.ServerWhereInput = {
+        ...baseWhere,
+        status: "approved",
+        reviewStatus: "reviewed",
+      };
+      [total, servers] = await Promise.all([
+        prisma.server.count({ where }),
+        findServersWithOwner(where, offset, limit),
+      ]);
+    } else if (status === "reported") {
+      // Find server IDs that have pending reports
+      const pendingReports = await prisma.report.groupBy({
+        by: ["targetId"],
+        where: { targetType: "server", status: "pending" },
+        _count: { id: true },
+      });
+
+      const reportedServerIds = pendingReports.map((r) => r.targetId);
+      reportCountMap = new Map(pendingReports.map((r) => [r.targetId, r._count.id]));
+
+      if (reportedServerIds.length === 0) {
+        total = 0;
+        servers = [];
+      } else {
+        const where: Prisma.ServerWhereInput = {
+          ...baseWhere,
+          id: { in: reportedServerIds },
+        };
+        [total, servers] = await Promise.all([
+          prisma.server.count({ where }),
+          findServersWithOwner(where, offset, limit),
+        ]);
+      }
+    } else if (status !== "all") {
       const where: Prisma.ServerWhereInput = { ...baseWhere, status };
       [total, servers] = await Promise.all([
         prisma.server.count({ where }),
@@ -128,12 +173,14 @@ export async function GET(request: Request) {
       description: server.description,
       content: server.content,
       status: server.status,
+      reviewStatus: server.reviewStatus,
       rejectReason: server.rejectReason,
       isVerified: server.isVerified,
       ownerId: server.ownerId,
       ownerName: server.owner?.name ?? null,
       ownerEmail: server.owner?.email ?? null,
       createdAt: server.createdAt.toISOString(),
+      ...(reportCountMap ? { reportCount: reportCountMap.get(server.id) ?? 0 } : {}),
     }));
 
     return NextResponse.json({

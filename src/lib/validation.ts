@@ -328,7 +328,7 @@ export const pingResultSchema = z.object({
 export const adminQueryServersSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
-  status: z.enum(["all", "pending", "approved", "rejected"]).default("all"),
+  status: z.enum(["all", "pending", "approved", "rejected", "unreviewed", "reviewed", "reported"]).default("all"),
   search: z.string().max(100).optional(),
 });
 
