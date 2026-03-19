@@ -334,7 +334,7 @@ export const adminQueryServersSchema = z.object({
 
 /** 管理后台服务器审核操作 */
 export const adminServerActionSchema = z.object({
-  action: z.enum(["approve", "reject"]),
+  action: z.enum(["approve", "reject", "review"]),
   reason: z.string().max(500).optional(),
 });
 
@@ -434,3 +434,33 @@ export type SyncHandshakeInput = z.infer<typeof syncHandshakeSchema>;
 export type StatusReportInput = z.infer<typeof statusReportSchema>;
 export type QueryApplicationsInput = z.infer<typeof queryApplicationsSchema>;
 export type QueryMembersInput = z.infer<typeof queryMembersSchema>;
+
+// ─── 举报 ───
+
+export const reportCategoryEnum = z.enum([
+  "misinformation",
+  "pornography",
+  "harassment",
+  "fraud",
+  "other",
+]);
+
+export const createReportSchema = z.object({
+  targetType: z.enum(["server", "comment", "user"]),
+  targetId: z.string().min(1),
+  category: reportCategoryEnum,
+  description: z.string().max(500).optional(),
+});
+
+export const adminQueryReportsSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  status: z.enum(["all", "pending", "resolved", "dismissed"]).default("pending"),
+  targetType: z.enum(["all", "server", "comment", "user"]).default("all"),
+});
+
+export const adminReportActionSchema = z.object({
+  action: z.enum(["dismiss", "resolve"]),
+  actions: z.array(z.enum(["warn", "takedown", "ban_user"])).optional(),
+  adminNote: z.string().max(500).optional(),
+});
