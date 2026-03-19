@@ -42,6 +42,7 @@ model User {
   reviewedApps   ServerApplication[] @relation("ApplicationReviewer")
   serverInvites  ServerInvite[]
   serverMembers  ServerMember[]
+  reports        Report[]       @relation("reportsMade")
 
   @@map("users")
 }
@@ -71,6 +72,9 @@ model Server {
   lastPingedAt    DateTime? @map("last_pinged_at")
   status          String    @default("pending") // pending | approved | rejected
   rejectReason    String?   @map("reject_reason")
+  reviewStatus    String    @default("unreviewed") @map("review_status") // unreviewed | reviewed
+  reviewedAt      DateTime? @map("reviewed_at")
+  reviewedBy      String?   @map("reviewed_by")
   visibility      String    @default("public") @map("visibility") // public | private | unlisted
   discoverable    Boolean   @default(false) @map("discoverable") // 非公开服务器是否出现在首页发现列表
   joinMode        String    @default("open") @map("join_mode") // open | apply | invite | apply_and_invite
@@ -102,6 +106,7 @@ model Server {
   @@index([status])
   @@index([status, visibility, discoverable])
   @@index([ownerId])
+  @@index([reviewStatus])
   @@map("servers")
 }
 
@@ -396,6 +401,29 @@ model WhitelistSync {
   @@index([serverId, status])
   @@index([memberId])
   @@map("whitelist_syncs")
+}
+
+/// 用户举报 —— 支持举报服务器、评论、用户
+model Report {
+  id          String    @id @default(cuid())
+  targetType  String    @map("target_type") // server | comment | user
+  targetId    String    @map("target_id")
+  reporterId  String    @map("reporter_id")
+  reporter    User      @relation("reportsMade", fields: [reporterId], references: [id], onDelete: Cascade)
+  category    String // misinformation | pornography | harassment | fraud | other
+  description String?   @db.VarChar(500)
+  status      String    @default("pending") // pending | resolved | dismissed
+  actions     String?   @db.Text // JSON: ["warn","takedown","ban_user"]
+  adminNote   String?   @map("admin_note") @db.VarChar(500)
+  resolvedBy  String?   @map("resolved_by")
+  resolvedAt  DateTime? @map("resolved_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@unique([reporterId, targetType, targetId])
+  @@index([targetType, targetId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("reports")
 }
 
 // ============================================
