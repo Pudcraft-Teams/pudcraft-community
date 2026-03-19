@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -58,7 +60,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
     // Execute enforcement actions when resolving
     if (action === "resolve" && actions && actions.length > 0) {
-      await executeActions(report.targetType, report.targetId, actions);
+      await executeActions(report.targetType, report.targetId, actions, adminNote);
     }
 
     // Notify reporter (non-blocking)
@@ -90,6 +92,7 @@ async function executeActions(
   targetType: string,
   targetId: string,
   actions: ("warn" | "takedown" | "ban_user")[],
+  adminNote?: string | null,
 ): Promise<void> {
   // Resolve the target owner
   const ownerId = await resolveTargetOwner(targetType, targetId);
@@ -159,7 +162,7 @@ async function executeActions(
           if (!ownerId) break;
           await prisma.user.update({
             where: { id: ownerId },
-            data: { bannedAt: new Date(), isBanned: true },
+            data: { bannedAt: new Date(), isBanned: true, banReason: adminNote ?? "举报处置" },
           });
           break;
         }
