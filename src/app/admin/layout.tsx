@@ -44,6 +44,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             内容审查
           </Link>
           <Link
+            href="/admin/reports"
+            className="block rounded-lg px-3 py-2 text-sm text-warm-700 transition-colors hover:bg-warm-100"
+          >
+            举报管理
+          </Link>
+          <Link
             href="/admin/changelog"
             className="block rounded-lg px-3 py-2 text-sm text-warm-700 transition-colors hover:bg-warm-100"
           >
@@ -65,6 +71,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </Link>
         <Link href="/admin/moderation" className="m3-chip text-xs">
           审查
+        </Link>
+        <Link href="/admin/reports" className="m3-chip text-xs">
+          举报
         </Link>
         <Link href="/admin/changelog" className="m3-chip text-xs">
           日志
