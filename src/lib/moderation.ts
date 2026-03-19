@@ -34,6 +34,11 @@ const CONTEXT_SERVICE: Record<ModerationContext, string> = {
   modpack: "comment_detection",
 };
 
+/** 各场景下应忽略的标签（服务器简介天然含推广内容，不应拦截广告/灌水标签） */
+const IGNORED_LABELS: Partial<Record<ModerationContext, Set<string>>> = {
+  server: new Set(["ad", "nonsense"]),
+};
+
 const LABEL_NAMES: Record<string, string> = {
   political_content: "涉政",
   sexual_content: "色情",
@@ -79,6 +84,7 @@ function writeModerationLog(
 async function callTextModeration(
   content: string,
   service: string,
+  ignoredLabels?: Set<string>,
 ): Promise<{ passed: boolean; labels?: string; reason?: string }> {
   const client = getGreenClient();
   const request = new TextModerationRequest({
@@ -104,7 +110,11 @@ async function callTextModeration(
     return { passed: true };
   }
 
-  const labelList = labels.split(",");
+  const labelList = labels.split(",").filter((l) => !ignoredLabels?.has(l));
+  if (labelList.length === 0) {
+    return { passed: true };
+  }
+
   const category = labelList.map((l) => LABEL_NAMES[l] ?? l).join("、");
   const reason = body.data.reason ?? `包含${category}内容`;
 
@@ -128,7 +138,11 @@ export async function moderateContent(
   const content = trimmed.slice(0, maxLength);
 
   try {
-    const result = await callTextModeration(content, CONTEXT_SERVICE[context]);
+    const result = await callTextModeration(
+      content,
+      CONTEXT_SERVICE[context],
+      IGNORED_LABELS[context],
+    );
 
     writeModerationLog(context, content, result.passed, result.labels, result.reason, options);
 
@@ -161,7 +175,11 @@ export async function moderateFields(
   if (!combined) return { passed: true };
 
   try {
-    const result = await callTextModeration(combined, CONTEXT_SERVICE[context]);
+    const result = await callTextModeration(
+      combined,
+      CONTEXT_SERVICE[context],
+      IGNORED_LABELS[context],
+    );
 
     writeModerationLog(context, combined, result.passed, result.labels, result.reason, options);
 
