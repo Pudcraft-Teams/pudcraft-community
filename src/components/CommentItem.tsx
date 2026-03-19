@@ -30,6 +30,7 @@ interface CommentItemProps {
   onToggleReply: () => void;
   onReplyCreated: (parentId: string, reply: CommentReply) => void;
   onDeleted: (commentId: string, parentId: string | null) => void;
+  onReport?: (commentId: string) => void;
 }
 
 function displayAuthorName(author: Pick<CommentAuthor, "name">): string {
@@ -47,6 +48,7 @@ export function CommentItem({
   onToggleReply,
   onReplyCreated,
   onDeleted,
+  onReport,
 }: CommentItemProps) {
   const { toast } = useToast();
   const [replyContent, setReplyContent] = useState("");
@@ -155,6 +157,15 @@ export function CommentItem({
         >
           回复
         </button>
+        {currentUserId && currentUserId !== comment.author.id && onReport && (
+          <button
+            type="button"
+            onClick={() => onReport(comment.id)}
+            className="text-sm text-warm-500 transition-colors hover:text-accent"
+          >
+            举报
+          </button>
+        )}
         {currentUserId === comment.author.id && (
           <button
             type="button"
@@ -239,16 +250,27 @@ export function CommentItem({
                 {reply.content}
               </p>
 
-              {currentUserId === reply.author.id && (
-                <div className="mt-2 flex justify-end">
-                  <button
-                    type="button"
-                    disabled={deletingId === reply.id}
-                    onClick={() => handleDelete(reply.id, comment.id, "确定删除这条回复吗？")}
-                    className="text-sm text-warm-500 transition-colors hover:text-coral-hover disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {deletingId === reply.id ? "删除中..." : "删除"}
-                  </button>
+              {(currentUserId === reply.author.id || (currentUserId && currentUserId !== reply.author.id && onReport)) && (
+                <div className="mt-2 flex justify-end gap-4">
+                  {currentUserId && currentUserId !== reply.author.id && onReport && (
+                    <button
+                      type="button"
+                      onClick={() => onReport(reply.id)}
+                      className="text-sm text-warm-500 transition-colors hover:text-accent"
+                    >
+                      举报
+                    </button>
+                  )}
+                  {currentUserId === reply.author.id && (
+                    <button
+                      type="button"
+                      disabled={deletingId === reply.id}
+                      onClick={() => handleDelete(reply.id, comment.id, "确定删除这条回复吗？")}
+                      className="text-sm text-warm-500 transition-colors hover:text-coral-hover disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {deletingId === reply.id ? "删除中..." : "删除"}
+                    </button>
+                  )}
                 </div>
               )}
             </div>

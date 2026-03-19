@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { CommentItem } from "@/components/CommentItem";
 import { EmptyState } from "@/components/EmptyState";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { ReportDialog } from "@/components/ReportDialog";
 import { useToast } from "@/hooks/useToast";
 import type {
   CommentAuthor,
@@ -66,6 +67,8 @@ export function CommentSection({
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeReplyCommentId, setActiveReplyCommentId] = useState<string | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportTarget, setReportTarget] = useState<{ type: "comment" | "user"; id: string } | null>(null);
 
   const loadComments = useCallback(
     async (targetPage: number, append: boolean) => {
@@ -199,6 +202,11 @@ export function CommentSection({
     );
   };
 
+  const handleReport = (commentId: string) => {
+    setReportTarget({ type: "comment", id: commentId });
+    setReportOpen(true);
+  };
+
   const handleDeleted = (commentId: string, parentId: string | null) => {
     if (parentId === null) {
       setComments((prev) => prev.filter((item) => item.id !== commentId));
@@ -281,6 +289,7 @@ export function CommentSection({
                 }}
                 onReplyCreated={handleReplyCreated}
                 onDeleted={handleDeleted}
+                onReport={handleReport}
               />
             ))}
 
@@ -301,6 +310,18 @@ export function CommentSection({
           </>
         )}
       </div>
+
+      {reportTarget && (
+        <ReportDialog
+          targetType={reportTarget.type}
+          targetId={reportTarget.id}
+          open={reportOpen}
+          onClose={() => {
+            setReportOpen(false);
+            setReportTarget(null);
+          }}
+        />
+      )}
     </section>
   );
 }
