@@ -160,12 +160,16 @@ export default async function ServersPage({ searchParams }: ServersPageProps) {
   const search = getFirstParam(rawSearchParams.search);
   const sort = parseSort(getFirstParam(rawSearchParams.sort));
 
-  const { servers, totalPages } = await getServerList({
-    page,
-    tag,
-    search,
-    sort,
-  });
+  let servers: Awaited<ReturnType<typeof getServerList>>["servers"] = [];
+  let totalPages = 1;
+
+  try {
+    const result = await getServerList({ page, tag, search, sort });
+    servers = result.servers;
+    totalPages = result.totalPages;
+  } catch {
+    // DB unavailable — render empty state
+  }
 
   return (
     <HomePageClient
