@@ -395,3 +395,132 @@ export interface MembershipStatus {
     createdAt: string;
   } | null;
 }
+
+// ─── 论坛类型 ──────────────────────────────────
+
+/** 圈子列表项 */
+export interface CircleItem {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  icon: string | null;
+  memberCount: number;
+  postCount: number;
+  createdAt: string;
+}
+
+/** 圈子详情（含额外信息） */
+export interface CircleDetail extends CircleItem {
+  banner: string | null;
+  creatorId: string | null;
+  creator: { id: string; uid: number; name: string | null; image: string | null } | null;
+  isMember?: boolean;
+  memberRole?: string | null;
+}
+
+/** 帖子作者信息 */
+export interface PostAuthor {
+  id: string;
+  uid: number;
+  name: string | null;
+  image: string | null;
+}
+
+/** 帖子列表项 */
+export interface PostItem {
+  id: string;
+  title: string;
+  contentPreview: string;
+  authorId: string;
+  author: PostAuthor;
+  circleId: string | null;
+  circle: { id: string; name: string; slug: string } | null;
+  sectionId: string | null;
+  section: { id: string; name: string } | null;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  isPinned: boolean;
+  isLiked?: boolean;
+  isBookmarked?: boolean;
+  createdAt: string;
+}
+
+/** 帖子详情（含完整内容） */
+export interface PostDetail extends Omit<PostItem, "contentPreview"> {
+  content: unknown;
+  updatedAt: string;
+}
+
+/** 论坛评论数据 */
+export interface ForumComment {
+  id: string;
+  content: string;
+  authorId: string;
+  author: PostAuthor;
+  parentCommentId: string | null;
+  parentAuthor?: { id: string; name: string | null } | null;
+  likeCount: number;
+  isLiked?: boolean;
+  createdAt: string;
+}
+
+/** 论坛评论列表 API 响应 */
+export interface ForumCommentResponse {
+  comments: ForumComment[];
+  nextCursor: string | null;
+}
+
+/** 帖子 Feed API 响应 */
+export interface PostFeedResponse {
+  posts: PostItem[];
+  nextCursor: string | null;
+}
+
+/** 圈子列表 API 响应 */
+export interface CircleListResponse {
+  circles: CircleItem[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+/** 板块列表项 */
+export interface SectionItem {
+  id: string;
+  name: string;
+  description: string | null;
+  sortOrder: number;
+}
+
+/** 论坛通知项 */
+export interface ForumNotificationItem {
+  id: string;
+  type: string;
+  sourceUser: { id: string; uid: number; name: string | null; image: string | null };
+  post: { id: string; title: string; circleId: string | null; circle: { slug: string } | null } | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
+/** 圈子成员列表项 */
+export interface CircleMemberItem {
+  id: string;
+  userId: string;
+  user: { id: string; uid: number; name: string | null; image: string | null };
+  role: string;
+  joinedAt: string;
+}
+
+/** 圈子封禁列表项 */
+export interface CircleBanItem {
+  id: string;
+  userId: string;
+  user: { id: string; uid: number; name: string | null; image: string | null };
+  reason: string | null;
+  expiresAt: string | null;
+  bannedBy: string;
+  banner: { id: string; name: string | null };
+  createdAt: string;
+}
