@@ -24,6 +24,10 @@ export async function GET(request: Request, { params }: RouteContext) {
   try {
     const { id } = await params;
 
+    const session = await auth();
+    const userId = session?.user?.id;
+    const isAdmin = session?.user?.role === "admin";
+
     const post = await prisma.post.findUnique({
       where: { id },
       include: {
@@ -43,38 +47,8 @@ export async function GET(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "帖子不存在" }, { status: 404 });
     }
 
-    // Deleted posts are not visible
-    if (post.status === "DELETED") {
-      // Allow author, site admin, or circle admins to still see deleted posts
-      const session = await auth();
-      const userId = session?.user?.id;
-      const isAdmin = session?.user?.role === "admin";
-      const isAuthor = userId === post.authorId;
-
-      let isCircleAdmin = false;
-      if (userId && post.circleId && !isAdmin && !isAuthor) {
-        const membership = await prisma.circleMembership.findUnique({
-          where: {
-            unique_circle_membership: {
-              userId,
-              circleId: post.circleId,
-            },
-          },
-          select: { role: true },
-        });
-        isCircleAdmin = membership?.role === "OWNER" || membership?.role === "ADMIN";
-      }
-
-      if (!isAuthor && !isAdmin && !isCircleAdmin) {
-        return NextResponse.json({ error: "帖子不存在" }, { status: 404 });
-      }
-    }
-
-    // Hidden posts: visible to author, admin, or circle admins
-    if (post.status === "HIDDEN") {
-      const session = await auth();
-      const userId = session?.user?.id;
-      const isAdmin = session?.user?.role === "admin";
+    // Deleted / Hidden posts: visible only to author, site admin, or circle admins
+    if (post.status === "DELETED" || post.status === "HIDDEN") {
       const isAuthor = userId === post.authorId;
 
       let isCircleAdmin = false;
@@ -103,10 +77,6 @@ export async function GET(request: Request, { params }: RouteContext) {
         data: { viewCount: { increment: 1 } },
       })
       .catch(() => {});
-
-    // Check liked/bookmarked status if user is logged in
-    const session = await auth();
-    const userId = session?.user?.id;
 
     let isLiked: boolean | undefined;
     let isBookmarked: boolean | undefined;
@@ -363,10 +333,18 @@ export async function DELETE(request: Request, { params }: RouteContext) {
           data: { status: "DELETED" },
         });
 
-        await tx.circle.update({
+        const updated = await tx.circle.update({
           where: { id: post.circleId! },
           data: { postCount: { decrement: 1 } },
+          select: { postCount: true },
         });
+
+        if (updated.postCount < 0) {
+          await tx.circle.update({
+            where: { id: post.circleId! },
+            data: { postCount: 0 },
+          });
+        }
       });
     } else {
       await prisma.post.update({

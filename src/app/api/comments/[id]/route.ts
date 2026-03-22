@@ -73,10 +73,18 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
         data: { status: "DELETED" },
       });
 
-      await tx.post.update({
+      const updated = await tx.post.update({
         where: { id: comment.postId },
         data: { commentCount: { decrement: 1 } },
+        select: { commentCount: true },
       });
+
+      if (updated.commentCount < 0) {
+        await tx.post.update({
+          where: { id: comment.postId },
+          data: { commentCount: 0 },
+        });
+      }
     });
 
     return NextResponse.json({ success: true });

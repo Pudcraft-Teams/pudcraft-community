@@ -7,6 +7,7 @@ import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { moderateContent } from "@/lib/moderation";
+import { rateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 import { createPostSchema, feedQuerySchema } from "@/lib/validation";
 import type { PostItem, PostFeedResponse } from "@/lib/types";
@@ -175,6 +176,11 @@ export async function POST(request: Request) {
       return authResult.response;
     }
     const userId = authResult.user.id;
+
+    const rl = await rateLimit(`post-create:${userId}`, 10, 60);
+    if (!rl.allowed) {
+      return NextResponse.json({ error: "请求过于频繁，请稍后再试" }, { status: 429 });
+    }
 
     const body: unknown = await request.json();
     const parsed = createPostSchema.safeParse(body);

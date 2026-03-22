@@ -86,14 +86,12 @@ export async function GET(request: Request, { params }: RouteContext) {
     });
 
     // Determine nextCursor
-    let nextCursor: string | null = null;
-    if (comments.length > limit) {
-      const lastItem = comments.pop()!;
-      nextCursor = lastItem.id;
-    }
+    const hasMore = comments.length > limit;
+    const sliced = hasMore ? comments.slice(0, limit) : comments;
+    const nextCursor = hasMore ? sliced[sliced.length - 1]?.id ?? null : null;
 
     // Collect parentCommentIds to batch-fetch parent authors
-    const parentIds = comments
+    const parentIds = sliced
       .map((c) => c.parentCommentId)
       .filter((id): id is string => id !== null);
 
@@ -117,8 +115,8 @@ export async function GET(request: Request, { params }: RouteContext) {
     const currentUserId = session?.user?.id;
     const likedSet = new Set<string>();
 
-    if (currentUserId && comments.length > 0) {
-      const commentIds = comments.map((c) => c.id);
+    if (currentUserId && sliced.length > 0) {
+      const commentIds = sliced.map((c) => c.id);
       const likes = await prisma.commentLike.findMany({
         where: { userId: currentUserId, commentId: { in: commentIds } },
         select: { commentId: true },
@@ -129,7 +127,7 @@ export async function GET(request: Request, { params }: RouteContext) {
     }
 
     // Map to response format
-    const mappedComments: ForumComment[] = comments.map((c) => ({
+    const mappedComments: ForumComment[] = sliced.map((c) => ({
       id: c.id,
       content: c.content,
       authorId: c.authorId,

@@ -152,6 +152,15 @@ export async function POST(request: Request, { params }: RouteContext) {
 
     const { userId: targetUserId, reason, expiresAt } = parsed.data;
 
+    // Check target user exists
+    const targetUser = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { id: true },
+    });
+    if (!targetUser) {
+      return NextResponse.json({ error: "用户不存在" }, { status: 404 });
+    }
+
     // Cannot ban OWNER of the circle
     const targetMembership = await prisma.circleMembership.findUnique({
       where: {
