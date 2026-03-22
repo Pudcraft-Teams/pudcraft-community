@@ -35,7 +35,7 @@ model User {
   comments       ServerComment[]
   favorites      Favorite[]
   modpacks       Modpack[]
-  notifications  Notification[]
+  serverNotifications ServerNotification[]
   moderationLogs ModerationLog[]
   changelogs     Changelog[]
   applications   ServerApplication[] @relation("ApplicationUser")
@@ -236,7 +236,7 @@ model Modpack {
 }
 
 /// 站内通知 —— 评论回复、服务器上线、审核结果等
-model Notification {
+model ServerNotification {
   id        String    @id @default(cuid())
   createdAt DateTime  @default(now()) @map("created_at")
   readAt    DateTime? @map("read_at")

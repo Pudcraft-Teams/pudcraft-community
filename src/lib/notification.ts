@@ -24,7 +24,7 @@ export interface CreateNotificationParams {
  * 创建单条站内通知。
  */
 export async function createNotification(params: CreateNotificationParams): Promise<void> {
-  await db.notification.create({
+  await db.serverNotification.create({
     data: {
       userId: params.userId,
       type: params.type,
@@ -47,7 +47,7 @@ export async function createBulkNotifications(
     return;
   }
 
-  await db.notification.createMany({
+  await db.serverNotification.createMany({
     data: notifications.map((notification) => ({
       userId: notification.userId,
       type: notification.type,

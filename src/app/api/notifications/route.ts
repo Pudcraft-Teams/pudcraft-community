@@ -40,14 +40,14 @@ export async function GET(request: Request) {
     };
 
     const [total, unreadCount, notifications] = await Promise.all([
-      prisma.notification.count({ where }),
-      prisma.notification.count({
+      prisma.serverNotification.count({ where }),
+      prisma.serverNotification.count({
         where: {
           userId,
           readAt: null,
         },
       }),
-      prisma.notification.findMany({
+      prisma.serverNotification.findMany({
         where,
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
@@ -108,7 +108,7 @@ export async function PATCH(request: Request) {
 
     const now = new Date();
     if ("all" in parsedBody.data) {
-      await prisma.notification.updateMany({
+      await prisma.serverNotification.updateMany({
         where: {
           userId,
           readAt: null,
@@ -116,7 +116,7 @@ export async function PATCH(request: Request) {
         data: { readAt: now },
       });
     } else {
-      await prisma.notification.updateMany({
+      await prisma.serverNotification.updateMany({
         where: {
           userId,
           id: { in: parsedBody.data.ids },
@@ -126,7 +126,7 @@ export async function PATCH(request: Request) {
       });
     }
 
-    const unreadCount = await prisma.notification.count({
+    const unreadCount = await prisma.serverNotification.count({
       where: {
         userId,
         readAt: null,

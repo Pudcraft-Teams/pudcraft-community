@@ -184,7 +184,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     }
 
     await prisma.$transaction([
-      prisma.notification.deleteMany({
+      prisma.serverNotification.deleteMany({
         where: { serverId: server.id },
       }),
       prisma.server.delete({ where: { id: server.id } }),

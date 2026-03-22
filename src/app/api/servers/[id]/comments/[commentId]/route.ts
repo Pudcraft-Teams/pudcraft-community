@@ -67,7 +67,7 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
     const targetIds = relatedCommentIds.map((item) => item.id);
 
     await prisma.$transaction([
-      prisma.notification.deleteMany({
+      prisma.serverNotification.deleteMany({
         where: {
           commentId: { in: targetIds },
         },

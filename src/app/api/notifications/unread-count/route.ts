@@ -17,7 +17,7 @@ export async function GET() {
       return NextResponse.json({ error: "请先登录" }, { status: 401 });
     }
 
-    const count = await prisma.notification.count({
+    const count = await prisma.serverNotification.count({
       where: {
         userId,
         readAt: null,

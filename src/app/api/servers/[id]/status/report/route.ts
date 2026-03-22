@@ -132,7 +132,7 @@ async function notifyServerOnline(
 
     if (favorites.length === 0) return;
 
-    await prisma.notification.createMany({
+    await prisma.serverNotification.createMany({
       data: favorites.map((f) => ({
         userId: f.userId,
         type: "server_online",
