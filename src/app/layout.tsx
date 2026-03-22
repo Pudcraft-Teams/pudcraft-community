@@ -2,17 +2,17 @@ export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Nunito } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import { AuthButtons, MobileNavMenu } from "@/components/AuthButtons";
 import { Providers } from "@/components/Providers";
 import "@/styles/globals.css";
 import "cropperjs/dist/cropper.css";
 
-const nunito = Nunito({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-nunito",
-  weight: ["400", "600", "700", "800"],
+  variable: "--font-jakarta",
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -42,26 +42,40 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN">
-      <body className={`${nunito.variable} min-h-screen antialiased`}>
+      <body className={`${jakarta.variable} min-h-screen antialiased`}>
         <Providers>
+          {/* ─── Skip Link ─── */}
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:rounded-lg focus:bg-accent focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white focus:shadow-lg"
+          >
+            跳到主要内容
+          </a>
+
           {/* ─── Header ─── */}
-          <header className="sticky top-0 z-50 bg-[#FFFAF6]/85 backdrop-blur-xl">
-            <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+          <header className="sticky top-0 z-50 border-b border-warm-200 bg-surface/95 backdrop-blur-sm">
+            <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
               <Link
                 href="/"
-                className="group flex items-center gap-2.5"
+                className="group flex items-center gap-2"
               >
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#D4715E] to-[#D4956A] text-base text-white shadow-sm shadow-[#D4715E]/20 transition-transform group-hover:scale-105">⛏</span>
-                <span className="text-lg font-extrabold tracking-tight text-[#8B4533]">Pudcraft</span>
+                <span className="text-lg font-bold tracking-tight text-warm-800">Pudcraft</span>
+                <span className="text-xs font-medium text-warm-400">Community</span>
               </Link>
               <nav className="hidden items-center gap-1 md:flex">
                 <Link href="/" className="nav-link">
-                  首页
+                  广场
+                </Link>
+                <Link href="/explore" className="nav-link">
+                  探索
+                </Link>
+                <Link href="/servers" className="nav-link">
+                  服务器
                 </Link>
                 <Link href="/changelog" className="nav-link">
                   更新日志
                 </Link>
-                <div className="ml-2 pl-2 border-l border-[#E8DDD4]">
+                <div className="ml-3 border-l border-warm-200 pl-3">
                   <AuthButtons />
                 </div>
               </nav>
@@ -69,17 +83,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <MobileNavMenu />
               </div>
             </div>
-            <div className="mx-auto max-w-6xl px-4 sm:px-6">
-              <div className="h-px bg-gradient-to-r from-transparent via-[#E8DDD4] to-transparent" />
-            </div>
           </header>
 
           {/* ─── Main ─── */}
-          <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">{children}</main>
+          <main id="main-content" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">{children}</main>
 
           {/* ─── Footer ─── */}
-          <footer className="mt-12 border-t border-[#E8DDD4]/60 bg-[#FBEEE6]/40 py-8 text-center text-xs text-[#9C8577]">
-            <p className="font-semibold text-[#8B4533]/60">Pudcraft Community</p>
+          <footer className="mt-16 border-t border-warm-200 py-8 text-center text-xs text-warm-400">
+            <p className="font-medium text-warm-500">Pudcraft Community</p>
             <p className="mt-1">发现优质 Minecraft 服务器 &middot; &copy; 2026</p>
           </footer>
         </Providers>

@@ -80,6 +80,9 @@ export function AuthButtons() {
 
   return (
     <div ref={menuRef} className="relative flex items-center gap-2">
+      <Link href="/new" className="m3-btn m3-btn-primary px-3 py-1.5">
+        发帖
+      </Link>
       <Link href="/submit" className="m3-btn m3-btn-tonal px-3 py-1.5">
         提交服务器
       </Link>
@@ -102,6 +105,13 @@ export function AuthButtons() {
 
       {open && (
         <div className="m3-surface absolute right-0 top-11 z-50 w-44 p-2">
+          <Link
+            href={`/u/${session.user.uid}`}
+            className="block rounded-lg px-3 py-2 text-sm text-warm-800 transition-colors hover:bg-warm-100"
+            onClick={() => setOpen(false)}
+          >
+            我的主页
+          </Link>
           <Link
             href={`/user/${session.user.uid}`}
             className="block rounded-lg px-3 py-2 text-sm text-warm-800 transition-colors hover:bg-warm-100"
@@ -230,7 +240,14 @@ export function MobileNavMenu() {
                 className="block rounded-lg px-3 py-2 text-sm text-warm-800 hover:bg-warm-100"
                 onClick={() => setOpen(false)}
               >
-                首页
+                广场
+              </Link>
+              <Link
+                href="/explore"
+                className="block rounded-lg px-3 py-2 text-sm text-warm-800 hover:bg-warm-100"
+                onClick={() => setOpen(false)}
+              >
+                探索
               </Link>
               <Link
                 href="/servers"
@@ -269,11 +286,25 @@ export function MobileNavMenu() {
               ) : (
                 <>
                   <Link
+                    href="/new"
+                    className="block rounded-lg px-3 py-2 text-sm font-medium text-accent hover:bg-accent-muted"
+                    onClick={() => setOpen(false)}
+                  >
+                    发帖
+                  </Link>
+                  <Link
                     href="/submit"
                     className="block rounded-lg px-3 py-2 text-sm text-warm-800 hover:bg-warm-100"
                     onClick={() => setOpen(false)}
                   >
                     提交服务器
+                  </Link>
+                  <Link
+                    href={`/u/${session.user.uid}`}
+                    className="block rounded-lg px-3 py-2 text-sm text-warm-800 hover:bg-warm-100"
+                    onClick={() => setOpen(false)}
+                  >
+                    我的主页
                   </Link>
                   <Link
                     href="/console"
