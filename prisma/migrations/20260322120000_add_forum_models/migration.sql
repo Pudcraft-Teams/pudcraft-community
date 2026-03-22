@@ -18,7 +18,7 @@ CREATE TABLE "circles" (
     "description" TEXT,
     "icon" TEXT,
     "banner" TEXT,
-    "creator_id" TEXT NOT NULL,
+    "creator_id" TEXT,
     "member_count" INTEGER NOT NULL DEFAULT 0,
     "post_count" INTEGER NOT NULL DEFAULT 0,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -46,6 +46,7 @@ CREATE TABLE "sections" (
     "circle_id" TEXT NOT NULL,
     "sort_order" INTEGER NOT NULL DEFAULT 0,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "sections_pkey" PRIMARY KEY ("id")
 );
@@ -178,6 +179,9 @@ CREATE INDEX "forum_comments_post_id_created_at_idx" ON "forum_comments"("post_i
 CREATE INDEX "forum_comments_parent_comment_id_idx" ON "forum_comments"("parent_comment_id");
 
 -- CreateIndex
+CREATE INDEX "forum_comments_author_id_idx" ON "forum_comments"("author_id");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "unique_post_like" ON "post_likes"("user_id", "post_id");
 
 -- CreateIndex
@@ -208,7 +212,7 @@ CREATE UNIQUE INDEX "unique_circle_ban" ON "circle_bans"("circle_id", "user_id")
 CREATE INDEX "circle_bans_circle_id_idx" ON "circle_bans"("circle_id");
 
 -- AddForeignKey
-ALTER TABLE "circles" ADD CONSTRAINT "circles_creator_id_fkey" FOREIGN KEY ("creator_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "circles" ADD CONSTRAINT "circles_creator_id_fkey" FOREIGN KEY ("creator_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "circle_memberships" ADD CONSTRAINT "circle_memberships_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;

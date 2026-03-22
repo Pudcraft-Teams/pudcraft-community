@@ -52,7 +52,7 @@ model User {
   commentLikes        CommentLike[]
   bookmarks           Bookmark[]
   forumNotifications  Notification[]     @relation("ForumNotificationRecipient")
-  forumNotifSources   Notification[]     @relation("ForumNotificationSource")
+  forumNotificationSources Notification[] @relation("ForumNotificationSource")
   circleBansReceived  CircleBan[]        @relation("CircleBanUser")
   circleBansIssued    CircleBan[]        @relation("CircleBanBanner")
 
@@ -446,13 +446,13 @@ model Circle {
   description String?  @db.Text
   icon        String?
   banner      String?
-  creatorId   String   @map("creator_id")
+  creatorId   String?  @map("creator_id")
   memberCount Int      @default(0) @map("member_count")
   postCount   Int      @default(0) @map("post_count")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  creator     User               @relation("CircleCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  creator     User?              @relation("CircleCreator", fields: [creatorId], references: [id], onDelete: SetNull)
   memberships CircleMembership[]
   sections    Section[]
   posts       Post[]
@@ -487,6 +487,7 @@ model Section {
   circleId    String   @map("circle_id")
   sortOrder   Int      @default(0) @map("sort_order")
   createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   circle Circle @relation(fields: [circleId], references: [id], onDelete: Cascade)
   posts  Post[]
@@ -546,6 +547,7 @@ model Comment {
 
   @@index([postId, createdAt(sort: Desc)])
   @@index([parentCommentId])
+  @@index([authorId])
   @@map("forum_comments")
 }
 
