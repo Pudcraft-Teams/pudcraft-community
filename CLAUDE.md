@@ -1,6 +1,9 @@
 # Pudcraft Community
 
-Minecraft 服务器社区平台，用户可以浏览、提交、认领、评论和收藏 MC 服务器。支持**私有服务器**功能：服主可设置服务器可见性（公开/私密/需申请），管理入服申请、邀请码、白名单同步。
+Minecraft 服务器社区平台，包含两大模块：
+
+1. **服务器系统**：用户可以浏览、提交、认领、评论和收藏 MC 服务器。支持私有服务器功能（可见性、入服申请、邀请码、白名单同步）。
+2. **社区论坛（MoltBook）**：类贴吧 + 类 X 混合形态的圈子系统。用户可创建圈子、发帖讨论，首页为信息流广场（大别野模式）。设计文档见 `docs/plans/2026-03-22-community-forum-design.md`。
 
 ## 技术栈
 
@@ -57,8 +60,15 @@ Commit message 格式: `<type>: <description>`
 | `src/app/admin/` | 管理员后台页面 | 普通用户功能 |
 | `src/app/console/` | 服主控制台页面 | 管理员功能 |
 | `src/app/servers/[id]/` | 服务器详情、申请页、邀请加入页 | - |
+| `src/app/c/[slug]/` | 圈子主页、发帖、帖子详情、圈子设置 | - |
+| `src/app/post/[postId]/` | 大别野帖子详情页 | - |
+| `src/app/explore/` | 圈子发现页 | - |
+| `src/app/u/[uid]/` | 用户主页（帖子、圈子） | - |
+| `src/app/new/` | 发帖页（广场或选择圈子） | - |
+| `src/app/circles/create/` | 创建圈子页 | - |
 | `src/components/` | 可复用 UI 组件 | API 调用、数据库访问 |
 | `src/components/console/` | 控制台专用组件（设置、申请管理、成员列表等） | 通用 UI 组件 |
+| `src/components/forum/` | 论坛专用组件（PostCard、CircleCard、评论、设置等） | 通用 UI 组件 |
 | `src/hooks/` | 自定义 React Hooks | 组件、API 逻辑 |
 | `src/lib/` | 工具函数、第三方服务封装、DB 客户端 | React 组件、路由 |
 | `src/worker/` | 后台 Worker 进程（ping、verify） | API Route、页面组件 |
@@ -105,7 +115,7 @@ Commit message 格式: `<type>: <description>`
 - **密钥**: 绝不硬编码，通过 `.env.local` 管理，仓库只保留 `.env.example`
 - **输入校验**: 所有 API 输入必须 Zod 校验；address 禁止 localhost/内网 IP；port 限 1-65535
 - **权限**: 所有写操作必须服务端校验，不能只靠前端隐藏按钮
-- **角色**: user(默认) | admin；Owner 通过 MOTD Token 认领
+- **角色**: user(默认) | admin；Owner 通过 MOTD Token 认领；圈子内角色 OWNER/ADMIN/MEMBER
 - **私有服务器**: 地址和端口对非成员隐藏；API Key 仅展示一次
 - **防滥用**: 邮箱验证码 60 秒冷却 + IP 日限 10 封；验证码错 5 次锁 15 分钟
 - **外链**: 用户链接必须 `rel="noopener noreferrer" target="_blank"`
@@ -117,7 +127,9 @@ Commit message 格式: `<type>: <description>`
 - API Route 响应目标 < 200ms，DB 查询告警 > 100ms
 - MC ping 超时 5s，Worker 单任务 10s，MOTD 验证 15s
 - 缓存字段 (`isOnline`, `playerCount`, `maxPlayers`, `favoriteCount`) 直接在 Server 表读取，避免 join
-- 收藏 ID 列表批量查询，不逐个请求
+- 论坛缓存字段 (`memberCount`, `postCount`, `likeCount`, `commentCount`) 更新必须与操作在同一 `$transaction`
+- 收藏/点赞 ID 列表批量查询，不逐个请求
+- Feed 使用游标分页 `(createdAt, id)`，不用偏移分页
 - 图片上传前端压缩（头像 256px，图标 512px，编辑器图片 1920px）
 
 ## 数据库规则
@@ -129,13 +141,13 @@ Commit message 格式: `<type>: <description>`
 - 缓存字段更新必须与关联操作在同一 `$transaction` 中
 - `address + port` 联合唯一约束
 
-### 主要模型
+### 主要模型 — 服务器系统
 - **User**: 用户（含 UID、邮箱、头像、简介、封禁状态）
 - **Server**: 服务器（含 PSID、地址、状态、可见性、加入模式）
 - **ServerStatus**: 服务器状态历史记录
-- **Comment**: 评论（2层嵌套：评论 + 回复）
-- **Favorite**: 用户收藏
-- **Notification**: 用户通知
+- **ServerComment**: 服务器评论（2层嵌套，DB 表 `comments`）
+- **Favorite**: 服务器收藏
+- **ServerNotification**: 服务器通知（DB 表 `notifications`）
 - **Modpack**: 整合包版本
 - **ServerApplication**: 入服申请（私有服务器）
 - **ServerInvite**: 邀请码（私有服务器）
@@ -143,6 +155,17 @@ Commit message 格式: `<type>: <description>`
 - **WhitelistSync**: 白名单同步记录（插件用）
 - **ModerationLog**: 内容审核日志
 - **Changelog**: 更新日志
+
+### 主要模型 — 论坛系统
+- **Circle**: 圈子（slug 唯一，含 memberCount/postCount 缓存）
+- **CircleMembership**: 圈子成员（角色枚举 OWNER/ADMIN/MEMBER）
+- **Section**: 圈子子板块
+- **Post**: 帖子（circleId 可选，null = 大别野/广场直发；content 为 Json）
+- **Comment**: 帖子评论（无限嵌套自引用，前端平铺，DB 表 `forum_comments`）
+- **PostLike / CommentLike**: 帖子/评论点赞（各自独立表，有 FK）
+- **Bookmark**: 帖子收藏
+- **Notification**: 论坛通知（POST_COMMENT/COMMENT_REPLY，DB 表 `forum_notifications`）
+- **CircleBan**: 圈内禁言（支持到期时间）
 
 ## Worker 规则
 
@@ -158,6 +181,22 @@ Commit message 格式: `<type>: <description>`
 - Minecraft 插件通过 WebSocket 接收 `whitelist_add` / `whitelist_remove` 事件
 - 构建输出到 `dist/ws/`，Docker 中通过 `node dist/ws/index.js` 启动
 - 环境变量: `WS_PORT` (默认 3001), `WS_PUBLIC_URL`
+
+## 论坛页面路由
+
+| 路由 | 说明 |
+|------|------|
+| `/` | 信息流广场（大别野），全站帖子 feed |
+| `/explore` | 圈子发现页 |
+| `/circles/create` | 创建圈子 |
+| `/c/:slug` | 圈子主页（feed + 子板块筛选） |
+| `/c/:slug/new` | 在圈子内发帖 |
+| `/c/:slug/post/:postId` | 圈子帖子详情 |
+| `/c/:slug/settings` | 圈主管理（信息、板块、成员、禁言） |
+| `/post/:postId` | 大别野帖子详情 |
+| `/new` | 发帖（选择圈子或广场） |
+| `/u/:uid` | 用户主页（帖子、圈子） |
+| `/servers` | 服务器列表（原首页） |
 
 ## UI 规则
 
@@ -188,12 +227,17 @@ Commit message 格式: `<type>: <description>`
 - **认证**: 注册、登录、验证码、重置密码
 - **服务器**: CRUD、列表、统计、认领
 - **私有服务器**: 设置、申请、邀请码、成员管理、白名单同步
-- **评论**: 发表、回复、删除
-- **收藏**: 收藏/取消收藏
+- **服务器评论**: 发表、回复、删除
+- **服务器收藏**: 收藏/取消收藏
 - **整合包**: 上传、下载、删除
 - **用户**: 资料、收藏列表
-- **通知**: 通知列表、已读标记
+- **服务器通知**: 通知列表、已读标记
 - **管理员**: 服务器审核、用户管理、内容审查、更新日志
+- **圈子**: CRUD、成员加入/退出/角色管理、子板块 CRUD、禁言管理
+- **帖子**: CRUD、Feed（游标分页）、置顶、大别野模式
+- **论坛评论**: 发表（含通知触发）、删除、游标分页
+- **点赞/收藏**: PostLike、CommentLike、Bookmark toggle
+- **论坛通知**: 列表、已读标记、未读计数（与服务器通知合并显示）
 
 ## 部署踩坑记录
 
