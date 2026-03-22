@@ -500,7 +500,7 @@ model Section {
 model Post {
   id           String     @id @default(cuid())
   title        String
-  content      Json
+  content      String    @db.Text
   authorId     String     @map("author_id")
   circleId     String?    @map("circle_id")
   sectionId    String?    @map("section_id")

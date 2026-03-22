@@ -449,7 +449,7 @@ export interface PostItem {
 
 /** 帖子详情（含完整内容） */
 export interface PostDetail extends Omit<PostItem, "contentPreview"> {
-  content: unknown;
+  content: string;
   updatedAt: string;
 }
 
