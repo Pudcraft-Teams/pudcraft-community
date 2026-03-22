@@ -58,7 +58,7 @@ async function createCommentNotification({
     }
 
     if (parentId) {
-      const parentComment = await prisma.comment.findUnique({
+      const parentComment = await prisma.serverComment.findUnique({
         where: { id: parentId },
         select: {
           authorId: true,
@@ -206,8 +206,8 @@ export async function GET(request: Request, { params }: RouteContext) {
     };
 
     const [total, comments] = await Promise.all([
-      prisma.comment.count({ where }),
-      prisma.comment.findMany({
+      prisma.serverComment.count({ where }),
+      prisma.serverComment.findMany({
         where,
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
@@ -324,7 +324,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     }
 
     if (parentId) {
-      const parent = await prisma.comment.findUnique({
+      const parent = await prisma.serverComment.findUnique({
         where: { id: parentId },
         select: {
           id: true,
@@ -342,7 +342,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       }
     }
 
-    const comment = await prisma.comment.create({
+    const comment = await prisma.serverComment.create({
       data: {
         content,
         serverId,

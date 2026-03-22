@@ -147,8 +147,8 @@ const getServerPageData = cache(async (rawId: string) => {
         joinMode: true,
       },
     }),
-    prisma.comment.count({ where }),
-    prisma.comment.findMany({
+    prisma.serverComment.count({ where }),
+    prisma.serverComment.findMany({
       where,
       orderBy: { createdAt: "desc" },
       take: COMMENTS_PAGE_SIZE,

@@ -32,7 +32,7 @@ model User {
   accounts       Account[]
   sessions       Session[]
   servers        Server[]
-  comments       Comment[]
+  comments       ServerComment[]
   favorites      Favorite[]
   modpacks       Modpack[]
   notifications  Notification[]
@@ -87,7 +87,7 @@ model Server {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   statuses     ServerStatus[]
-  comments     Comment[]
+  comments     ServerComment[]
   favorites    Favorite[]
   modpacks     Modpack[]
   applications ServerApplication[]
@@ -166,7 +166,7 @@ model ServerStatus {
 }
 
 /// 服务器评论 —— 支持两层结构（评论 + 回复）
-model Comment {
+model ServerComment {
   id        String   @id @default(cuid())
   content   String   @db.Text
   createdAt DateTime @default(now()) @map("created_at")
@@ -178,9 +178,9 @@ model Comment {
   authorId String @map("author_id")
   author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
-  parentId String?   @map("parent_id")
-  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies  Comment[] @relation("CommentReplies")
+  parentId String?        @map("parent_id")
+  parent   ServerComment? @relation("ServerCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  ServerComment[] @relation("ServerCommentReplies")
 
   @@index([serverId, createdAt(sort: Desc)])
   @@index([parentId])

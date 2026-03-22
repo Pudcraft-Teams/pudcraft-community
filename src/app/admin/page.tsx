@@ -15,7 +15,7 @@ export default async function AdminDashboardPage() {
   ] = await Promise.all([
     prisma.user.count(),
     prisma.server.count({ where: { status: "approved" } }),
-    prisma.comment.count({ where: { createdAt: { gte: todayStart } } }),
+    prisma.serverComment.count({ where: { createdAt: { gte: todayStart } } }),
     prisma.server.count({ where: { status: "pending" } }),
     prisma.server.count({ where: { status: "approved", isOnline: true } }),
     prisma.user.count({ where: { isBanned: true } }),

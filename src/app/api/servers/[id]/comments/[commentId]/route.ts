@@ -38,7 +38,7 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "无效的评论 ID 格式" }, { status: 400 });
     }
 
-    const comment = await prisma.comment.findUnique({
+    const comment = await prisma.serverComment.findUnique({
       where: { id: parsedCommentId.data },
       select: {
         id: true,
@@ -57,7 +57,7 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "无权限" }, { status: 403 });
     }
 
-    const relatedCommentIds = await prisma.comment.findMany({
+    const relatedCommentIds = await prisma.serverComment.findMany({
       where: {
         OR: [{ id: comment.id }, { parentId: comment.id }],
       },
@@ -72,7 +72,7 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
           commentId: { in: targetIds },
         },
       }),
-      prisma.comment.delete({
+      prisma.serverComment.delete({
         where: { id: comment.id },
       }),
     ]);
