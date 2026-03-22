@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
@@ -136,6 +137,9 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return NextResponse.json({ error: "该用户不是圈子成员" }, { status: 404 });
+    }
     logger.error("[api/circles/[id]/members/[userId]] Unexpected DELETE error", error);
     return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
   }
@@ -204,6 +208,10 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
     if (!targetMembership) {
       return NextResponse.json({ error: "该用户不是圈子成员" }, { status: 404 });
+    }
+
+    if (targetMembership.role === role) {
+      return NextResponse.json({ success: true });
     }
 
     // Update role
