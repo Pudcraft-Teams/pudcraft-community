@@ -43,6 +43,19 @@ model User {
   serverInvites  ServerInvite[]
   serverMembers  ServerMember[]
 
+  // Forum relations
+  createdCircles      Circle[]           @relation("CircleCreator")
+  circleMemberships   CircleMembership[]
+  posts               Post[]             @relation("PostAuthor")
+  forumComments       Comment[]          @relation("ForumCommentAuthor")
+  postLikes           PostLike[]
+  commentLikes        CommentLike[]
+  bookmarks           Bookmark[]
+  forumNotifications  Notification[]     @relation("ForumNotificationRecipient")
+  forumNotifSources   Notification[]     @relation("ForumNotificationSource")
+  circleBansReceived  CircleBan[]        @relation("CircleBanUser")
+  circleBansIssued    CircleBan[]        @relation("CircleBanBanner")
+
   @@map("users")
 }
 
@@ -396,6 +409,230 @@ model WhitelistSync {
   @@index([serverId, status])
   @@index([memberId])
   @@map("whitelist_syncs")
+}
+
+// ============================================
+// 论坛模块 — Circle / Post / Comment / Like / Bookmark / Notification / Ban
+// ============================================
+
+enum CircleRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum PostStatus {
+  PUBLISHED
+  HIDDEN
+  DELETED
+}
+
+enum CommentStatus {
+  PUBLISHED
+  HIDDEN
+  DELETED
+}
+
+enum NotificationType {
+  POST_COMMENT
+  COMMENT_REPLY
+}
+
+/// 圈子 —— 论坛的顶级分组
+model Circle {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?  @db.Text
+  icon        String?
+  banner      String?
+  creatorId   String   @map("creator_id")
+  memberCount Int      @default(0) @map("member_count")
+  postCount   Int      @default(0) @map("post_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  creator     User               @relation("CircleCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  memberships CircleMembership[]
+  sections    Section[]
+  posts       Post[]
+  bans        CircleBan[]
+
+  @@index([creatorId])
+  @@index([createdAt(sort: Desc)])
+  @@map("circles")
+}
+
+/// 圈子成员 —— 用户与圈子的关系
+model CircleMembership {
+  id       String     @id @default(cuid())
+  userId   String     @map("user_id")
+  circleId String     @map("circle_id")
+  role     CircleRole @default(MEMBER)
+  joinedAt DateTime   @default(now()) @map("joined_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  circle Circle @relation(fields: [circleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, circleId], name: "unique_circle_membership")
+  @@index([circleId])
+  @@map("circle_memberships")
+}
+
+/// 版块 —— 圈子内的帖子分类
+model Section {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  circleId    String   @map("circle_id")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  circle Circle @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  posts  Post[]
+
+  @@index([circleId, sortOrder])
+  @@map("sections")
+}
+
+/// 帖子 —— 论坛核心内容
+model Post {
+  id           String     @id @default(cuid())
+  title        String
+  content      Json
+  authorId     String     @map("author_id")
+  circleId     String?    @map("circle_id")
+  sectionId    String?    @map("section_id")
+  viewCount    Int        @default(0) @map("view_count")
+  likeCount    Int        @default(0) @map("like_count")
+  commentCount Int        @default(0) @map("comment_count")
+  isPinned     Boolean    @default(false) @map("is_pinned")
+  status       PostStatus @default(PUBLISHED)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  author        User           @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  circle        Circle?        @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  section       Section?       @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  comments      Comment[]
+  likes         PostLike[]
+  bookmarks     Bookmark[]
+  notifications Notification[]
+
+  @@index([circleId, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@index([authorId, createdAt(sort: Desc)])
+  @@index([sectionId])
+  @@map("posts")
+}
+
+/// 论坛评论 —— 帖子下的评论，支持嵌套回复
+model Comment {
+  id              String        @id @default(cuid())
+  content         String        @db.Text
+  authorId        String        @map("author_id")
+  postId          String        @map("post_id")
+  parentCommentId String?       @map("parent_comment_id")
+  likeCount       Int           @default(0) @map("like_count")
+  status          CommentStatus @default(PUBLISHED)
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  author        User           @relation("ForumCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  post          Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parent        Comment?       @relation("CommentThread", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  replies       Comment[]      @relation("CommentThread")
+  likes         CommentLike[]
+  notifications Notification[]
+
+  @@index([postId, createdAt(sort: Desc)])
+  @@index([parentCommentId])
+  @@map("forum_comments")
+}
+
+/// 帖子点赞
+model PostLike {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  postId    String   @map("post_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId], name: "unique_post_like")
+  @@index([postId])
+  @@map("post_likes")
+}
+
+/// 评论点赞
+model CommentLike {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  commentId String   @map("comment_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, commentId], name: "unique_comment_like")
+  @@index([commentId])
+  @@map("comment_likes")
+}
+
+/// 帖子收藏
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  postId    String   @map("post_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId], name: "unique_bookmark")
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("bookmarks")
+}
+
+/// 论坛通知 —— 帖子评论、评论回复等
+model Notification {
+  id           String           @id @default(cuid())
+  recipientId  String           @map("recipient_id")
+  type         NotificationType
+  sourceUserId String           @map("source_user_id")
+  postId       String?          @map("post_id")
+  commentId    String?          @map("comment_id")
+  isRead       Boolean          @default(false) @map("is_read")
+  createdAt    DateTime         @default(now()) @map("created_at")
+
+  recipient  User     @relation("ForumNotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  sourceUser User     @relation("ForumNotificationSource", fields: [sourceUserId], references: [id], onDelete: Cascade)
+  post       Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment    Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, isRead])
+  @@index([createdAt(sort: Desc)])
+  @@map("forum_notifications")
+}
+
+/// 圈子封禁 —— 记录被封禁的用户
+model CircleBan {
+  id            String    @id @default(cuid())
+  circleId      String    @map("circle_id")
+  userId        String    @map("user_id")
+  reason        String?
+  expiresAt     DateTime? @map("expires_at")
+  syncToServers Boolean   @default(false) @map("sync_to_servers")
+  bannedBy      String    @map("banned_by")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  circle Circle @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  user   User   @relation("CircleBanUser", fields: [userId], references: [id], onDelete: Cascade)
+  banner User   @relation("CircleBanBanner", fields: [bannedBy], references: [id], onDelete: Cascade)
+
+  @@unique([circleId, userId], name: "unique_circle_ban")
+  @@index([circleId])
+  @@map("circle_bans")
 }
 
 // ============================================
