@@ -416,7 +416,7 @@ export interface CircleDetail extends CircleItem {
   creatorId: string | null;
   creator: { id: string; uid: number; name: string | null; image: string | null } | null;
   isMember?: boolean;
-  memberRole?: string | null;
+  memberRole?: CircleRoleType | null;
 }
 
 /** 帖子作者信息 */
@@ -494,10 +494,14 @@ export interface SectionItem {
   sortOrder: number;
 }
 
+export type ForumNotificationType = "POST_COMMENT" | "COMMENT_REPLY";
+
+export type CircleRoleType = "OWNER" | "ADMIN" | "MEMBER";
+
 /** 论坛通知项 */
 export interface ForumNotificationItem {
   id: string;
-  type: string;
+  type: ForumNotificationType;
   sourceUser: { id: string; uid: number; name: string | null; image: string | null };
   post: { id: string; title: string; circleId: string | null; circle: { slug: string } | null } | null;
   isRead: boolean;
@@ -509,7 +513,7 @@ export interface CircleMemberItem {
   id: string;
   userId: string;
   user: { id: string; uid: number; name: string | null; image: string | null };
-  role: string;
+  role: CircleRoleType;
   joinedAt: string;
 }
 
