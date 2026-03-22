@@ -5,11 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import StarterKit from "@tiptap/starter-kit";
-import ImageExtension from "@tiptap/extension-image";
-import LinkExtension from "@tiptap/extension-link";
-import Underline from "@tiptap/extension-underline";
-import { EditorContent, useEditor } from "@tiptap/react";
+import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { ForumCommentSection } from "@/components/forum/ForumCommentSection";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useToast } from "@/hooks/useToast";
@@ -38,49 +34,6 @@ interface DeleteResponse {
   error?: string;
 }
 
-/**
- * Read-only Tiptap renderer for JSON content.
- * Uses the same extensions as the editor to ensure consistent rendering.
- */
-function TiptapContentRenderer({ content }: { content: unknown }) {
-  const editor = useEditor({
-    immediatelyRender: false,
-    editable: false,
-    content: content as Record<string, unknown>,
-    extensions: [
-      StarterKit.configure({
-        heading: { levels: [2, 3] },
-      }),
-      Underline,
-      LinkExtension.configure({
-        autolink: false,
-        openOnClick: true,
-      }),
-      ImageExtension.configure({
-        allowBase64: false,
-      }),
-    ],
-    editorProps: {
-      attributes: {
-        class:
-          "prose prose-stone max-w-none text-warm-800 [&_h2]:mb-3 [&_h2]:mt-7 [&_h2]:text-2xl [&_h2]:font-semibold [&_h3]:mb-3 [&_h3]:mt-6 [&_h3]:text-xl [&_h3]:font-semibold [&_p]:my-3 [&_p]:leading-7 [&_a]:m3-link [&_a]:font-medium [&_a]:underline [&_a]:decoration-accent/30 [&_a]:underline-offset-4 [&_pre]:my-4 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-warm-200 [&_pre]:bg-warm-50 [&_pre]:p-4 [&_pre]:text-sm [&_code]:rounded-md [&_code]:bg-warm-100 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-sm [&_img]:my-4 [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-xl [&_img]:border [&_img]:border-warm-200 [&_blockquote]:border-l-4 [&_blockquote]:border-warm-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-warm-600 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:my-1",
-      },
-    },
-  });
-
-  useEffect(() => {
-    if (!editor) return;
-    editor.commands.setContent(content as Record<string, unknown>, { emitUpdate: false });
-  }, [editor, content]);
-
-  if (!editor) {
-    return (
-      <div className="min-h-[100px] animate-pulse rounded-xl bg-warm-100" />
-    );
-  }
-
-  return <EditorContent editor={editor} />;
-}
 
 export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
   const router = useRouter();
@@ -480,7 +433,7 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
 
         {/* ── Content ── */}
         <div className="mb-6">
-          <TiptapContentRenderer content={post.content} />
+          <MarkdownRenderer content={post.content} />
         </div>
 
         {/* ── Stats ── */}

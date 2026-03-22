@@ -1,7 +1,6 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import type { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
@@ -234,7 +233,7 @@ export async function PUT(request: Request, { params }: RouteContext) {
     // Build update data
     const updateData: Record<string, unknown> = {};
     if (title !== undefined) updateData.title = title;
-    if (content !== undefined) updateData.content = content as Prisma.InputJsonValue;
+    if (content !== undefined) updateData.content = content;
     if (sectionId !== undefined) updateData.sectionId = sectionId;
 
     const updated = await prisma.post.update({

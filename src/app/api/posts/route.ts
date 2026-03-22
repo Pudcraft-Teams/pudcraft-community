@@ -1,7 +1,6 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import type { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
@@ -15,17 +14,15 @@ import type { PostItem, PostFeedResponse } from "@/lib/types";
 /**
  * Extract a plain-text preview from JSON content (truncated to maxLength).
  */
-function extractContentPreview(content: unknown, maxLength = 200): string {
-  try {
-    if (typeof content === "string") return content.substring(0, maxLength);
-    const text = JSON.stringify(content)
-      .replace(/[{}\[\]"\\]/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-    return text.substring(0, maxLength);
-  } catch {
-    return "";
-  }
+function extractContentPreview(content: string, maxLength = 200): string {
+  // Strip Markdown syntax for plain text preview
+  const text = content
+    .replace(/#{1,6}\s/g, "")         // headings
+    .replace(/[*_~`>]/g, "")          // emphasis, code, blockquote
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1") // links/images
+    .replace(/\n+/g, " ")
+    .trim();
+  return text.substring(0, maxLength);
 }
 
 /**
@@ -277,7 +274,7 @@ export async function POST(request: Request) {
         const created = await tx.post.create({
           data: {
             title,
-            content: content as Prisma.InputJsonValue,
+            content: content,
             authorId: userId,
             circleId,
             sectionId: sectionId ?? null,
@@ -318,7 +315,7 @@ export async function POST(request: Request) {
     const post = await prisma.post.create({
       data: {
         title,
-        content: content as Prisma.InputJsonValue,
+        content: content,
         authorId: userId,
         circleId: null,
         sectionId: null,

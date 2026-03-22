@@ -480,7 +480,7 @@ export const updateSectionSchema = z.object({
 /** 创建帖子请求体 */
 export const createPostSchema = z.object({
   title: z.string().trim().min(1, "请输入标题").max(100, "标题最多 100 个字符"),
-  content: z.record(z.unknown()).or(z.array(z.unknown())),
+  content: z.string().trim().min(1, "请输入内容").max(50000, "内容最多 50000 个字符"),
   circleId: z.string().cuid().optional().nullable(),
   sectionId: z.string().cuid().optional().nullable(),
 });
@@ -488,7 +488,7 @@ export const createPostSchema = z.object({
 /** 更新帖子请求体 */
 export const updatePostSchema = z.object({
   title: z.string().trim().min(1).max(100).optional(),
-  content: z.record(z.unknown()).or(z.array(z.unknown())).optional(),
+  content: z.string().trim().min(1).max(50000).optional(),
   sectionId: z.string().cuid().optional().nullable(),
 });
 
