@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { CircleCard } from "@/components/forum/CircleCard";
@@ -28,13 +28,8 @@ export function FeedPage() {
   const [myCircles, setMyCircles] = useState<CircleItem[]>([]);
   const [circlesLoading, setCirclesLoading] = useState(true);
 
-  const initialFetchDone = useRef(false);
-
   // ── Fetch initial posts ──
   useEffect(() => {
-    if (initialFetchDone.current) return;
-    initialFetchDone.current = true;
-
     let cancelled = false;
 
     async function fetchPosts() {
