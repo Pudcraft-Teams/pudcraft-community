@@ -43,7 +43,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          direct_prompt: |
+          prompt: |
             你是一位资深代码审查员。请对这个 PR 的所有变更进行详细的代码审查。
 
             审查要求：
