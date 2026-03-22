@@ -57,7 +57,7 @@ function buildUrl(query: QueryState): string {
   }
 
   const search = params.toString();
-  return search ? `/?${search}` : "/";
+  return search ? `/servers?${search}` : "/servers";
 }
 
 /**
@@ -264,25 +264,20 @@ export function HomePageClient({
 
   return (
     <div>
-      {/* Hero */}
-      <section className="-mx-[calc((100vw-100%)/2+1rem)] -mt-8 mb-10 bg-gradient-to-b from-[#FBEEE6] via-[#FDF6F0] to-transparent px-[calc((100vw-100%)/2+1rem)] pb-2 pt-10 sm:-mx-[calc((100vw-100%)/2+1.5rem)] sm:px-[calc((100vw-100%)/2+1.5rem)]">
-        <h1
-          className="text-[clamp(1.75rem,5vw,2.5rem)] font-extrabold leading-tight tracking-tight text-[#4A3728]"
-        >
-          发现你的下一个
-          <br />
-          <span className="bg-gradient-to-r from-[#D4715E] to-[#D4956A] bg-clip-text text-transparent">Minecraft 社区</span>
+      {/* Hero — 精简：只保留文案和搜索 */}
+      <section className="mb-8 pt-2">
+        <h1 className="text-2xl font-bold tracking-tight text-warm-800">
+          发现 Minecraft 服务器
         </h1>
-        <p className="mt-3 max-w-md text-[15px] leading-relaxed text-[#6B5344]">
+        <p className="mt-1.5 text-sm text-warm-500">
           浏览国内优质私人服务器，找到志同道合的玩家
         </p>
 
-        {/* 搜索 + 筛选 */}
-        <div className="mt-6 max-w-xl">
+        <div className="mt-5 max-w-lg">
           <SearchBar onSearch={handleSearch} initialValue={query.search} />
         </div>
 
-        <div className="scrollbar-hide mt-4 flex gap-1.5 overflow-x-auto whitespace-nowrap pb-2">
+        <div className="scrollbar-hide mt-3 flex gap-1.5 overflow-x-auto pb-1">
           {TAG_FILTERS.map((tag) => (
             <button
               key={tag}
@@ -299,7 +294,7 @@ export function HomePageClient({
       </section>
 
       {/* 排序 + 结果 */}
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between">
         <SortButtons
           value={sort}
           onChange={(nextSort) => {
@@ -313,12 +308,12 @@ export function HomePageClient({
       ) : servers.length === 0 ? (
         <EmptyState title="暂无服务器" description="试试其他筛选条件或搜索关键词" />
       ) : (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {servers.map((server, index) => (
             <ServerCard
               key={server.id}
               server={server}
-              style={{ animationDelay: `${index * 60}ms` }}
+              style={{ animationDelay: `${index * 50}ms` }}
               initialFavorited={favoriteServerIds.includes(server.id)}
               onFavoriteChange={(serverId, favorited) => {
                 setFavoriteServerIds((previous) => {

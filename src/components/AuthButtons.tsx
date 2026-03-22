@@ -59,7 +59,7 @@ export function AuthButtons() {
   }, [open]);
 
   if (status === "loading") {
-    return <span className="text-sm text-warm-500">加载中...</span>;
+    return <span className="text-sm text-warm-400">加载中...</span>;
   }
 
   if (!session?.user) {
@@ -95,7 +95,7 @@ export function AuthButtons() {
           name={session.user.name}
           email={session.user.email}
           className="h-6 w-6"
-          fallbackClassName="bg-gradient-to-br from-coral to-coral-amber text-white"
+          fallbackClassName="bg-accent text-white"
         />
         <span className="max-w-32 truncate text-sm">{displayName}</span>
       </button>
@@ -104,28 +104,28 @@ export function AuthButtons() {
         <div className="m3-surface absolute right-0 top-11 z-50 w-44 p-2">
           <Link
             href={`/user/${session.user.uid}`}
-            className="block rounded-lg px-3 py-2 text-sm text-warm-700 transition-colors hover:bg-warm-100"
+            className="block rounded-lg px-3 py-2 text-sm text-warm-800 transition-colors hover:bg-warm-100"
             onClick={() => setOpen(false)}
           >
             个人主页
           </Link>
           <Link
             href="/settings/profile"
-            className="block rounded-lg px-3 py-2 text-sm text-warm-700 transition-colors hover:bg-warm-100"
+            className="block rounded-lg px-3 py-2 text-sm text-warm-800 transition-colors hover:bg-warm-100"
             onClick={() => setOpen(false)}
           >
             资料设置
           </Link>
           <Link
             href="/console"
-            className="block rounded-lg px-3 py-2 text-sm text-warm-700 transition-colors hover:bg-warm-100"
+            className="block rounded-lg px-3 py-2 text-sm text-warm-800 transition-colors hover:bg-warm-100"
             onClick={() => setOpen(false)}
           >
             控制台
           </Link>
           <Link
             href="/favorites"
-            className="block rounded-lg px-3 py-2 text-sm text-warm-700 transition-colors hover:bg-warm-100"
+            className="block rounded-lg px-3 py-2 text-sm text-warm-800 transition-colors hover:bg-warm-100"
             onClick={() => setOpen(false)}
           >
             我的收藏
@@ -133,7 +133,7 @@ export function AuthButtons() {
           {session.user.role === "admin" && (
             <Link
               href="/admin"
-              className="block rounded-lg px-3 py-2 text-sm font-medium text-coral transition-colors hover:bg-coral-light"
+              className="block rounded-lg px-3 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent-muted"
               onClick={() => setOpen(false)}
             >
               管理后台
@@ -146,7 +146,7 @@ export function AuthButtons() {
               await handleSignOut();
             }}
             disabled={isSigningOut}
-            className="mt-1 block w-full rounded-lg px-3 py-2 text-left text-sm text-coral-hover transition-colors hover:bg-coral-light disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-1 block w-full rounded-lg px-3 py-2 text-left text-sm text-accent-hover transition-colors hover:bg-accent-muted disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSigningOut ? "退出中..." : "退出"}
           </button>
@@ -202,15 +202,15 @@ export function MobileNavMenu() {
     <>
       <button
         type="button"
-        className="m3-btn m3-btn-tonal inline-flex h-10 w-10 items-center justify-center p-0"
+        className="m3-btn m3-btn-tonal inline-flex h-11 w-11 items-center justify-center p-0"
         onClick={() => setOpen((prev) => !prev)}
         aria-label={open ? "关闭菜单" : "打开菜单"}
         aria-expanded={open}
       >
         <span className="space-y-1">
-          <span className="block h-0.5 w-4 rounded bg-warm-700" />
-          <span className="block h-0.5 w-4 rounded bg-warm-700" />
-          <span className="block h-0.5 w-4 rounded bg-warm-700" />
+          <span className="block h-0.5 w-4 rounded bg-warm-800" />
+          <span className="block h-0.5 w-4 rounded bg-warm-800" />
+          <span className="block h-0.5 w-4 rounded bg-warm-800" />
         </span>
       </button>
 
@@ -227,33 +227,40 @@ export function MobileNavMenu() {
             <nav className="space-y-1">
               <Link
                 href="/"
-                className="block rounded-lg px-3 py-2 text-sm text-warm-700 hover:bg-warm-100"
+                className="block rounded-lg px-3 py-2 text-sm text-warm-800 hover:bg-warm-100"
                 onClick={() => setOpen(false)}
               >
                 首页
               </Link>
               <Link
+                href="/servers"
+                className="block rounded-lg px-3 py-2 text-sm text-warm-800 hover:bg-warm-100"
+                onClick={() => setOpen(false)}
+              >
+                服务器
+              </Link>
+              <Link
                 href="/changelog"
-                className="block rounded-lg px-3 py-2 text-sm text-warm-700 hover:bg-warm-100"
+                className="block rounded-lg px-3 py-2 text-sm text-warm-800 hover:bg-warm-100"
                 onClick={() => setOpen(false)}
               >
                 更新日志
               </Link>
 
               {status === "loading" ? (
-                <p className="px-3 py-2 text-sm text-warm-500">加载中...</p>
+                <p className="px-3 py-2 text-sm text-warm-400">加载中...</p>
               ) : !session?.user ? (
                 <>
                   <Link
                     href="/login"
-                    className="block rounded-lg px-3 py-2 text-sm text-warm-700 hover:bg-warm-100"
+                    className="block rounded-lg px-3 py-2 text-sm text-warm-800 hover:bg-warm-100"
                     onClick={() => setOpen(false)}
                   >
                     登录
                   </Link>
                   <Link
                     href="/register"
-                    className="block rounded-lg px-3 py-2 text-sm text-warm-700 hover:bg-warm-100"
+                    className="block rounded-lg px-3 py-2 text-sm text-warm-800 hover:bg-warm-100"
                     onClick={() => setOpen(false)}
                   >
                     注册
@@ -263,35 +270,35 @@ export function MobileNavMenu() {
                 <>
                   <Link
                     href="/submit"
-                    className="block rounded-lg px-3 py-2 text-sm text-warm-700 hover:bg-warm-100"
+                    className="block rounded-lg px-3 py-2 text-sm text-warm-800 hover:bg-warm-100"
                     onClick={() => setOpen(false)}
                   >
                     提交服务器
                   </Link>
                   <Link
                     href="/console"
-                    className="block rounded-lg px-3 py-2 text-sm text-warm-700 hover:bg-warm-100"
+                    className="block rounded-lg px-3 py-2 text-sm text-warm-800 hover:bg-warm-100"
                     onClick={() => setOpen(false)}
                   >
                     控制台
                   </Link>
                   <Link
                     href="/favorites"
-                    className="block rounded-lg px-3 py-2 text-sm text-warm-700 hover:bg-warm-100"
+                    className="block rounded-lg px-3 py-2 text-sm text-warm-800 hover:bg-warm-100"
                     onClick={() => setOpen(false)}
                   >
                     我的收藏
                   </Link>
                   <Link
                     href="/notifications"
-                    className="block rounded-lg px-3 py-2 text-sm text-warm-700 hover:bg-warm-100"
+                    className="block rounded-lg px-3 py-2 text-sm text-warm-800 hover:bg-warm-100"
                     onClick={() => setOpen(false)}
                   >
                     通知中心
                   </Link>
                   <Link
                     href={`/user/${session.user.uid}`}
-                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-warm-700 hover:bg-warm-100"
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-warm-800 hover:bg-warm-100"
                     onClick={() => setOpen(false)}
                   >
                     <UserAvatar
@@ -299,14 +306,14 @@ export function MobileNavMenu() {
                       name={session.user.name}
                       email={session.user.email}
                       className="h-6 w-6"
-                      fallbackClassName="bg-gradient-to-br from-coral to-coral-amber text-white"
+                      fallbackClassName="bg-accent text-white"
                     />
                     <span className="min-w-0 flex-1 truncate">用户信息 · {displayName}</span>
                   </Link>
                   {session.user.role === "admin" && (
                     <Link
                       href="/admin"
-                      className="block rounded-lg px-3 py-2 text-sm font-medium text-coral hover:bg-coral-light"
+                      className="block rounded-lg px-3 py-2 text-sm font-medium text-accent hover:bg-accent-muted"
                       onClick={() => setOpen(false)}
                     >
                       管理后台
@@ -316,7 +323,7 @@ export function MobileNavMenu() {
                     type="button"
                     onClick={handleSignOut}
                     disabled={isSigningOut}
-                    className="block w-full rounded-lg px-3 py-2 text-left text-sm text-coral-hover hover:bg-coral-light disabled:cursor-not-allowed disabled:opacity-60"
+                    className="block w-full rounded-lg px-3 py-2 text-left text-sm text-accent-hover hover:bg-accent-muted disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isSigningOut ? "退出中..." : "退出"}
                   </button>
