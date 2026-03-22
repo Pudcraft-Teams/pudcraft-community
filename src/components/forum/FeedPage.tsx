@@ -151,7 +151,7 @@ export function FeedPage() {
             <h2 className="text-sm font-semibold text-warm-800">
               热门圈子
             </h2>
-            <Link href="/circles" className="text-xs m3-link">
+            <Link href="/explore" className="text-xs m3-link">
               查看全部
             </Link>
           </div>
@@ -262,7 +262,7 @@ export function FeedPage() {
             <EmptyState
               title="暂无帖子"
               description="还没有人发布帖子，加入圈子开始讨论吧"
-              action={{ label: "浏览圈子", href: "/circles" }}
+              action={{ label: "浏览圈子", href: "/explore" }}
             />
           ) : (
             <div className="flex flex-col gap-3">
