@@ -115,6 +115,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ success: true, message: "服务器已通过审核" });
     }
 
+    if (action === "review") {
+      await prisma.server.update({
+        where: { id: server.id },
+        data: {
+          reviewStatus: "reviewed",
+          reviewedAt: new Date(),
+          reviewedBy: adminResult.userId,
+        },
+      });
+      return NextResponse.json({ success: true, message: "已标记为已巡检" });
+    }
+
     if (action === "reject") {
       if (!reason) {
         return NextResponse.json({ error: "拒绝时必须填写原因" }, { status: 400 });

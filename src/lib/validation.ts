@@ -328,13 +328,13 @@ export const pingResultSchema = z.object({
 export const adminQueryServersSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
-  status: z.enum(["all", "pending", "approved", "rejected"]).default("all"),
+  status: z.enum(["all", "pending", "approved", "rejected", "unreviewed", "reviewed", "reported"]).default("all"),
   search: z.string().max(100).optional(),
 });
 
 /** 管理后台服务器审核操作 */
 export const adminServerActionSchema = z.object({
-  action: z.enum(["approve", "reject"]),
+  action: z.enum(["approve", "reject", "review"]),
   reason: z.string().max(500).optional(),
 });
 
@@ -540,6 +540,7 @@ export type CreatePostInput = z.infer<typeof createPostSchema>;
 export type UpdatePostInput = z.infer<typeof updatePostSchema>;
 export type CreateForumCommentInput = z.infer<typeof createForumCommentSchema>;
 export type CreateCircleBanInput = z.infer<typeof createCircleBanSchema>;
+
 // ─── 管理后台话题 Schema ─────────────────────────
 
 /** 管理后台话题列表查询参数 */
@@ -582,3 +583,33 @@ export type SearchQueryInput = z.infer<typeof searchQuerySchema>;
 export type AdminQueryTagsInput = z.infer<typeof adminQueryTagsSchema>;
 export type AdminUpdateTagInput = z.infer<typeof adminUpdateTagSchema>;
 export type AdminMergeTagsInput = z.infer<typeof adminMergeTagsSchema>;
+
+// ─── 举报 ───
+
+export const reportCategoryEnum = z.enum([
+  "misinformation",
+  "pornography",
+  "harassment",
+  "fraud",
+  "other",
+]);
+
+export const createReportSchema = z.object({
+  targetType: z.enum(["server", "comment", "user"]),
+  targetId: z.string().min(1),
+  category: reportCategoryEnum,
+  description: z.string().max(500).optional(),
+});
+
+export const adminQueryReportsSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  status: z.enum(["all", "pending", "resolved", "dismissed"]).default("pending"),
+  targetType: z.enum(["all", "server", "comment", "user"]).default("all"),
+});
+
+export const adminReportActionSchema = z.object({
+  action: z.enum(["dismiss", "resolve"]),
+  actions: z.array(z.enum(["warn", "takedown", "ban_user"])).optional(),
+  adminNote: z.string().max(500).optional(),
+});
