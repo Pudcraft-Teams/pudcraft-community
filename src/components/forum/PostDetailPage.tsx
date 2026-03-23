@@ -5,7 +5,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { MarkdownRenderer } from "@/components/MarkdownRenderer";
+import { useConfirm } from "@/components/ConfirmDialog";
+import { PostContentRenderer } from "@/components/forum/PostContentRenderer";
+import { normalizeImageSrc } from "@/lib/image-url";
 import { ForumCommentSection } from "@/components/forum/ForumCommentSection";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useToast } from "@/hooks/useToast";
@@ -40,6 +42,7 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
   const pathname = usePathname();
   const { data: session, status: sessionStatus } = useSession();
   const { toast } = useToast();
+  const confirm = useConfirm();
 
   const [post, setPost] = useState<PostDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -160,7 +163,9 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
 
     async function checkCircleMembership() {
       try {
-        const res = await fetch(`/api/circles/${post!.circleId}`);
+        const circleId = post?.circleId;
+        if (!circleId) return;
+        const res = await fetch(`/api/circles/${circleId}`);
         if (!res.ok) return;
 
         const payload = (await res.json()) as {
@@ -287,7 +292,13 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
 
   // Delete post
   async function handleDelete() {
-    if (!window.confirm("确定删除这篇帖子吗？删除后不可恢复。")) return;
+    const ok = await confirm({
+      title: "删除确认",
+      message: "确定删除这篇帖子吗？删除后不可恢复。",
+      confirmText: "删除",
+      danger: true,
+    });
+    if (!ok) return;
     setDeletePending(true);
 
     try {
@@ -375,7 +386,7 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
             <span>/</span>
           </>
         )}
-        <span className="truncate text-warm-400">{post.title}</span>
+        <span className="truncate text-warm-400">{post.title || "帖子详情"}</span>
       </nav>
 
       {/* ── Post card ── */}
@@ -385,7 +396,7 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
           <Link href={`/user/${post.author.uid}`}>
             <span className="relative inline-flex h-10 w-10 shrink-0 overflow-hidden rounded-full">
               <Image
-                src={post.author.image || "/default-avatar.png"}
+                src={normalizeImageSrc(post.author.image) || "/default-avatar.png"}
                 alt={post.author.name ?? "用户头像"}
                 width={40}
                 height={40}
@@ -427,14 +438,38 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
         </div>
 
         {/* ── Title ── */}
-        <h1 className="mb-4 text-2xl font-bold tracking-tight text-warm-800">
-          {post.title}
-        </h1>
+        {post.title && (
+          <h1 className="mb-4 text-2xl font-bold tracking-tight text-warm-800">
+            {post.title}
+          </h1>
+        )}
 
         {/* ── Content ── */}
         <div className="mb-6">
-          <MarkdownRenderer content={post.content} />
+          <PostContentRenderer content={post.content} />
         </div>
+
+        {/* ── Images ── */}
+        {post.images && post.images.length > 0 && (
+          <div className="mb-6 flex flex-col gap-2">
+            {post.images.map((url, i) => (
+              <a
+                key={i}
+                href={normalizeImageSrc(url) || url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="overflow-hidden rounded-lg"
+              >
+                <img
+                  src={normalizeImageSrc(url) || url}
+                  alt={`图片 ${i + 1}`}
+                  className="w-full rounded-lg object-contain"
+                  loading="lazy"
+                />
+              </a>
+            ))}
+          </div>
+        )}
 
         {/* ── Stats ── */}
         <div className="mb-4 flex items-center gap-4 border-t border-warm-200 pt-4 text-sm text-warm-400">
@@ -477,7 +512,7 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
         </div>
 
         {/* ── Action bar ── */}
-        <div className="flex items-center gap-3 border-t border-warm-200 pt-4">
+        <div className="flex flex-wrap items-center gap-1 border-t border-warm-200 pt-3 sm:gap-3 sm:pt-4">
           {/* Like */}
           <button
             type="button"
@@ -485,10 +520,10 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
               void handleLike();
             }}
             disabled={likePending}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors disabled:cursor-not-allowed ${
+            className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors disabled:cursor-not-allowed ${
               liked
                 ? "bg-accent-muted text-accent"
-                : "text-warm-500 hover:bg-warm-100 hover:text-warm-700"
+                : "text-warm-500 hover:bg-warm-100 hover:text-warm-700 active:bg-warm-100"
             }`}
             aria-label={liked ? "取消点赞" : "点赞"}
           >
@@ -498,7 +533,7 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
               fill={liked ? "currentColor" : "none"}
               stroke="currentColor"
               strokeWidth={liked ? 0 : 1.5}
-              className="h-4.5 w-4.5"
+              className="h-[18px] w-[18px]"
             >
               <path d="M2 10.5a1.5 1.5 0 1 1 3 0v6a1.5 1.5 0 0 1-3 0v-6ZM6 10.333v5.43a2 2 0 0 0 1.106 1.79l.05.025A4 4 0 0 0 8.943 18h5.416a2 2 0 0 0 1.962-1.608l1.2-6A2 2 0 0 0 15.56 8H12V4a2 2 0 0 0-2-2 1 1 0 0 0-1 1v.667a4 4 0 0 1-.8 2.4L6.8 7.933a4 4 0 0 0-.8 2.4Z" />
             </svg>
@@ -512,10 +547,10 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
               void handleBookmark();
             }}
             disabled={bookmarkPending}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors disabled:cursor-not-allowed ${
+            className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors disabled:cursor-not-allowed ${
               bookmarked
                 ? "bg-accent-muted text-accent"
-                : "text-warm-500 hover:bg-warm-100 hover:text-warm-700"
+                : "text-warm-500 hover:bg-warm-100 hover:text-warm-700 active:bg-warm-100"
             }`}
             aria-label={bookmarked ? "取消收藏" : "收藏"}
           >
@@ -525,7 +560,7 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
               fill={bookmarked ? "currentColor" : "none"}
               stroke="currentColor"
               strokeWidth={bookmarked ? 0 : 1.5}
-              className="h-4.5 w-4.5"
+              className="h-[18px] w-[18px]"
             >
               <path
                 strokeLinecap="round"
@@ -540,7 +575,7 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
           <button
             type="button"
             onClick={handleShare}
-            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-warm-500 transition-colors hover:bg-warm-100 hover:text-warm-700"
+            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm text-warm-500 transition-colors hover:bg-warm-100 hover:text-warm-700 active:bg-warm-100"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -548,7 +583,7 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
               fill="none"
               stroke="currentColor"
               strokeWidth={1.5}
-              className="h-4.5 w-4.5"
+              className="h-[18px] w-[18px]"
             >
               <path
                 strokeLinecap="round"
@@ -561,7 +596,7 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
 
           {/* ── Admin / Moderator actions ── */}
           {canModerate && (
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex items-center gap-1 sm:gap-2">
               {/* Pin / Unpin */}
               <button
                 type="button"

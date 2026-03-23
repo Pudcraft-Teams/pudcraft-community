@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { Fragment, useCallback, useEffect, useState } from "react";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { useToast } from "@/hooks/useToast";
 import { PageLoading } from "@/components/PageLoading";
 import type { AdminServerItem, PaginationInfo } from "@/lib/types";
@@ -49,6 +50,7 @@ function timeAgo(dateStr: string): string {
 }
 
 export default function AdminServersPage() {
+  const confirm = useConfirm();
   const { toast } = useToast();
   const [servers, setServers] = useState<AdminServerItem[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
@@ -141,7 +143,13 @@ export default function AdminServersPage() {
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!window.confirm(`确定要删除服务器「${name}」吗？此操作不可恢复。`)) {
+    const ok = await confirm({
+      title: "删除确认",
+      message: `确定要删除服务器「${name}」吗？此操作不可恢复。`,
+      confirmText: "删除",
+      danger: true,
+    });
+    if (!ok) {
       return;
     }
 

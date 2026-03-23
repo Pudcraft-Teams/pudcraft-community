@@ -20,7 +20,7 @@ const RichTextEditor = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="min-h-[220px] rounded-xl border border-warm-200 bg-[#FFFAF6] px-4 py-3 text-sm text-warm-500">
+      <div className="min-h-[220px] rounded-xl border border-warm-200 bg-surface px-4 py-3 text-sm text-warm-400">
         编辑器加载中...
       </div>
     ),
@@ -380,18 +380,18 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
 
     return (
       <div className="space-y-2">
-        {label && <p className="text-sm text-warm-700">{label}</p>}
+        {label && <p className="text-sm text-warm-800">{label}</p>}
 
-        <div className="flex items-center justify-between rounded-xl border border-warm-200 bg-[#FFFAF6] px-3 py-2">
-          <div className="inline-flex rounded-lg border border-warm-200 bg-warm-100 p-1">
+        <div className="flex items-center gap-2">
+          <div className="inline-flex rounded-lg border border-warm-200 bg-warm-100 p-0.5">
             <button
               type="button"
               onClick={() => switchMode("rich")}
               disabled={disabled}
-              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                 mode === "rich"
-                  ? "bg-[#FFFAF6] text-coral shadow-sm"
-                  : "text-warm-600 hover:bg-[#FFFAF6] hover:text-warm-800"
+                  ? "bg-surface text-accent shadow-sm"
+                  : "text-warm-400 hover:text-warm-700"
               }`}
             >
               富文本
@@ -400,18 +400,15 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
               type="button"
               onClick={() => switchMode("markdown")}
               disabled={disabled}
-              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                 mode === "markdown"
-                  ? "bg-[#FFFAF6] text-coral shadow-sm"
-                  : "text-warm-600 hover:bg-[#FFFAF6] hover:text-warm-800"
+                  ? "bg-surface text-accent shadow-sm"
+                  : "text-warm-400 hover:text-warm-700"
               }`}
             >
               Markdown
             </button>
           </div>
-          <span className="text-xs text-warm-500">
-            当前模式：{mode === "rich" ? "富文本" : "Markdown"}
-          </span>
         </div>
 
         {mode === "rich" ? (
@@ -423,7 +420,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             onUploadImage={uploadEditorImage}
           />
         ) : (
-          <div className="overflow-hidden rounded-xl border border-warm-200 bg-[#FFFAF6]">
+          <div className="overflow-hidden rounded-xl border border-warm-200 bg-surface">
             <input
               ref={markdownImageInputRef}
               type="file"
@@ -433,53 +430,61 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             />
 
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-warm-200 bg-warm-100 px-3 py-2">
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-0.5">
                 <button
                   type="button"
+                  title="粗体"
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => wrapMarkdownSelection("**", "**", "粗体文本")}
                   disabled={disabled}
-                  className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-warm-200 bg-[#FFFAF6] px-2 text-xs font-medium text-warm-600 transition-colors hover:bg-warm-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-warm-500 transition-colors hover:bg-warm-200/60 hover:text-warm-700 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  B
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8" /></svg>
                 </button>
                 <button
                   type="button"
+                  title="斜体"
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => wrapMarkdownSelection("*", "*", "斜体文本")}
                   disabled={disabled}
-                  className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-warm-200 bg-[#FFFAF6] px-2 text-xs font-medium text-warm-600 transition-colors hover:bg-warm-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-warm-500 transition-colors hover:bg-warm-200/60 hover:text-warm-700 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  I
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="4" x2="10" y2="4" /><line x1="14" y1="20" x2="5" y2="20" /><line x1="15" y1="4" x2="9" y2="20" /></svg>
                 </button>
                 <button
                   type="button"
+                  title="链接"
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={insertMarkdownLink}
                   disabled={disabled}
-                  className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-warm-200 bg-[#FFFAF6] px-2 text-xs font-medium text-warm-600 transition-colors hover:bg-warm-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-warm-500 transition-colors hover:bg-warm-200/60 hover:text-warm-700 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  链接
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
                 </button>
                 <button
                   type="button"
+                  title={isImageUploading ? "上传中..." : "插入图片"}
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => markdownImageInputRef.current?.click()}
                   disabled={disabled || isImageUploading}
-                  className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-warm-200 bg-[#FFFAF6] px-2 text-xs font-medium text-warm-600 transition-colors hover:bg-warm-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-warm-500 transition-colors hover:bg-warm-200/60 hover:text-warm-700 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  {isImageUploading ? "上传中..." : "图片"}
+                  {isImageUploading ? (
+                    <span className="text-xs">...</span>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
+                  )}
                 </button>
               </div>
 
-              <div className="inline-flex rounded-lg border border-warm-200 bg-[#FFFAF6] p-1 md:hidden">
+              <div className="inline-flex rounded-lg border border-warm-200 bg-surface p-1 md:hidden">
                 <button
                   type="button"
                   onClick={() => setMarkdownMobileTab("edit")}
                   className={`rounded-md px-2 py-1 text-xs font-medium ${
                     markdownMobileTab === "edit"
                       ? "bg-warm-100 text-warm-800"
-                      : "text-warm-500 hover:text-warm-700"
+                      : "text-warm-400 hover:text-warm-700"
                   }`}
                 >
                   编辑
@@ -490,7 +495,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
                   className={`rounded-md px-2 py-1 text-xs font-medium ${
                     markdownMobileTab === "preview"
                       ? "bg-warm-100 text-warm-800"
-                      : "text-warm-500 hover:text-warm-700"
+                      : "text-warm-400 hover:text-warm-700"
                   }`}
                 >
                   预览
@@ -509,7 +514,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
                   value={markdownText}
                   onChange={handleMarkdownChange}
                   onKeyDown={handleMarkdownKeyDown}
-                  className="min-h-[220px] w-full resize-y border-0 bg-[#FFFAF6] px-4 py-3 text-sm leading-7 text-warm-700 outline-none"
+                  className="min-h-[220px] w-full resize-y border-0 bg-surface px-4 py-3 text-sm leading-7 text-warm-800 outline-none"
                   placeholder={placeholder}
                   maxLength={maxLength}
                   disabled={disabled}
@@ -519,14 +524,14 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
               <div
                 className={`${markdownMobileTab === "edit" ? "hidden md:block" : "block"} bg-warm-50/70`}
               >
-                <div className="border-b border-warm-200 px-4 py-2 text-xs text-warm-500">
+                <div className="border-b border-warm-200 px-4 py-2 text-xs text-warm-400">
                   预览
                 </div>
                 <div className="max-h-[460px] overflow-y-auto px-4 py-3">
                   {markdownText.trim() ? (
                     <MarkdownRenderer content={markdownText} />
                   ) : (
-                    <p className="text-sm text-warm-500">暂无可预览内容</p>
+                    <p className="text-sm text-warm-400">暂无可预览内容</p>
                   )}
                 </div>
               </div>
@@ -538,12 +543,12 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           const displayLength = mode === "rich" ? richMarkdownLength : markdownText.length;
           const isOverLimit = typeof maxLength === "number" && displayLength > maxLength;
           return (
-            <div className="flex items-center justify-between text-xs text-warm-500">
-              <span className={isOverLimit ? "font-medium text-coral-hover" : ""}>
+            <div className="flex items-center justify-between text-xs text-warm-400">
+              <span className={isOverLimit ? "font-medium text-accent-hover" : ""}>
                 {maxLength ? `${displayLength}/${maxLength}` : `${displayLength} 字`}
               </span>
               {isOverLimit ? (
-                <span className="font-medium text-coral-hover">内容超出字数限制</span>
+                <span className="font-medium text-accent-hover">内容超出字数限制</span>
               ) : (
                 mode === "rich" &&
                 isRichDirty && (

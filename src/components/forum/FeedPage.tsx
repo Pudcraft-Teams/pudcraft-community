@@ -96,7 +96,7 @@ export function FeedPage() {
         // Extract user's circles from the same response (isMember == true)
         if (sessionStatus === "authenticated") {
           const joined = data.circles.filter(
-            (c) => (c as CircleItem & { isMember?: boolean }).isMember,
+            (c) => c.isMember,
           );
           setMyCircles(joined);
         }
@@ -168,7 +168,7 @@ export function FeedPage() {
                   key={circle.id}
                   circle={circle}
                   isMember={
-                    (circle as CircleItem & { isMember?: boolean }).isMember
+                    circle.isMember
                   }
                 />
               ))}
@@ -239,11 +239,11 @@ export function FeedPage() {
         ) : (
           <div className="scrollbar-hide -mx-4 flex gap-3 overflow-x-auto px-4 pb-2">
             {popularCircles.map((circle) => (
-              <div key={circle.id} className="w-64 shrink-0">
+              <div key={circle.id} className="w-56 shrink-0 sm:w-64">
                 <CircleCard
                   circle={circle}
                   isMember={
-                    (circle as CircleItem & { isMember?: boolean }).isMember
+                    circle.isMember
                   }
                 />
               </div>

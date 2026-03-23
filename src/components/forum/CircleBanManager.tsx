@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -39,6 +40,7 @@ function parseBansPayload(raw: unknown): BansResponse {
  * 支持查看封禁列表、添加封禁和解除封禁。
  */
 export function CircleBanManager({ circleId }: CircleBanManagerProps) {
+  const confirm = useConfirm();
   const [bans, setBans] = useState<CircleBanItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,7 +92,10 @@ export function CircleBanManager({ circleId }: CircleBanManagerProps) {
 
   const handleUnban = useCallback(
     async (userId: string) => {
-      const confirmed = window.confirm("确定要解除该用户的封禁吗？");
+      const confirmed = await confirm({
+        title: "解除封禁",
+        message: "确定要解除该用户的封禁吗？",
+      });
       if (!confirmed) {
         return;
       }
@@ -117,7 +122,7 @@ export function CircleBanManager({ circleId }: CircleBanManagerProps) {
         setUnbanningId(null);
       }
     },
-    [circleId, fetchBans, page],
+    [circleId, confirm, fetchBans, page],
   );
 
   const handleBan = useCallback(async () => {

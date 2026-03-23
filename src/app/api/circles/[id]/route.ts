@@ -26,6 +26,9 @@ async function resolveCircleDetail(param: string) {
       creator: {
         select: { id: true, uid: true, name: true, image: true },
       },
+      server: {
+        select: { id: true, psid: true, name: true, iconUrl: true },
+      },
     },
   });
 }
@@ -78,6 +81,7 @@ export async function GET(
       postCount: circle.postCount,
       creatorId: circle.creatorId,
       creator: circle.creator,
+      server: circle.server,
       isMember,
       memberRole,
       createdAt: circle.createdAt.toISOString(),

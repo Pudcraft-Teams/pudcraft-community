@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
+import { normalizeImageSrc } from "@/lib/image-url";
 import { PostCard } from "@/components/forum/PostCard";
 import { CircleCard } from "@/components/forum/CircleCard";
 import { EmptyState } from "@/components/EmptyState";
@@ -185,7 +186,7 @@ export function UserProfilePage({ uid, user }: UserProfilePageProps) {
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
           <span className="relative inline-flex h-20 w-20 shrink-0 overflow-hidden rounded-full">
             <Image
-              src={user.image || "/default-avatar.png"}
+              src={normalizeImageSrc(user.image) || "/default-avatar.png"}
               alt={`${displayName} 的头像`}
               width={80}
               height={80}

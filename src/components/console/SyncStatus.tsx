@@ -12,10 +12,10 @@ interface SyncStatusProps {
 const POLL_INTERVAL_MS = 15_000;
 
 const STATUS_STYLES: Record<WhitelistSyncItem["status"], { label: string; className: string }> = {
-  pending: { label: "等待中", className: "bg-[#FDF5ED] text-coral-amber ring-1 ring-coral-amber/20" },
-  pushed: { label: "已推送", className: "bg-coral-light text-coral ring-1 ring-coral/20" },
+  pending: { label: "等待中", className: "bg-accent-muted text-accent-hover ring-1 ring-accent-hover/20" },
+  pushed: { label: "已推送", className: "bg-accent-muted text-accent ring-1 ring-accent/20" },
   acked: { label: "已确认", className: "bg-forest-light text-forest-dark ring-1 ring-forest/20" },
-  failed: { label: "失败", className: "bg-coral-light text-coral-hover ring-1 ring-coral-hover/20" },
+  failed: { label: "失败", className: "bg-accent-muted text-accent-hover ring-1 ring-accent-hover/20" },
 };
 
 const ACTION_LABELS: Record<WhitelistSyncItem["action"], string> = {
@@ -120,7 +120,7 @@ export function SyncStatus({ serverId }: SyncStatusProps) {
     return (
       <section className="m3-surface p-4 sm:p-5">
         <h2 className="text-lg font-semibold text-warm-800">白名单同步</h2>
-        <p className="mt-4 text-sm text-coral-hover">{error}</p>
+        <p className="mt-4 text-sm text-accent-hover">{error}</p>
       </section>
     );
   }
@@ -151,7 +151,7 @@ export function SyncStatus({ serverId }: SyncStatusProps) {
         </span>
       </div>
 
-      {error && <p className="mt-3 text-sm text-coral-hover">{error}</p>}
+      {error && <p className="mt-3 text-sm text-accent-hover">{error}</p>}
 
       {/* Stats row */}
       <div className="mt-4 flex flex-wrap gap-4 text-sm">
@@ -159,7 +159,7 @@ export function SyncStatus({ serverId }: SyncStatusProps) {
           <span className="text-warm-500">等待同步</span>
           <span
             className={`font-semibold ${
-              overview.pendingCount > 0 ? "text-coral-amber" : "text-warm-700"
+              overview.pendingCount > 0 ? "text-accent-hover" : "text-warm-800"
             }`}
           >
             {overview.pendingCount}
@@ -169,7 +169,7 @@ export function SyncStatus({ serverId }: SyncStatusProps) {
           <span className="text-warm-500">同步失败</span>
           <span
             className={`font-semibold ${
-              overview.failedCount > 0 ? "text-coral-hover" : "text-warm-700"
+              overview.failedCount > 0 ? "text-accent-hover" : "text-warm-800"
             }`}
           >
             {overview.failedCount}
@@ -178,7 +178,7 @@ export function SyncStatus({ serverId }: SyncStatusProps) {
         {overview.lastAckedAt && (
           <div className="flex items-center gap-2">
             <span className="text-warm-500">最近确认</span>
-            <span className="font-medium text-warm-700">
+            <span className="font-medium text-warm-800">
               {timeAgo(overview.lastAckedAt)}
             </span>
           </div>
@@ -205,7 +205,7 @@ export function SyncStatus({ serverId }: SyncStatusProps) {
                     <td className="py-2.5 pr-4 font-mono text-warm-800">
                       {sync.mcUsername ?? "-"}
                     </td>
-                    <td className="py-2.5 pr-4 text-warm-600">
+                    <td className="py-2.5 pr-4 text-warm-500">
                       {ACTION_LABELS[sync.action] ?? sync.action}
                     </td>
                     <td className="py-2.5 pr-4">

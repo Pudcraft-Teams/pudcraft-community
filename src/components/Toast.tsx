@@ -47,7 +47,7 @@ function Toast({ item, onClose }: ToastProps) {
   const colorClass =
     item.type === "success"
       ? "border-forest/30 bg-forest-light text-forest-dark"
-      : "border-coral/30 bg-[#FDF0ED] text-[#6B2E1F]";
+      : "border-accent/30 bg-accent-muted text-warm-800";
 
   return (
     <div

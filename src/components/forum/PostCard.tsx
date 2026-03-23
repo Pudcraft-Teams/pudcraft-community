@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
+import { normalizeImageSrc } from "@/lib/image-url";
 import { timeAgo } from "@/lib/time";
 
 import type { PostItem } from "@/lib/types";
@@ -117,10 +118,10 @@ export function PostCard({ post, onLikeChange, onBookmarkChange }: PostCardProps
       className="group block rounded-xl border border-warm-200 bg-surface p-4 transition-colors hover:border-warm-300 animate-card-in"
     >
       {/* ── Header: avatar + name + time + circle tag + pin ── */}
-      <div className="mb-2 flex items-center gap-2">
-        <span className="relative inline-flex h-8 w-8 shrink-0 overflow-hidden rounded-full">
+      <div className="mb-2 flex items-center gap-1.5 overflow-hidden sm:gap-2">
+        <span className="relative inline-flex h-7 w-7 shrink-0 overflow-hidden rounded-full sm:h-8 sm:w-8">
           <Image
-            src={post.author.image || "/default-avatar.png"}
+            src={normalizeImageSrc(post.author.image) || "/default-avatar.png"}
             alt={post.author.name ?? "用户头像"}
             width={32}
             height={32}
@@ -128,20 +129,20 @@ export function PostCard({ post, onLikeChange, onBookmarkChange }: PostCardProps
           />
         </span>
 
-        <span className="text-sm font-medium text-warm-800">
+        <span className="min-w-0 max-w-[6rem] truncate text-sm font-medium text-warm-800 sm:max-w-none">
           {post.author.name ?? `用户${post.author.uid}`}
         </span>
 
-        <span className="text-xs text-warm-400">
+        <span className="shrink-0 text-xs text-warm-400">
           {timeAgo(post.createdAt)}
         </span>
 
         {post.circle ? (
-          <span className="rounded-full bg-warm-100 px-2 py-0.5 text-xs text-warm-500">
+          <span className="max-w-[5rem] truncate rounded-full bg-warm-100 px-2 py-0.5 text-xs text-warm-500 sm:max-w-none">
             {post.circle.name}
           </span>
         ) : (
-          <span className="rounded-full bg-warm-100 px-2 py-0.5 text-xs text-warm-500">
+          <span className="shrink-0 rounded-full bg-warm-100 px-2 py-0.5 text-xs text-warm-500">
             广场
           </span>
         )}
@@ -162,15 +163,38 @@ export function PostCard({ post, onLikeChange, onBookmarkChange }: PostCardProps
       </div>
 
       {/* ── Title ── */}
-      <h3 className="mb-1 text-base font-semibold text-warm-800 transition-colors group-hover:text-accent">
-        {post.title}
-      </h3>
+      {post.title && (
+        <h3 className="mb-1 text-base font-semibold text-warm-800 transition-colors group-hover:text-accent">
+          {post.title}
+        </h3>
+      )}
 
       {/* ── Content preview ── */}
       {post.contentPreview && (
-        <p className="mb-3 line-clamp-2 text-sm leading-relaxed text-warm-500">
+        <p className={`line-clamp-2 text-sm leading-relaxed ${post.title ? "mb-3 text-warm-500" : "mb-3 text-warm-700"}`}>
           {post.contentPreview}
         </p>
+      )}
+
+      {/* ── Image preview ── */}
+      {post.images?.length > 0 && (
+        <div className="mb-3 flex gap-1.5 overflow-hidden rounded-lg">
+          {post.images.slice(0, 3).map((url, i) => (
+            <div key={i} className="relative aspect-square flex-1 overflow-hidden bg-warm-100">
+              <img
+                src={normalizeImageSrc(url) || url}
+                alt=""
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
+              {i === 2 && post.images.length > 3 && (
+                <div className="absolute inset-0 flex items-center justify-center bg-warm-900/40 text-sm font-medium text-white">
+                  +{post.images.length - 3}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       )}
 
       {/* ── Action bar ── */}

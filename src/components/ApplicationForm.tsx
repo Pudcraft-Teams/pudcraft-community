@@ -192,7 +192,7 @@ export function ApplicationForm({ serverId, fields, onSuccess }: ApplicationForm
           </svg>
         </div>
         <h3 className="text-lg font-semibold text-warm-800">申请已提交</h3>
-        <p className="mt-1 text-sm text-warm-600">请等待服主审核，审核结果将通过站内通知告知。</p>
+        <p className="mt-1 text-sm text-warm-500">请等待服主审核，审核结果将通过站内通知告知。</p>
       </div>
     );
   }
@@ -204,9 +204,9 @@ export function ApplicationForm({ serverId, fields, onSuccess }: ApplicationForm
       <fieldset disabled={isSubmitting} className="space-y-4 disabled:opacity-90">
         {/* MC Username - always shown, always required */}
         <div>
-          <label htmlFor="mc-username" className="block text-sm font-medium text-warm-700">
+          <label htmlFor="mc-username" className="block text-sm font-medium text-warm-800">
             Minecraft 用户名
-            <span className="ml-0.5 text-coral-hover">*</span>
+            <span className="ml-0.5 text-accent-hover">*</span>
           </label>
           <input
             id="mc-username"
@@ -222,7 +222,7 @@ export function ApplicationForm({ serverId, fields, onSuccess }: ApplicationForm
             autoComplete="off"
           />
           {fieldErrors.mcUsername && (
-            <p className="mt-1 text-xs text-coral-hover">{fieldErrors.mcUsername}</p>
+            <p className="mt-1 text-xs text-accent-hover">{fieldErrors.mcUsername}</p>
           )}
         </div>
 
@@ -231,10 +231,10 @@ export function ApplicationForm({ serverId, fields, onSuccess }: ApplicationForm
           <div key={field.key}>
             <label
               htmlFor={`field-${field.key}`}
-              className="block text-sm font-medium text-warm-700"
+              className="block text-sm font-medium text-warm-800"
             >
               {field.label}
-              {field.required && <span className="ml-0.5 text-coral-hover">*</span>}
+              {field.required && <span className="ml-0.5 text-accent-hover">*</span>}
             </label>
 
             {field.type === "text" && (
@@ -259,7 +259,7 @@ export function ApplicationForm({ serverId, fields, onSuccess }: ApplicationForm
                   placeholder={field.placeholder}
                   maxLength={500}
                 />
-                <p className="mt-1 text-xs text-warm-500">
+                <p className="mt-1 text-xs text-warm-400">
                   {((formData[field.key] as string) ?? "").length}/500
                 </p>
               </>
@@ -292,8 +292,8 @@ export function ApplicationForm({ serverId, fields, onSuccess }: ApplicationForm
                       key={option}
                       className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm transition-colors ${
                         selected
-                          ? "border-coral bg-coral-light text-coral"
-                          : "border-warm-200 bg-[#FFFAF6] text-warm-700 hover:border-warm-300"
+                          ? "border-accent bg-accent-muted text-accent"
+                          : "border-warm-200 bg-surface text-warm-800 hover:border-warm-300"
                       }`}
                     >
                       <input
@@ -310,7 +310,7 @@ export function ApplicationForm({ serverId, fields, onSuccess }: ApplicationForm
             )}
 
             {fieldErrors[field.key] && (
-              <p className="mt-1 text-xs text-coral-hover">{fieldErrors[field.key]}</p>
+              <p className="mt-1 text-xs text-accent-hover">{fieldErrors[field.key]}</p>
             )}
           </div>
         ))}

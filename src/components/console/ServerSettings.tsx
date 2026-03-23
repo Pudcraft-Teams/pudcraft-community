@@ -271,8 +271,8 @@ export function ServerSettings({
               key={option.value}
               className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
                 visibility === option.value
-                  ? "border-coral/30 bg-coral-light/50"
-                  : "border-warm-200 bg-[#FFFAF6] hover:border-warm-300"
+                  ? "border-accent/30 bg-accent-muted/50"
+                  : "border-warm-200 bg-surface hover:border-warm-300"
               }`}
             >
               <input
@@ -283,12 +283,12 @@ export function ServerSettings({
                 onChange={() => {
                   setVisibility(option.value);
                 }}
-                className="mt-0.5 h-4 w-4 border-warm-300 text-coral focus:ring-coral-hover"
+                className="mt-0.5 h-4 w-4 border-warm-300 text-accent focus:ring-accent-hover"
               />
               <div className="min-w-0">
                 <p
                   className={`text-sm font-medium ${
-                    visibility === option.value ? "text-coral" : "text-warm-700"
+                    visibility === option.value ? "text-accent" : "text-warm-800"
                   }`}
                 >
                   {option.label}
@@ -303,17 +303,17 @@ export function ServerSettings({
       {/* ─── Discoverable toggle ─── */}
       {showJoinModeSelector && (
         <div className="mt-6">
-          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-warm-200 bg-[#FFFAF6] p-3 transition-colors hover:border-warm-300">
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-warm-200 bg-surface p-3 transition-colors hover:border-warm-300">
             <input
               type="checkbox"
               checked={discoverable}
               onChange={(e) => {
                 setDiscoverable(e.target.checked);
               }}
-              className="mt-0.5 h-4 w-4 rounded border-warm-300 text-coral focus:ring-coral-hover"
+              className="mt-0.5 h-4 w-4 rounded border-warm-300 text-accent focus:ring-accent-hover"
             />
             <div className="min-w-0">
-              <p className="text-sm font-medium text-warm-700">
+              <p className="text-sm font-medium text-warm-800">
                 在首页发现中展示
               </p>
               <p className="mt-0.5 text-xs text-warm-500">
@@ -334,8 +334,8 @@ export function ServerSettings({
                 key={option.value}
                 className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
                   joinMode === option.value
-                    ? "border-coral/30 bg-coral-light/50"
-                    : "border-warm-200 bg-[#FFFAF6] hover:border-warm-300"
+                    ? "border-accent/30 bg-accent-muted/50"
+                    : "border-warm-200 bg-surface hover:border-warm-300"
                 }`}
               >
                 <input
@@ -346,12 +346,12 @@ export function ServerSettings({
                   onChange={() => {
                     setJoinMode(option.value);
                   }}
-                  className="mt-0.5 h-4 w-4 border-warm-300 text-coral focus:ring-coral-hover"
+                  className="mt-0.5 h-4 w-4 border-warm-300 text-accent focus:ring-accent-hover"
                 />
                 <div className="min-w-0">
                   <p
                     className={`text-sm font-medium ${
-                      joinMode === option.value ? "text-coral" : "text-warm-700"
+                      joinMode === option.value ? "text-accent" : "text-warm-800"
                     }`}
                   >
                     {option.label}
@@ -393,7 +393,7 @@ export function ServerSettings({
                       onClick={() => {
                         handleRemoveField(field.key);
                       }}
-                      className="text-xs text-coral-hover transition-colors hover:text-coral-dark"
+                      className="text-xs text-accent-hover transition-colors hover:text-accent-dark"
                     >
                       移除
                     </button>
@@ -402,7 +402,7 @@ export function ServerSettings({
                   <div className="mt-2 grid gap-3 sm:grid-cols-2">
                     {/* Label */}
                     <div>
-                      <label className="text-xs font-medium text-warm-600">
+                      <label className="text-xs font-medium text-warm-500">
                         字段名称
                       </label>
                       <input
@@ -413,13 +413,13 @@ export function ServerSettings({
                         }}
                         placeholder="例如：游戏 ID"
                         maxLength={100}
-                        className="mt-1 w-full rounded-lg border border-warm-200 bg-[#FFFAF6] px-3 py-2 text-sm text-warm-800 placeholder:text-warm-400 focus:border-coral focus:outline-none focus:ring-1 focus:ring-coral"
+                        className="mt-1 w-full rounded-lg border border-warm-200 bg-surface px-3 py-2 text-sm text-warm-800 placeholder:text-warm-400 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                       />
                     </div>
 
                     {/* Type */}
                     <div>
-                      <label className="text-xs font-medium text-warm-600">
+                      <label className="text-xs font-medium text-warm-500">
                         字段类型
                       </label>
                       <select
@@ -428,7 +428,7 @@ export function ServerSettings({
                           const newType = e.target.value as ApplicationFormField["type"];
                           handleFieldChange(field.key, { type: newType });
                         }}
-                        className="mt-1 w-full rounded-lg border border-warm-200 bg-[#FFFAF6] px-3 py-2 text-sm text-warm-800 focus:border-coral focus:outline-none focus:ring-1 focus:ring-coral"
+                        className="mt-1 w-full rounded-lg border border-warm-200 bg-surface px-3 py-2 text-sm text-warm-800 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                       >
                         {FIELD_TYPE_OPTIONS.map((opt) => (
                           <option key={opt.value} value={opt.value}>
@@ -442,7 +442,7 @@ export function ServerSettings({
                   {/* Options for select/multiselect */}
                   {(field.type === "select" || field.type === "multiselect") && (
                     <div className="mt-3">
-                      <label className="text-xs font-medium text-warm-600">
+                      <label className="text-xs font-medium text-warm-500">
                         选项（用逗号分隔）
                       </label>
                       <input
@@ -452,7 +452,7 @@ export function ServerSettings({
                           handleOptionsChange(field.key, e.target.value);
                         }}
                         placeholder="例如：选项一, 选项二, 选项三"
-                        className="mt-1 w-full rounded-lg border border-warm-200 bg-[#FFFAF6] px-3 py-2 text-sm text-warm-800 placeholder:text-warm-400 focus:border-coral focus:outline-none focus:ring-1 focus:ring-coral"
+                        className="mt-1 w-full rounded-lg border border-warm-200 bg-surface px-3 py-2 text-sm text-warm-800 placeholder:text-warm-400 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                       />
                     </div>
                   )}
@@ -465,9 +465,9 @@ export function ServerSettings({
                       onChange={(e) => {
                         handleFieldChange(field.key, { required: e.target.checked });
                       }}
-                      className="h-4 w-4 rounded border-warm-300 text-coral focus:ring-coral-hover"
+                      className="h-4 w-4 rounded border-warm-300 text-accent focus:ring-accent-hover"
                     />
-                    <span className="text-xs text-warm-600">必填</span>
+                    <span className="text-xs text-warm-500">必填</span>
                   </label>
                 </div>
               ))}
@@ -478,7 +478,7 @@ export function ServerSettings({
             <button
               type="button"
               onClick={handleAddField}
-              className="mt-3 w-full rounded-xl border border-dashed border-warm-300 px-4 py-2.5 text-sm text-warm-500 transition-colors hover:border-coral hover:text-coral"
+              className="mt-3 w-full rounded-xl border border-dashed border-warm-300 px-4 py-2.5 text-sm text-warm-500 transition-colors hover:border-accent hover:text-accent"
             >
               + 添加字段
             </button>
@@ -510,7 +510,7 @@ export function ServerSettings({
         )}
 
         {saveError && (
-          <span className="text-sm text-coral-hover">{saveError}</span>
+          <span className="text-sm text-accent-hover">{saveError}</span>
         )}
       </div>
     </section>

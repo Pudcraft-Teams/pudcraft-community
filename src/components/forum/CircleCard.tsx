@@ -3,6 +3,9 @@
 import { useCallback, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { normalizeImageSrc } from "@/lib/image-url";
 import type { CircleItem } from "@/lib/types";
 
 interface CircleCardProps {
@@ -12,6 +15,10 @@ interface CircleCardProps {
 }
 
 export function CircleCard({ circle, isMember, onJoinChange }: CircleCardProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { status: sessionStatus } = useSession();
+
   const [joined, setJoined] = useState(isMember ?? false);
   const [loading, setLoading] = useState(false);
 
@@ -20,6 +27,14 @@ export function CircleCard({ circle, isMember, onJoinChange }: CircleCardProps) 
       e.preventDefault();
       e.stopPropagation();
       if (loading) return;
+
+      // Auth guard — redirect to login if not authenticated
+      if (sessionStatus === "loading") return;
+      if (sessionStatus !== "authenticated") {
+        const callbackUrl = pathname && pathname.length > 0 ? pathname : "/";
+        router.push(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+        return;
+      }
 
       const next = !joined;
       // Optimistic update
@@ -47,19 +62,19 @@ export function CircleCard({ circle, isMember, onJoinChange }: CircleCardProps) 
         setLoading(false);
       }
     },
-    [joined, loading, circle.id, onJoinChange],
+    [joined, loading, circle.id, onJoinChange, sessionStatus, pathname, router],
   );
 
   return (
     <Link
       href={`/c/${circle.slug}`}
-      className="group flex items-center gap-3 rounded-xl border border-warm-200 bg-surface p-4 transition-all duration-150 hover:border-warm-300 hover:shadow-sm"
+      className="group flex items-center gap-2.5 rounded-xl border border-warm-200 bg-surface p-3 transition-all duration-150 hover:border-warm-300 hover:shadow-sm sm:gap-3 sm:p-4"
     >
       {/* Icon */}
       {circle.icon ? (
-        <span className="relative inline-flex h-12 w-12 shrink-0 overflow-hidden rounded-lg">
+        <span className="relative inline-flex h-10 w-10 shrink-0 overflow-hidden rounded-lg sm:h-12 sm:w-12">
           <Image
-            src={circle.icon}
+            src={normalizeImageSrc(circle.icon)!}
             alt={`${circle.name} 图标`}
             width={48}
             height={48}
@@ -67,7 +82,7 @@ export function CircleCard({ circle, isMember, onJoinChange }: CircleCardProps) 
           />
         </span>
       ) : (
-        <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent-hover text-lg font-bold text-white">
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent-hover text-base font-bold text-white sm:h-12 sm:w-12 sm:text-lg">
           {circle.name.charAt(0)}
         </span>
       )}

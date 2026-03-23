@@ -111,11 +111,11 @@ export function ApiKeyManager({ serverId, hasApiKey: initialHasApiKey }: ApiKeyM
         生成 API Key 后，可在 Minecraft 插件中配置，实现白名单自动同步。
       </p>
 
-      {error && <p className="mt-3 text-sm text-coral-hover">{error}</p>}
+      {error && <p className="mt-3 text-sm text-accent-hover">{error}</p>}
 
       {/* Confirm dialog for reset */}
       {showConfirm && (
-        <div className="mt-3 rounded-xl border border-coral-amber/20 bg-[#FDF5ED] px-4 py-3">
+        <div className="mt-3 rounded-xl border border-accent-hover/20 bg-accent-muted px-4 py-3">
           <p className="text-sm font-medium text-warm-800">
             生成新密钥将使旧密钥失效，确定继续？
           </p>
@@ -142,12 +142,12 @@ export function ApiKeyManager({ serverId, hasApiKey: initialHasApiKey }: ApiKeyM
       {/* Generated key display */}
       {generatedKey && (
         <div className="mt-4 space-y-3">
-          <div className="rounded-xl border border-coral/30 bg-coral-light px-4 py-3">
-            <p className="mb-2 text-xs font-medium text-coral-dark">
+          <div className="rounded-xl border border-accent/30 bg-accent-muted px-4 py-3">
+            <p className="mb-2 text-xs font-medium text-accent-hover">
               此密钥仅显示一次，请妥善保存
             </p>
             <div className="flex items-center gap-2">
-              <code className="min-w-0 flex-1 break-all rounded-lg bg-[#FFFAF6] px-3 py-2 font-mono text-sm text-warm-800 ring-1 ring-warm-200">
+              <code className="min-w-0 flex-1 break-all rounded-lg bg-surface px-3 py-2 font-mono text-sm text-warm-800 ring-1 ring-warm-200">
                 {generatedKey}
               </code>
               <button
@@ -162,8 +162,8 @@ export function ApiKeyManager({ serverId, hasApiKey: initialHasApiKey }: ApiKeyM
 
           {/* Plugin config hint */}
           <div className="rounded-xl border border-warm-200 bg-warm-50 px-4 py-3">
-            <p className="mb-2 text-xs font-medium text-warm-600">插件配置示例</p>
-            <pre className="overflow-x-auto whitespace-pre rounded-lg bg-[#FFFAF6] px-3 py-2 font-mono text-xs text-warm-700 ring-1 ring-warm-200">
+            <p className="mb-2 text-xs font-medium text-warm-500">插件配置示例</p>
+            <pre className="overflow-x-auto whitespace-pre rounded-lg bg-surface px-3 py-2 font-mono text-xs text-warm-800 ring-1 ring-warm-200">
               {`platformUrl: https://your-domain.com\napiKey: ${generatedKey}`}
             </pre>
           </div>

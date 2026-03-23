@@ -38,7 +38,7 @@ export function DeleteServerDialog({
   redirectTo,
   onDeleted,
   buttonText = "删除",
-  triggerClassName = "m3-btn rounded-lg border border-coral-hover/30 bg-[#FFFAF6] px-3 py-1.5 text-xs text-coral-hover transition-colors hover:bg-coral-light",
+  triggerClassName = "m3-btn rounded-lg border border-accent-hover/30 bg-surface px-3 py-1.5 text-xs text-accent-hover transition-colors hover:bg-accent-muted",
 }: DeleteServerDialogProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -122,7 +122,7 @@ export function DeleteServerDialog({
 
           <div className="m3-surface relative w-full max-w-md p-6">
             <h3 className="text-lg font-semibold text-warm-800">确认删除</h3>
-            <p className="mt-3 text-sm text-warm-600">
+            <p className="mt-3 text-sm text-warm-500">
               确定要删除服务器「{serverName}」吗？此操作不可恢复。
             </p>
 

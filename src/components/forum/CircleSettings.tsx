@@ -8,16 +8,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CircleBanManager } from "@/components/forum/CircleBanManager";
 import { CircleMemberManager } from "@/components/forum/CircleMemberManager";
 import { CircleSectionManager } from "@/components/forum/CircleSectionManager";
+import { CircleServerBind } from "@/components/forum/CircleServerBind";
 import { ImageUpload } from "@/components/ImageUpload";
 import { PageLoading } from "@/components/PageLoading";
 import type { CircleDetail, CircleRoleType } from "@/lib/types";
 
 // ─── Constants ───────────────────────────────────
 
-type SettingsTab = "info" | "sections" | "members" | "bans";
+type SettingsTab = "info" | "server" | "sections" | "members" | "bans";
 
 const TABS: { key: SettingsTab; label: string; minRole: CircleRoleType }[] = [
   { key: "info", label: "基本信息", minRole: "OWNER" },
+  { key: "server", label: "绑定服务器", minRole: "ADMIN" },
   { key: "sections", label: "子板块", minRole: "ADMIN" },
   { key: "members", label: "成员管理", minRole: "ADMIN" },
   { key: "bans", label: "封禁管理", minRole: "ADMIN" },
@@ -433,6 +435,16 @@ export function CircleSettings({ circleSlug }: CircleSettingsProps) {
               <span className="text-sm text-accent-hover">{saveError}</span>
             )}
           </div>
+        </section>
+      )}
+
+      {activeTab === "server" && (
+        <section className="m3-surface p-4 sm:p-5">
+          <CircleServerBind
+            circleId={circle.id}
+            boundServer={circle.server ?? null}
+            onUpdate={() => void fetchCircle()}
+          />
         </section>
       )}
 

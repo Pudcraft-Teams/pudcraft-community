@@ -213,12 +213,12 @@ export default function ServerModpacksPage() {
   }
 
   if (status === "unauthenticated") {
-    return <div className="py-12 text-center text-sm text-warm-500">正在跳转到登录页...</div>;
+    return <div className="py-12 text-center text-sm text-warm-400">正在跳转到登录页...</div>;
   }
 
   if (isForbidden) {
     return (
-      <div className="mx-auto max-w-3xl rounded-xl border border-coral-hover bg-coral-hover px-4 py-3 text-sm text-coral-hover">
+      <div className="mx-auto max-w-3xl rounded-xl border border-accent-hover bg-accent-hover px-4 py-3 text-sm text-accent-hover">
         无权限管理该服务器整合包，正在返回详情页...
       </div>
     );
@@ -226,22 +226,22 @@ export default function ServerModpacksPage() {
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 px-4">
-      <nav className="flex items-center gap-2 text-sm text-warm-500">
-        <Link href={`/servers/${id}`} className="text-coral hover:text-coral-hover">
+      <nav className="flex items-center gap-2 text-sm text-warm-400">
+        <Link href={`/servers/${id}`} className="text-accent hover:text-accent-hover">
           &larr; 返回服务器详情
         </Link>
       </nav>
 
-      <section className="rounded-xl border border-warm-200 bg-[#FFFAF6] p-5 sm:p-6">
+      <section className="rounded-xl border border-warm-200 bg-surface p-5 sm:p-6">
         <h1 className="text-2xl font-semibold text-warm-800">整合包管理</h1>
-        <p className="mt-1 text-sm text-warm-600">服务器：{serverName}</p>
-        <p className="mt-1 text-xs text-warm-500">
+        <p className="mt-1 text-sm text-warm-500">服务器：{serverName}</p>
+        <p className="mt-1 text-xs text-warm-400">
           仅支持 .mrpack，单文件最大 {MAX_MRPACK_SIZE_MB}MB
         </p>
 
         <form className="mt-5 space-y-4" onSubmit={handleUpload} noValidate>
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-warm-700" htmlFor="modpack-file">
+            <label className="block text-sm font-medium text-warm-800" htmlFor="modpack-file">
               整合包文件
             </label>
             <input
@@ -251,33 +251,33 @@ export default function ServerModpacksPage() {
               onChange={(event) => {
                 setSelectedFile(event.target.files?.[0] ?? null);
               }}
-              className="block w-full rounded-xl border border-warm-200 bg-[#FFFAF6] px-3 py-2 text-sm text-warm-700 file:mr-3 file:rounded-lg file:border file:border-warm-200 file:bg-[#FFFAF6] file:px-3 file:py-1.5 file:text-sm file:text-warm-700 hover:file:bg-warm-50"
+              className="block w-full rounded-lg border border-warm-200 bg-surface px-3 py-2 text-sm text-warm-800 file:mr-3 file:rounded-lg file:border file:border-warm-200 file:bg-surface file:px-3 file:py-1.5 file:text-sm file:text-warm-800 hover:file:bg-warm-50"
             />
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
-              <label className="block text-sm font-medium text-warm-700" htmlFor="modpack-version">
+              <label className="block text-sm font-medium text-warm-800" htmlFor="modpack-version">
                 版本号（可选）
               </label>
               <input
                 id="modpack-version"
                 value={version}
                 onChange={(event) => setVersion(event.target.value)}
-                className="mt-1 w-full rounded-xl border border-warm-200 bg-[#FFFAF6] px-3 py-2 text-sm text-warm-700 outline-none focus:border-coral"
+                className="mt-1 w-full rounded-lg border border-warm-200 bg-surface px-3 py-2 text-sm text-warm-800 outline-none focus:border-accent"
                 placeholder="例如 v1.0.0"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-warm-700" htmlFor="modpack-loader">
+              <label className="block text-sm font-medium text-warm-800" htmlFor="modpack-loader">
                 加载器（可选）
               </label>
               <select
                 id="modpack-loader"
                 value={loader}
                 onChange={(event) => setLoader(event.target.value)}
-                className="mt-1 w-full rounded-xl border border-warm-200 bg-[#FFFAF6] px-3 py-2 text-sm text-warm-700 outline-none focus:border-coral"
+                className="mt-1 w-full rounded-lg border border-warm-200 bg-surface px-3 py-2 text-sm text-warm-800 outline-none focus:border-accent"
               >
                 <option value="">自动识别</option>
                 <option value="fabric">fabric</option>
@@ -289,7 +289,7 @@ export default function ServerModpacksPage() {
 
             <div>
               <label
-                className="block text-sm font-medium text-warm-700"
+                className="block text-sm font-medium text-warm-800"
                 htmlFor="modpack-game-version"
               >
                 游戏版本（可选）
@@ -298,7 +298,7 @@ export default function ServerModpacksPage() {
                 id="modpack-game-version"
                 value={gameVersion}
                 onChange={(event) => setGameVersion(event.target.value)}
-                className="mt-1 w-full rounded-xl border border-warm-200 bg-[#FFFAF6] px-3 py-2 text-sm text-warm-700 outline-none focus:border-coral"
+                className="mt-1 w-full rounded-lg border border-warm-200 bg-surface px-3 py-2 text-sm text-warm-800 outline-none focus:border-accent"
                 placeholder="例如 1.20.1"
               />
             </div>
@@ -307,39 +307,39 @@ export default function ServerModpacksPage() {
           <button
             type="submit"
             disabled={isUploading}
-            className="rounded-xl border border-coral px-4 py-2 text-sm font-medium text-coral transition-colors hover:bg-coral-light disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-xl border border-accent px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent-muted disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isUploading ? "上传中..." : "上传整合包"}
           </button>
         </form>
       </section>
 
-      <section className="rounded-xl border border-warm-200 bg-[#FFFAF6] p-5 sm:p-6">
+      <section className="rounded-xl border border-warm-200 bg-surface p-5 sm:p-6">
         <h2 className="text-lg font-semibold text-warm-800">已上传版本</h2>
         {pageError && (
-          <p className="mt-3 rounded-xl border border-coral-hover bg-coral-hover px-3 py-2 text-sm text-coral-hover">
+          <p className="mt-3 rounded-xl border border-accent-hover bg-accent-hover px-3 py-2 text-sm text-accent-hover">
             {pageError}
           </p>
         )}
 
         {!pageError && modpacks.length === 0 && (
-          <p className="mt-3 text-sm text-warm-500">还没有上传整合包版本。</p>
+          <p className="mt-3 text-sm text-warm-400">还没有上传整合包版本。</p>
         )}
 
         {!pageError && modpacks.length > 0 && (
           <div className="mt-4 space-y-3">
             {modpacks.map((modpack, index) => (
-              <div key={modpack.id} className="rounded-xl border border-warm-200 bg-[#FFFAF6] p-4">
+              <div key={modpack.id} className="rounded-xl border border-warm-200 bg-surface p-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-base font-semibold text-warm-800">{modpack.name}</h3>
                   {index === 0 && (
-                    <span className="rounded-full border border-coral px-2 py-0.5 text-xs font-medium text-coral">
+                    <span className="rounded-full border border-accent px-2 py-0.5 text-xs font-medium text-accent">
                       最新版本
                     </span>
                   )}
                 </div>
 
-                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-warm-600">
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-warm-500">
                   <span>版本：{modpack.version ?? "--"}</span>
                   <span>加载器：{modpack.loader ?? "--"}</span>
                   <span>游戏版本：{modpack.gameVersion ?? "--"}</span>
@@ -349,13 +349,13 @@ export default function ServerModpacksPage() {
                 </div>
 
                 {modpack.summary && (
-                  <p className="mt-2 text-sm text-warm-600">{modpack.summary}</p>
+                  <p className="mt-2 text-sm text-warm-500">{modpack.summary}</p>
                 )}
 
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <a
                     href={`/api/modpacks/${modpack.id}/download`}
-                    className="rounded-xl border border-coral px-3 py-1.5 text-xs font-medium text-coral transition-colors hover:bg-coral-light"
+                    className="rounded-xl border border-accent px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-muted"
                   >
                     下载
                   </a>
@@ -365,7 +365,7 @@ export default function ServerModpacksPage() {
                     onDeleted={(deletedId) => {
                       setModpacks((prev) => prev.filter((item) => item.id !== deletedId));
                     }}
-                    className="rounded-xl border border-coral-hover px-3 py-1.5 text-xs font-medium text-coral-hover transition-colors hover:bg-coral-hover"
+                    className="rounded-xl border border-accent-hover px-3 py-1.5 text-xs font-medium text-accent-hover transition-colors hover:bg-accent-hover"
                   />
                 </div>
               </div>

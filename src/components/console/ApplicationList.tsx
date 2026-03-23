@@ -45,7 +45,7 @@ function statusBadge(status: ApplicationStatus) {
   switch (status) {
     case "pending":
       return (
-        <span className="inline-flex items-center rounded-full bg-[#FDF5ED] px-2.5 py-0.5 text-xs font-medium text-coral-amber ring-1 ring-coral-amber/20">
+        <span className="inline-flex items-center rounded-full bg-accent-muted px-2.5 py-0.5 text-xs font-medium text-accent-hover ring-1 ring-accent-hover/20">
           待审核
         </span>
       );
@@ -57,7 +57,7 @@ function statusBadge(status: ApplicationStatus) {
       );
     case "rejected":
       return (
-        <span className="inline-flex items-center rounded-full bg-coral-light px-2.5 py-0.5 text-xs font-medium text-coral-hover ring-1 ring-coral-hover/20">
+        <span className="inline-flex items-center rounded-full bg-accent-muted px-2.5 py-0.5 text-xs font-medium text-accent-hover ring-1 ring-accent-hover/20">
           已拒绝
         </span>
       );
@@ -213,13 +213,13 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
             onClick={() => handleTabChange(tab.key)}
             className={`relative px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === tab.key
-                ? "border-b-2 border-coral text-coral"
-                : "text-warm-500 hover:text-warm-700"
+                ? "border-b-2 border-accent text-accent"
+                : "text-warm-500 hover:text-warm-800"
             }`}
           >
             {tab.label}
             {tab.key === "pending" && pendingCount > 0 && (
-              <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-coral-amber px-1.5 text-[11px] font-semibold text-white">
+              <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-hover px-1.5 text-[11px] font-semibold text-white">
                 {pendingCount > 99 ? "99+" : pendingCount}
               </span>
             )}
@@ -229,7 +229,7 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
 
       {/* Error */}
       {error && (
-        <div className="mt-4 rounded-lg border border-coral-hover/20 bg-coral-light px-4 py-2 text-sm text-coral-hover">
+        <div className="mt-4 rounded-lg border border-accent-hover/20 bg-accent-muted px-4 py-2 text-sm text-accent-hover">
           {error}
         </div>
       )}
@@ -244,7 +244,7 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
           {applications.map((app) => (
             <div
               key={app.id}
-              className="rounded-xl border border-warm-200 bg-[#FFFAF6] p-4 shadow-sm"
+              className="rounded-xl border border-warm-200 bg-surface p-4 shadow-sm"
             >
               {/* Header: user info + status */}
               <div className="flex items-start justify-between gap-3">
@@ -253,7 +253,7 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
                     src={app.userImage}
                     name={app.userName}
                     className="h-10 w-10"
-                    fallbackClassName="bg-gradient-to-br from-coral to-coral-amber text-white"
+                    fallbackClassName="bg-accent text-white"
                   />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-warm-800">
@@ -262,7 +262,7 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
                     {app.mcUsername && (
                       <p className="mt-0.5 text-xs text-warm-500">
                         MC 用户名：
-                        <span className="font-mono text-warm-700">{app.mcUsername}</span>
+                        <span className="font-mono text-warm-800">{app.mcUsername}</span>
                       </p>
                     )}
                   </div>
@@ -279,8 +279,8 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
                 <div className="mt-3 space-y-1.5 rounded-lg bg-warm-50 p-3">
                   {Object.entries(app.formData).map(([key, value]) => (
                     <div key={key} className="flex gap-2 text-sm">
-                      <span className="shrink-0 font-medium text-warm-600">{key}:</span>
-                      <span className="text-warm-700">
+                      <span className="shrink-0 font-medium text-warm-500">{key}:</span>
+                      <span className="text-warm-800">
                         {Array.isArray(value) ? value.join(", ") : value}
                       </span>
                     </div>
@@ -291,8 +291,8 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
               {/* Review note (for reviewed applications) */}
               {app.status !== "pending" && app.reviewNote && (
                 <div className="mt-3 rounded-lg border border-warm-100 bg-warm-50 p-3 text-sm">
-                  <span className="font-medium text-warm-600">审核备注：</span>
-                  <span className="text-warm-700">{app.reviewNote}</span>
+                  <span className="font-medium text-warm-500">审核备注：</span>
+                  <span className="text-warm-800">{app.reviewNote}</span>
                   {app.reviewerName && (
                     <span className="ml-2 text-xs text-warm-400">
                       — {app.reviewerName}
@@ -311,14 +311,14 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
                         onChange={(e) => setRejectNote(e.target.value)}
                         placeholder="填写拒绝原因（可选）"
                         rows={2}
-                        className="w-full rounded-lg border border-warm-200 bg-[#FFFAF6] px-3 py-2 text-sm text-warm-700 placeholder:text-warm-400 focus:border-coral focus:outline-none focus:ring-1 focus:ring-coral"
+                        className="w-full rounded-lg border border-warm-200 bg-surface px-3 py-2 text-sm text-warm-800 placeholder:text-warm-400 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                       />
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => void handleReject(app.id)}
                           disabled={actionLoading === app.id}
-                          className="rounded-lg bg-coral-hover px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-coral-dark disabled:opacity-50"
+                          className="rounded-lg bg-accent-hover px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-accent-dark disabled:opacity-50"
                         >
                           {actionLoading === app.id ? "处理中..." : "确认拒绝"}
                         </button>
@@ -329,7 +329,7 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
                             setRejectNote("");
                           }}
                           disabled={actionLoading === app.id}
-                          className="rounded-lg border border-warm-200 bg-[#FFFAF6] px-3 py-1.5 text-sm font-medium text-warm-600 transition-colors hover:bg-warm-50 disabled:opacity-50"
+                          className="rounded-lg border border-warm-200 bg-surface px-3 py-1.5 text-sm font-medium text-warm-500 transition-colors hover:bg-warm-50 disabled:opacity-50"
                         >
                           取消
                         </button>
@@ -341,7 +341,7 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
                         type="button"
                         onClick={() => void handleApprove(app.id)}
                         disabled={actionLoading === app.id}
-                        className="rounded-lg bg-coral px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-coral-hover disabled:opacity-50"
+                        className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
                       >
                         {actionLoading === app.id ? "处理中..." : "通过"}
                       </button>
@@ -349,7 +349,7 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
                         type="button"
                         onClick={() => setRejectingId(app.id)}
                         disabled={actionLoading !== null}
-                        className="rounded-lg border border-coral-hover/20 bg-[#FFFAF6] px-3 py-1.5 text-sm font-medium text-coral-hover transition-colors hover:bg-coral-light disabled:opacity-50"
+                        className="rounded-lg border border-accent-hover/20 bg-surface px-3 py-1.5 text-sm font-medium text-accent-hover transition-colors hover:bg-accent-muted disabled:opacity-50"
                       >
                         拒绝
                       </button>

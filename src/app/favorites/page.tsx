@@ -2,28 +2,29 @@
 
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { PageLoading } from "@/components/PageLoading";
+import { PostCard } from "@/components/forum/PostCard";
 import { ServerCard } from "@/components/ServerCard";
-import { useToast } from "@/hooks/useToast";
-import type { ServerListItem } from "@/lib/types";
 
-interface FavoritesResponse {
-  data: ServerListItem[];
-}
+import type { PostItem, ServerListItem } from "@/lib/types";
 
-/**
- * 我的收藏页面。
- * 登录用户可查看和管理已收藏的服务器。
- */
+type Tab = "servers" | "posts";
+
 export default function FavoritesPage() {
   const router = useRouter();
   const { status } = useSession();
-  const { toast } = useToast();
+
+  const [tab, setTab] = useState<Tab>("servers");
+
+  // Server favorites
   const [servers, setServers] = useState<ServerListItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [serversLoading, setServersLoading] = useState(true);
+
+  // Post bookmarks
+  const [posts, setPosts] = useState<PostItem[]>([]);
+  const [postsLoading, setPostsLoading] = useState(true);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -31,84 +32,163 @@ export default function FavoritesPage() {
     }
   }, [router, status]);
 
+  // Fetch both on mount
   useEffect(() => {
     if (status !== "authenticated") {
       if (status !== "loading") {
-        setIsLoading(false);
+        setServersLoading(false);
+        setPostsLoading(false);
       }
       return;
     }
 
     let cancelled = false;
-    setIsLoading(true);
-    setError(null);
 
-    async function fetchFavorites() {
+    async function fetchServers() {
       try {
-        const response = await fetch("/api/user/favorites");
-        if (!response.ok) {
-          throw new Error("加载收藏失败");
-        }
-
-        const payload = (await response.json()) as FavoritesResponse;
-        if (!cancelled) {
-          setServers(payload.data ?? []);
-        }
+        const res = await fetch("/api/user/favorites");
+        if (!res.ok) throw new Error();
+        const json = (await res.json()) as { data: ServerListItem[] };
+        if (!cancelled) setServers(json.data ?? []);
       } catch {
-        if (!cancelled) {
-          setError("加载收藏失败，请稍后重试");
-          toast.error("加载收藏失败，请稍后重试");
-        }
+        // silently fail
       } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+        if (!cancelled) setServersLoading(false);
       }
     }
 
-    fetchFavorites();
+    async function fetchPosts() {
+      try {
+        const res = await fetch("/api/user/bookmarks");
+        if (!res.ok) throw new Error();
+        const json = (await res.json()) as { posts: PostItem[] };
+        if (!cancelled) setPosts(json.posts ?? []);
+      } catch {
+        // silently fail
+      } finally {
+        if (!cancelled) setPostsLoading(false);
+      }
+    }
+
+    void fetchServers();
+    void fetchPosts();
+
     return () => {
       cancelled = true;
     };
-  }, [status, toast]);
+  }, [status]);
+
+  const handleBookmarkChange = useCallback(
+    (postId: string, bookmarked: boolean) => {
+      if (!bookmarked) {
+        setPosts((prev) => prev.filter((p) => p.id !== postId));
+      }
+    },
+    [],
+  );
 
   if (status === "loading") {
     return <PageLoading text="正在加载登录状态..." />;
   }
 
   if (status === "unauthenticated") {
-    return <div className="py-12 text-center text-sm text-warm-500">正在跳转到登录页...</div>;
+    return (
+      <div className="py-12 text-center text-sm text-warm-500">
+        正在跳转到登录页...
+      </div>
+    );
   }
+
+  const isLoading = tab === "servers" ? serversLoading : postsLoading;
 
   return (
     <div>
-      <section className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-warm-800">我的收藏</h1>
-        <p className="mt-2 text-sm text-warm-600">你标记的服务器会展示在这里</p>
+      <section className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight text-warm-800">
+          我的收藏
+        </h1>
+        <p className="mt-1.5 text-sm text-warm-500">
+          收藏的服务器和帖子都在这里
+        </p>
       </section>
 
+      {/* Tabs */}
+      <div className="mb-5 flex gap-1 rounded-xl bg-warm-100 p-1">
+        <button
+          type="button"
+          onClick={() => setTab("servers")}
+          className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+            tab === "servers"
+              ? "bg-surface text-warm-800 shadow-sm"
+              : "text-warm-400 hover:text-warm-500"
+          }`}
+        >
+          服务器
+          {!serversLoading && servers.length > 0 && (
+            <span className="ml-1.5 text-xs text-warm-400">
+              {servers.length}
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("posts")}
+          className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+            tab === "posts"
+              ? "bg-surface text-warm-800 shadow-sm"
+              : "text-warm-400 hover:text-warm-500"
+          }`}
+        >
+          帖子
+          {!postsLoading && posts.length > 0 && (
+            <span className="ml-1.5 text-xs text-warm-400">
+              {posts.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Content */}
       {isLoading ? (
         <PageLoading />
-      ) : error ? (
-        <div className="m3-alert-error">{error}</div>
-      ) : servers.length === 0 ? (
+      ) : tab === "servers" ? (
+        servers.length === 0 ? (
+          <EmptyState
+            title="暂无收藏的服务器"
+            description="浏览服务器列表，点击星标收藏"
+            action={{ label: "去发现服务器", href: "/servers" }}
+          />
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {servers.map((server) => (
+              <ServerCard
+                key={server.id}
+                server={server}
+                initialFavorited
+                onFavoriteChange={(_, favorited) => {
+                  if (!favorited) {
+                    setServers((prev) =>
+                      prev.filter((s) => s.id !== server.id),
+                    );
+                  }
+                }}
+              />
+            ))}
+          </div>
+        )
+      ) : posts.length === 0 ? (
         <EmptyState
-          title="暂无收藏"
-          description="你还没有收藏服务器"
-          action={{ label: "去发现服务器", href: "/" }}
+          title="暂无收藏的帖子"
+          description="浏览帖子时点击收藏按钮"
+          action={{ label: "去广场看看", href: "/" }}
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {servers.map((server) => (
-            <ServerCard
-              key={server.id}
-              server={server}
-              initialFavorited
-              onFavoriteChange={(_, favorited) => {
-                if (!favorited) {
-                  setServers((prev) => prev.filter((item) => item.id !== server.id));
-                }
-              }}
+        <div className="flex flex-col gap-3">
+          {posts.map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              onBookmarkChange={handleBookmarkChange}
             />
           ))}
         </div>

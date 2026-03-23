@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { normalizeImageSrc } from "@/lib/image-url";
 import { timeAgo } from "@/lib/time";
 import type {
   ForumNotificationItem,
@@ -66,6 +67,13 @@ function getForumNotificationText(notification: ForumNotificationItem): {
     const postTitle = notification.post?.title ?? "某个帖子";
     return {
       title: `${userName} 评论了你的帖子`,
+      message: postTitle,
+    };
+  }
+  if (notification.type === "MENTION") {
+    const postTitle = notification.post?.title ?? "某个帖子";
+    return {
+      title: `${userName} 在帖子中提到了你`,
       message: postTitle,
     };
   }
@@ -519,7 +527,7 @@ export function NotificationBell() {
                   >
                     {notification.sourceUser.image ? (
                       <Image
-                        src={notification.sourceUser.image}
+                        src={normalizeImageSrc(notification.sourceUser.image) || "/default-avatar.png"}
                         alt=""
                         width={28}
                         height={28}

@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { AuthButtons, MobileNavMenu } from "@/components/AuthButtons";
+import { HeaderSearch } from "@/components/HeaderSearch";
 import { Providers } from "@/components/Providers";
 import "@/styles/globals.css";
 import "cropperjs/dist/cropper.css";
@@ -76,10 +77,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   更新日志
                 </Link>
                 <div className="ml-3 border-l border-warm-200 pl-3">
+                  <HeaderSearch />
+                </div>
+                <div className="ml-2 border-l border-warm-200 pl-2">
                   <AuthButtons />
                 </div>
               </nav>
-              <div className="md:hidden">
+              <div className="flex items-center gap-2 md:hidden">
+                <HeaderSearch />
                 <MobileNavMenu />
               </div>
             </div>
@@ -91,7 +96,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {/* ─── Footer ─── */}
           <footer className="mt-16 border-t border-warm-200 py-8 text-center text-xs text-warm-400">
             <p className="font-medium text-warm-500">Pudcraft Community</p>
-            <p className="mt-1">发现优质 Minecraft 服务器 &middot; &copy; 2026</p>
+            <p className="mt-1">&copy; 2026</p>
           </footer>
         </Providers>
       </body>

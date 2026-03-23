@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { normalizeImageSrc } from "@/lib/image-url";
 
 interface UserAvatarProps {
   src?: string | null;
@@ -38,11 +39,13 @@ export function UserAvatar({
     className,
   );
 
-  if (src) {
+  const resolvedSrc = normalizeImageSrc(src);
+
+  if (resolvedSrc) {
     return (
       <span className={sharedClassName}>
         <Image
-          src={src}
+          src={resolvedSrc}
           alt={alt ?? `${name ?? "用户"} 的头像`}
           width={96}
           height={96}

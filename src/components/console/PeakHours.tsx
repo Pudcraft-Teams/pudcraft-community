@@ -3,6 +3,12 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { ConsoleHourlyAveragePoint } from "@/components/console/types";
 
+// Recharts requires literal color strings; these match design tokens
+const CHART_GRID = "#E8DDD4"; // warm-200
+const CHART_TICK = "#8B7355"; // ~warm-600
+const CHART_BORDER = "#E8DDD4"; // warm-200
+const CHART_PRIMARY = "#D4715E"; // coral
+
 interface PeakHoursProps {
   hourlyAverages: ConsoleHourlyAveragePoint[];
   isLoading?: boolean;
@@ -48,8 +54,8 @@ export function PeakHours({ hourlyAverages, isLoading = false }: PeakHoursProps)
           <div className="mt-4 space-y-2 rounded-xl border border-warm-200 bg-warm-50 p-3">
             {peakHours.map((item, index) => (
               <div key={item.hour} className="flex items-center justify-between gap-3 text-sm">
-                <p className="text-warm-700">
-                  <span className={index < 2 ? "text-coral-hover" : "text-warm-400"}>🔥</span>{" "}
+                <p className="text-warm-800">
+                  <span className={index < 2 ? "text-accent-hover" : "text-warm-400"}>🔥</span>{" "}
                   {resolveRangeLabel(item.hour)}
                 </p>
                 <p className="text-warm-500">平均 {item.avgPlayers} 人</p>
@@ -60,17 +66,17 @@ export function PeakHours({ hourlyAverages, isLoading = false }: PeakHoursProps)
           <div className="mt-4 h-[220px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={hourlyAverages} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E8DDD4" />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
                 <XAxis
                   dataKey="hour"
-                  tick={{ fontSize: 11, fill: "#8B7355" }}
+                  tick={{ fontSize: 11, fill: CHART_TICK }}
                   tickLine={false}
                   axisLine={false}
                   interval={1}
                   tickFormatter={(value: string) => value.slice(0, 2)}
                 />
                 <YAxis
-                  tick={{ fontSize: 12, fill: "#8B7355" }}
+                  tick={{ fontSize: 12, fill: CHART_TICK }}
                   tickLine={false}
                   axisLine={false}
                   allowDecimals={false}
@@ -79,12 +85,12 @@ export function PeakHours({ hourlyAverages, isLoading = false }: PeakHoursProps)
                 <Tooltip
                   contentStyle={{
                     borderRadius: 12,
-                    borderColor: "#E8DDD4",
+                    borderColor: CHART_BORDER,
                     boxShadow: "0 8px 24px rgba(90, 60, 30, 0.08)",
                   }}
                   cursor={{ fill: "rgba(184, 169, 154, 0.16)" }}
                 />
-                <Bar dataKey="avgPlayers" name="在线人数" fill="#D4715E" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="avgPlayers" name="在线人数" fill={CHART_PRIMARY} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

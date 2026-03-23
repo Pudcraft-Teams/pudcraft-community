@@ -8,21 +8,16 @@ import { logger } from "@/lib/logger";
 import { moderateContent } from "@/lib/moderation";
 import { rateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
+import { notifyMentionedUsers } from "@/lib/mentions";
+import { linkTagsToPost } from "@/lib/tags";
 import { createPostSchema, feedQuerySchema } from "@/lib/validation";
 import type { PostItem, PostFeedResponse } from "@/lib/types";
 
 /**
- * Extract a plain-text preview from JSON content (truncated to maxLength).
+ * Extract a plain-text preview from content (truncated to maxLength).
  */
 function extractContentPreview(content: string, maxLength = 200): string {
-  // Strip Markdown syntax for plain text preview
-  const text = content
-    .replace(/#{1,6}\s/g, "")         // headings
-    .replace(/[*_~`>]/g, "")          // emphasis, code, blockquote
-    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1") // links/images
-    .replace(/\n+/g, " ")
-    .trim();
-  return text.substring(0, maxLength);
+  return content.replace(/\n+/g, " ").trim().substring(0, maxLength);
 }
 
 /**
@@ -145,6 +140,7 @@ export async function GET(request: Request) {
       likeCount: post.likeCount,
       commentCount: post.commentCount,
       isPinned: post.isPinned,
+      images: post.images,
       isLiked: userId ? likedPostIdSet.has(post.id) : undefined,
       isBookmarked: userId ? bookmarkedPostIdSet.has(post.id) : undefined,
       createdAt: post.createdAt.toISOString(),
@@ -189,7 +185,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { title, content, circleId, sectionId } = parsed.data;
+    const { title, content, circleId, sectionId, tags, images } = parsed.data;
 
     // Circle-related validations
     if (circleId) {
@@ -278,6 +274,7 @@ export async function POST(request: Request) {
             authorId: userId,
             circleId,
             sectionId: sectionId ?? null,
+            images,
           },
           select: {
             id: true,
@@ -293,8 +290,15 @@ export async function POST(request: Request) {
           data: { postCount: { increment: 1 } },
         });
 
+        if (tags.length > 0) {
+          await linkTagsToPost(tx, created.id, tags);
+        }
+
         return created;
       });
+
+      // Fire-and-forget: notify mentioned users
+      notifyMentionedUsers(post.id, userId, content);
 
       return NextResponse.json(
         {
@@ -312,22 +316,34 @@ export async function POST(request: Request) {
     }
 
     // No circle — direct post to the public square
-    const post = await prisma.post.create({
-      data: {
-        title,
-        content: content,
-        authorId: userId,
-        circleId: null,
-        sectionId: null,
-      },
-      select: {
-        id: true,
-        title: true,
-        circleId: true,
-        sectionId: true,
-        createdAt: true,
-      },
+    const post = await prisma.$transaction(async (tx) => {
+      const created = await tx.post.create({
+        data: {
+          title,
+          content: content,
+          authorId: userId,
+          circleId: null,
+          sectionId: null,
+          images,
+        },
+        select: {
+          id: true,
+          title: true,
+          circleId: true,
+          sectionId: true,
+          createdAt: true,
+        },
+      });
+
+      if (tags.length > 0) {
+        await linkTagsToPost(tx, created.id, tags);
+      }
+
+      return created;
     });
+
+    // Fire-and-forget: notify mentioned users
+    notifyMentionedUsers(post.id, userId, content);
 
     return NextResponse.json(
       {

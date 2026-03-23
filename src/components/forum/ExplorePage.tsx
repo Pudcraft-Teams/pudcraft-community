@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { CircleCard } from "@/components/forum/CircleCard";
 import { EmptyState } from "@/components/EmptyState";
@@ -212,7 +212,7 @@ export function ExplorePage() {
               <CircleCard
                 key={circle.id}
                 circle={circle}
-                isMember={(circle as CircleItem & { isMember?: boolean }).isMember}
+                isMember={circle.isMember}
                 onJoinChange={handleJoinChange}
               />
             ))}

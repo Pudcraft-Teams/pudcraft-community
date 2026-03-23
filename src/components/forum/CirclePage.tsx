@@ -2,13 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { EmptyState } from "@/components/EmptyState";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { PageLoading } from "@/components/PageLoading";
 import { PostCard } from "@/components/forum/PostCard";
+import { normalizeImageSrc } from "@/lib/image-url";
 import { timeAgo } from "@/lib/time";
 
 import type {
@@ -42,9 +43,6 @@ export function CirclePage({ slug }: CirclePageProps) {
 
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [joinPending, setJoinPending] = useState(false);
-
-  // Ref to prevent double-fetches
-  const fetchedRef = useRef(false);
 
   // ── Fetch circle detail ──
   const fetchCircle = useCallback(async () => {
@@ -98,9 +96,6 @@ export function CirclePage({ slug }: CirclePageProps) {
 
   // ── Initial load ──
   useEffect(() => {
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-
     let cancelled = false;
 
     async function load() {
@@ -237,10 +232,10 @@ export function CirclePage({ slug }: CirclePageProps) {
   return (
     <div className="mx-auto max-w-5xl px-4 pb-12">
       {/* ── Banner ── */}
-      <div className="relative h-[200px] w-full overflow-hidden rounded-b-2xl bg-warm-100">
+      <div className="relative h-[120px] w-full overflow-hidden rounded-b-2xl bg-warm-100 sm:h-[200px]">
         {circle.banner ? (
           <Image
-            src={circle.banner}
+            src={normalizeImageSrc(circle.banner)!}
             alt={`${circle.name} 横幅`}
             fill
             className="object-cover"
@@ -261,7 +256,7 @@ export function CirclePage({ slug }: CirclePageProps) {
         <div className="relative z-10 h-20 w-20 shrink-0 overflow-hidden rounded-xl border-4 border-surface bg-surface shadow-sm">
           {circle.icon ? (
             <Image
-              src={circle.icon}
+              src={normalizeImageSrc(circle.icon)!}
               alt={`${circle.name} 图标`}
               width={80}
               height={80}
@@ -445,7 +440,7 @@ export function CirclePage({ slug }: CirclePageProps) {
 
             {isOwnerOrAdmin && (
               <Link
-                href={`/circles/${circle.id}/settings`}
+                href={`/c/${slug}/settings`}
                 className="m3-btn m3-btn-tonal flex w-full items-center justify-center gap-2 text-sm"
               >
                 <svg

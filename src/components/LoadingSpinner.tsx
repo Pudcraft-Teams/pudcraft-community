@@ -37,7 +37,7 @@ function renderText(text: string | undefined, size: "sm" | "md" | "lg"): ReactNo
     return null;
   }
 
-  return <span className={`text-warm-600 ${textClassMap(size)}`}>{text}</span>;
+  return <span className={`text-warm-500 ${textClassMap(size)}`}>{text}</span>;
 }
 
 /**
@@ -46,12 +46,13 @@ function renderText(text: string | undefined, size: "sm" | "md" | "lg"): ReactNo
  */
 export function LoadingSpinner({ size = "md", text, className = "" }: LoadingSpinnerProps) {
   return (
-    <div className={`inline-flex items-center gap-2 ${className}`}>
+    <div className={`inline-flex items-center gap-2 ${className}`} role="status">
       <span
-        aria-hidden
-        className={`animate-spin rounded-full border-coral border-t-transparent ${sizeClassMap(size)}`}
+        aria-hidden="true"
+        className={`animate-spin rounded-full border-accent border-t-transparent ${sizeClassMap(size)}`}
       />
       {renderText(text, size)}
+      {!text && <span className="sr-only">加载中</span>}
     </div>
   );
 }

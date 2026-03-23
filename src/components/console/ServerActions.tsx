@@ -25,11 +25,11 @@ export function ServerActions({ serverId, serverName, isVerified, onDeleted }: S
         </Link>
 
         {isVerified ? (
-          <span className="inline-flex items-center rounded-full bg-coral-light px-3 py-2 text-sm font-medium text-coral ring-1 ring-coral/20">
+          <span className="inline-flex items-center rounded-full bg-accent-muted px-3 py-2 text-sm font-medium text-accent ring-1 ring-accent/20">
             ✓ 已认领
           </span>
         ) : (
-          <Link href={`/servers/${serverId}/verify`} className="m3-btn m3-btn-tonal text-coral">
+          <Link href={`/servers/${serverId}/verify`} className="m3-btn m3-btn-tonal text-accent">
             去认领
           </Link>
         )}
@@ -47,7 +47,7 @@ export function ServerActions({ serverId, serverName, isVerified, onDeleted }: S
           serverId={serverId}
           serverName={serverName}
           redirectTo="/console"
-          triggerClassName="m3-btn rounded-xl border border-coral-hover/20 bg-[#FFFAF6] text-coral-hover transition-colors hover:bg-coral-light"
+          triggerClassName="m3-btn rounded-xl border border-accent-hover/20 bg-surface text-accent-hover transition-colors hover:bg-accent-muted"
           onDeleted={() => {
             onDeleted?.();
           }}

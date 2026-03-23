@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useToast } from "@/hooks/useToast";
 import { timeAgo } from "@/lib/time";
@@ -49,6 +50,7 @@ export function CommentItem({
   onDeleted,
 }: CommentItemProps) {
   const { toast } = useToast();
+  const confirmAction = useConfirm();
   const [replyContent, setReplyContent] = useState("");
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -99,7 +101,13 @@ export function CommentItem({
   };
 
   const handleDelete = async (commentId: string, parentId: string | null, confirmText: string) => {
-    if (!window.confirm(confirmText)) {
+    const ok = await confirmAction({
+      title: "删除确认",
+      message: confirmText,
+      confirmText: "删除",
+      danger: true,
+    });
+    if (!ok) {
       return;
     }
 

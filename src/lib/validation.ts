@@ -479,10 +479,12 @@ export const updateSectionSchema = z.object({
 
 /** 创建帖子请求体 */
 export const createPostSchema = z.object({
-  title: z.string().trim().min(1, "请输入标题").max(100, "标题最多 100 个字符"),
+  title: z.string().trim().max(100, "标题最多 100 个字符").optional().default(""),
   content: z.string().trim().min(1, "请输入内容").max(50000, "内容最多 50000 个字符"),
   circleId: z.string().cuid().optional().nullable(),
   sectionId: z.string().cuid().optional().nullable(),
+  tags: z.array(z.string().trim().min(1).max(50)).max(5).optional().default([]),
+  images: z.array(z.string().url().max(500)).max(9).optional().default([]),
 });
 
 /** 更新帖子请求体 */
@@ -538,6 +540,45 @@ export type CreatePostInput = z.infer<typeof createPostSchema>;
 export type UpdatePostInput = z.infer<typeof updatePostSchema>;
 export type CreateForumCommentInput = z.infer<typeof createForumCommentSchema>;
 export type CreateCircleBanInput = z.infer<typeof createCircleBanSchema>;
+// ─── 管理后台话题 Schema ─────────────────────────
+
+/** 管理后台话题列表查询参数 */
+export const adminQueryTagsSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  search: z.string().max(100).optional(),
+});
+
+/** 管理后台更新话题请求体 */
+export const adminUpdateTagSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "名称不能为空")
+    .max(50, "最多 50 个字符")
+    .transform((v) => v.toLowerCase())
+    .optional(),
+  displayName: z.string().trim().min(1, "显示名称不能为空").max(50, "最多 50 个字符").optional(),
+  aliases: z.array(z.string().trim().min(1).max(50)).max(20).optional(),
+});
+
+/** 管理后台合并话题请求体 */
+export const adminMergeTagsSchema = z.object({
+  sourceId: z.string().cuid(),
+  targetId: z.string().cuid(),
+});
+
+/** 搜索查询参数 */
+export const searchQuerySchema = z.object({
+  q: z.string().trim().min(1, "搜索关键词不能为空").max(100),
+  cursor: z.string().cuid().optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+
 export type FeedQueryInput = z.infer<typeof feedQuerySchema>;
 export type CircleListQueryInput = z.infer<typeof circleListQuerySchema>;
 export type CommentQueryInput = z.infer<typeof commentQuerySchema>;
+export type SearchQueryInput = z.infer<typeof searchQuerySchema>;
+export type AdminQueryTagsInput = z.infer<typeof adminQueryTagsSchema>;
+export type AdminUpdateTagInput = z.infer<typeof adminUpdateTagSchema>;
+export type AdminMergeTagsInput = z.infer<typeof adminMergeTagsSchema>;

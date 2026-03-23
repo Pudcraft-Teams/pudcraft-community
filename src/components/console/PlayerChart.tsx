@@ -16,6 +16,12 @@ import type {
   StatsPeriod,
 } from "@/components/console/types";
 
+// Recharts requires literal color strings; these match design tokens
+const CHART_GRID = "#E8DDD4"; // warm-200
+const CHART_TICK = "#8B7355"; // ~warm-600
+const CHART_PRIMARY = "#D4715E"; // coral
+const CHART_MUTED = "#B8A99A"; // ~warm-300
+
 interface PlayerChartProps {
   dataPoints: ConsoleStatsDataPoint[];
   period: StatsPeriod;
@@ -52,7 +58,7 @@ function renderTooltip({ active, label, payload }: TooltipContentProps<number, s
   const labelText = typeof label === "string" || typeof label === "number" ? String(label) : "--";
 
   return (
-    <div className="rounded-xl border border-warm-200 bg-[#FFFAF6] px-3 py-2 text-xs text-warm-700 shadow-lg">
+    <div className="rounded-xl border border-warm-200 bg-surface px-3 py-2 text-xs text-warm-800 shadow-lg">
       <p className="font-medium text-warm-800">{labelText}</p>
       <p className="mt-1">在线人数：{playerCount}</p>
       <p>最大容量：{maxPlayers}</p>
@@ -118,19 +124,19 @@ export function PlayerChart({
           <AreaChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="onlineArea" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#D4715E" stopOpacity={0.32} />
-                <stop offset="95%" stopColor="#D4715E" stopOpacity={0.05} />
+                <stop offset="5%" stopColor={CHART_PRIMARY} stopOpacity={0.32} />
+                <stop offset="95%" stopColor={CHART_PRIMARY} stopOpacity={0.05} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E8DDD4" />
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
             <XAxis
               dataKey="time"
-              tick={{ fontSize: 12, fill: "#8B7355" }}
+              tick={{ fontSize: 12, fill: CHART_TICK }}
               tickLine={false}
               axisLine={false}
             />
             <YAxis
-              tick={{ fontSize: 12, fill: "#8B7355" }}
+              tick={{ fontSize: 12, fill: CHART_TICK }}
               tickLine={false}
               axisLine={false}
               allowDecimals={false}
@@ -140,7 +146,7 @@ export function PlayerChart({
             <Area
               type="monotone"
               dataKey="onlinePlayerCount"
-              stroke="#D4715E"
+              stroke={CHART_PRIMARY}
               fill="url(#onlineArea)"
               strokeWidth={2}
               connectNulls={false}
@@ -148,7 +154,7 @@ export function PlayerChart({
             <Area
               type="monotone"
               dataKey="offlinePlayerCount"
-              stroke="#B8A99A"
+              stroke={CHART_MUTED}
               strokeDasharray="5 4"
               fillOpacity={0}
               strokeWidth={2}

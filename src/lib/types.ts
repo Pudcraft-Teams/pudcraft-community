@@ -408,6 +408,7 @@ export interface CircleItem {
   memberCount: number;
   postCount: number;
   createdAt: string;
+  isMember?: boolean;
 }
 
 /** 圈子详情（含额外信息） */
@@ -415,7 +416,7 @@ export interface CircleDetail extends CircleItem {
   banner: string | null;
   creatorId: string | null;
   creator: { id: string; uid: number; name: string | null; image: string | null } | null;
-  isMember?: boolean;
+  server?: { id: string; psid: number; name: string; iconUrl: string | null } | null;
   memberRole?: CircleRoleType | null;
 }
 
@@ -443,6 +444,7 @@ export interface PostItem {
   commentCount: number;
   isPinned: boolean;
   isLiked?: boolean;
+  images: string[];
   isBookmarked?: boolean;
   createdAt: string;
 }
@@ -494,7 +496,7 @@ export interface SectionItem {
   sortOrder: number;
 }
 
-export type ForumNotificationType = "POST_COMMENT" | "COMMENT_REPLY";
+export type ForumNotificationType = "POST_COMMENT" | "COMMENT_REPLY" | "MENTION";
 
 export type CircleRoleType = "OWNER" | "ADMIN" | "MEMBER";
 

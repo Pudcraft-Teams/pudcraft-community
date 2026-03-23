@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -62,6 +63,7 @@ function resolveRoleBadge(role: CircleRoleType): { label: string; className: str
  * 支持分页查看成员列表、修改角色和移除成员。
  */
 export function CircleMemberManager({ circleId, currentUserRole }: CircleMemberManagerProps) {
+  const confirm = useConfirm();
   const [members, setMembers] = useState<CircleMemberItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +111,12 @@ export function CircleMemberManager({ circleId, currentUserRole }: CircleMemberM
 
   const handleKick = useCallback(
     async (userId: string) => {
-      const confirmed = window.confirm("确定要移除该成员吗？");
+      const confirmed = await confirm({
+        title: "移除成员",
+        message: "确定要移除该成员吗？",
+        confirmText: "移除",
+        danger: true,
+      });
       if (!confirmed) {
         return;
       }
@@ -136,7 +143,7 @@ export function CircleMemberManager({ circleId, currentUserRole }: CircleMemberM
         setActionId(null);
       }
     },
-    [circleId, fetchMembers, page],
+    [circleId, confirm, fetchMembers, page],
   );
 
   const handleChangeRole = useCallback(

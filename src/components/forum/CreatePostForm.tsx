@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { MarkdownEditor } from "@/components/MarkdownEditor";
+import { PostTextarea } from "@/components/forum/PostTextarea";
+import type { PostTextareaHandle } from "@/components/forum/PostTextarea";
+import { UserAvatar } from "@/components/UserAvatar";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useToast } from "@/hooks/useToast";
+import { normalizeImageSrc } from "@/lib/image-url";
 
-import type { MarkdownEditorHandle } from "@/components/MarkdownEditor";
 import type { SectionItem, CircleItem } from "@/lib/types";
 
 interface CreatePostFormProps {
@@ -15,6 +17,7 @@ interface CreatePostFormProps {
   circleName?: string;
   circleSlug?: string;
   sections?: SectionItem[];
+  onSuccess?: () => void;
 }
 
 interface CircleOption {
@@ -32,25 +35,21 @@ interface PostCreateResponse {
   };
 }
 
-/**
- * Post creation form.
- * Supports posting to a specific circle (with optional section) or to the public square.
- * When no circleId is provided, shows a circle selector.
- */
 export function CreatePostForm({
   circleId: initialCircleId,
   circleName,
   circleSlug,
   sections: initialSections,
+  onSuccess,
 }: CreatePostFormProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { status: sessionStatus } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const { toast } = useToast();
-  const editorRef = useRef<MarkdownEditorHandle>(null);
 
   // ── Form state ──
   const [title, setTitle] = useState("");
+  const [showTitle, setShowTitle] = useState(false);
   const [content, setContent] = useState("");
   const [selectedCircleId, setSelectedCircleId] = useState<string | null>(
     initialCircleId ?? null,
@@ -59,8 +58,12 @@ export function CreatePostForm({
     null,
   );
   const [submitting, setSubmitting] = useState(false);
+  const [images, setImages] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<PostTextareaHandle>(null);
 
-  // ── Circle selector state (when no circleId provided) ──
+  // ── Circle selector state ──
   const [circleOptions, setCircleOptions] = useState<CircleOption[]>([]);
   const [loadingCircles, setLoadingCircles] = useState(false);
   const [sections, setSections] = useState<SectionItem[]>(
@@ -77,7 +80,7 @@ export function CreatePostForm({
     }
   }, [sessionStatus, router, pathname]);
 
-  // ── Fetch user's circles (when no circleId prop) ──
+  // ── Fetch user's circles ──
   useEffect(() => {
     if (initialCircleId || sessionStatus !== "authenticated") return;
 
@@ -86,20 +89,18 @@ export function CreatePostForm({
     async function fetchCircles() {
       setLoadingCircles(true);
       try {
-        // Fetch circles and use the membership info to identify joined circles
         const res = await fetch("/api/circles?limit=50");
         if (!res.ok) return;
         const json = (await res.json()) as {
           circles: (CircleItem & { isMember?: boolean })[];
         };
         if (cancelled) return;
-        // Filter only circles user is a member of
         const joined = json.circles
           .filter((c) => c.isMember)
           .map((c) => ({ id: c.id, name: c.name, slug: c.slug }));
         setCircleOptions(joined);
       } catch {
-        // Silently fail -- user can still post to square
+        // Silently fail
       } finally {
         if (!cancelled) setLoadingCircles(false);
       }
@@ -111,7 +112,7 @@ export function CreatePostForm({
     };
   }, [initialCircleId, sessionStatus]);
 
-  // ── Fetch sections when circle changes ──
+  // ── Fetch sections ──
   const fetchSectionsForCircle = useCallback(
     async (circleId: string) => {
       if (initialSections && circleId === initialCircleId) {
@@ -138,7 +139,6 @@ export function CreatePostForm({
     [initialCircleId, initialSections],
   );
 
-  // When selected circle changes, fetch its sections
   useEffect(() => {
     if (selectedCircleId) {
       void fetchSectionsForCircle(selectedCircleId);
@@ -148,9 +148,41 @@ export function CreatePostForm({
     }
   }, [selectedCircleId, fetchSectionsForCircle]);
 
-  // ── Handle circle selection change ──
-  const handleCircleChange = (value: string) => {
-    setSelectedCircleId(value === "" ? null : value);
+  // ── Image upload ──
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("图片大小不能超过 5MB");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.set("image", file);
+      const res = await fetch("/api/uploads/editor-image", {
+        method: "POST",
+        body: formData,
+      });
+      const json = (await res.json()) as {
+        data?: { url: string };
+        error?: string;
+      };
+      if (!res.ok) {
+        toast.error(json.error ?? "图片上传失败");
+        return;
+      }
+      if (json.data?.url) {
+        setImages((prev) => [...prev, json.data!.url]);
+      }
+    } catch {
+      toast.error("网络异常，图片上传失败");
+    } finally {
+      setUploading(false);
+    }
   };
 
   // ── Submit ──
@@ -158,15 +190,7 @@ export function CreatePostForm({
     e.preventDefault();
     if (submitting) return;
 
-    // Sync editor content
-    const finalContent = editorRef.current?.syncMarkdown() ?? content;
-
-    if (!title.trim()) {
-      toast.error("请输入标题");
-      return;
-    }
-
-    if (!finalContent.trim()) {
+    if (!content.trim()) {
       toast.error("请输入内容");
       return;
     }
@@ -174,18 +198,24 @@ export function CreatePostForm({
     setSubmitting(true);
 
     try {
+      const tagPattern =
+        /#([\w\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\uff00-\uffef]+)/g;
+      const tagSet = new Set<string>();
+      let tagMatch: RegExpExecArray | null;
+      while ((tagMatch = tagPattern.exec(content.trim())) !== null) {
+        tagSet.add(tagMatch[1]!);
+        if (tagSet.size >= 5) break;
+      }
+
       const body: Record<string, unknown> = {
         title: title.trim(),
-        content: finalContent,
+        content: content.trim(),
+        tags: [...tagSet],
+        images,
       };
 
-      if (selectedCircleId) {
-        body.circleId = selectedCircleId;
-      }
-
-      if (selectedSectionId) {
-        body.sectionId = selectedSectionId;
-      }
+      if (selectedCircleId) body.circleId = selectedCircleId;
+      if (selectedSectionId) body.sectionId = selectedSectionId;
 
       const res = await fetch("/api/posts", {
         method: "POST",
@@ -201,12 +231,11 @@ export function CreatePostForm({
       }
 
       toast.success("发帖成功");
+      onSuccess?.();
 
-      // Redirect to the post
       const postId = json.data?.id;
       const postCircleId = json.data?.circleId;
       if (postId) {
-        // Determine redirect URL
         const targetSlug =
           circleSlug ??
           circleOptions.find((c) => c.id === postCircleId)?.slug;
@@ -225,10 +254,10 @@ export function CreatePostForm({
     }
   };
 
-  // ── Auth loading ──
+  // ── Loading / Auth states ──
   if (sessionStatus === "loading") {
     return (
-      <div className="flex min-h-[240px] items-center justify-center">
+      <div className="flex min-h-[200px] items-center justify-center">
         <LoadingSpinner size="lg" text="加载中..." />
       </div>
     );
@@ -242,128 +271,238 @@ export function CreatePostForm({
     );
   }
 
+  const currentTarget = initialCircleId
+    ? circleName
+    : selectedCircleId
+      ? circleOptions.find((c) => c.id === selectedCircleId)?.name
+      : null;
+
+  const charCount = content.length;
+  const canSubmit = content.trim().length > 0 && !submitting && !uploading;
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      {/* ── Circle info badge (fixed circle) ── */}
-      {initialCircleId && circleName && (
-        <div className="flex items-center gap-2 text-sm text-warm-500">
-          <span className="rounded-full bg-accent-muted px-3 py-1 text-xs font-medium text-accent">
-            {circleName}
-          </span>
-          <span>中发帖</span>
+    <form onSubmit={handleSubmit}>
+      <div className="flex gap-3">
+        {/* ── Avatar ── */}
+        <div className="hidden shrink-0 pt-1 sm:block">
+          <UserAvatar
+            src={session?.user?.image}
+            name={session?.user?.name}
+            email={session?.user?.email}
+            className="h-10 w-10"
+          />
         </div>
-      )}
 
-      {/* ── Circle selector (no fixed circle) ── */}
-      {!initialCircleId && (
-        <div>
-          <label
-            htmlFor="circle-select"
-            className="mb-1.5 block text-sm text-warm-800"
-          >
-            发布到
-          </label>
-          <select
-            id="circle-select"
-            value={selectedCircleId ?? ""}
-            onChange={(e) => handleCircleChange(e.target.value)}
-            disabled={loadingCircles}
-            className="m3-input w-full"
-          >
-            <option value="">广场（公开）</option>
-            {circleOptions.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          {loadingCircles && (
-            <p className="mt-1 text-xs text-warm-400">加载圈子列表...</p>
+        {/* ── Compose area ── */}
+        <div className="min-w-0 flex-1">
+          {/* Target selector */}
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            {!initialCircleId ? (
+              <select
+                value={selectedCircleId ?? ""}
+                onChange={(e) =>
+                  setSelectedCircleId(e.target.value === "" ? null : e.target.value)
+                }
+                disabled={loadingCircles}
+                className="rounded-full border border-accent/30 bg-transparent px-3 py-1 text-xs font-medium text-accent outline-none transition-colors hover:border-accent focus:border-accent focus:ring-1 focus:ring-accent/20"
+              >
+                <option value="">广场</option>
+                {circleOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span className="rounded-full border border-accent/30 px-3 py-1 text-xs font-medium text-accent">
+                {circleName}
+              </span>
+            )}
+
+            {sections.length > 0 && (
+              <select
+                value={selectedSectionId ?? ""}
+                onChange={(e) =>
+                  setSelectedSectionId(
+                    e.target.value === "" ? null : e.target.value,
+                  )
+                }
+                disabled={loadingSections}
+                className="rounded-full border border-warm-300 bg-transparent px-3 py-1 text-xs text-warm-600 outline-none transition-colors hover:border-warm-400 focus:border-accent focus:ring-1 focus:ring-accent/20"
+              >
+                <option value="">不选板块</option>
+                {sections.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* Optional title */}
+          {showTitle ? (
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="标题（选填）"
+              maxLength={100}
+              disabled={submitting}
+              className="mb-1 w-full border-none bg-transparent text-lg font-semibold text-warm-800 placeholder:text-warm-300 focus:outline-none"
+              autoFocus
+            />
+          ) : null}
+
+          {/* Content textarea */}
+          <PostTextarea
+            ref={textareaRef}
+            value={content}
+            onChange={setContent}
+            placeholder={currentTarget ? `在「${currentTarget}」说点什么...` : "有什么新鲜事？"}
+            maxLength={20000}
+            disabled={submitting}
+          />
+
+          {/* Image previews */}
+          {images.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {images.map((url, i) => (
+                <div
+                  key={i}
+                  className="group relative h-20 w-20 overflow-hidden rounded-lg border border-warm-200 sm:h-24 sm:w-24"
+                >
+                  <img
+                    src={normalizeImageSrc(url) || url}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setImages((prev) => prev.filter((_, j) => j !== i))
+                    }
+                    className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-warm-900/70 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100"
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
+
+          {/* ── Toolbar ── */}
+          <div className="mt-3 flex items-center border-t border-warm-100 pt-3">
+            {/* Actions */}
+            <div className="flex items-center gap-1">
+              {/* Image upload */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={handleImageUpload}
+                disabled={uploading || submitting}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading || submitting || images.length >= 9}
+                className="rounded-full p-2 text-accent transition-colors hover:bg-accent-muted disabled:text-warm-300 disabled:hover:bg-transparent"
+                title={`添加图片 (${images.length}/9)`}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-5 w-5"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M1 5.25A2.25 2.25 0 0 1 3.25 3h13.5A2.25 2.25 0 0 1 19 5.25v9.5A2.25 2.25 0 0 1 16.75 17H3.25A2.25 2.25 0 0 1 1 14.75v-9.5Zm1.5 5.81v3.69c0 .414.336.75.75.75h13.5a.75.75 0 0 0 .75-.75v-2.69l-2.22-2.219a.75.75 0 0 0-1.06 0l-1.91 1.909-4.97-4.969a.75.75 0 0 0-1.06 0L2.5 11.06ZM12.75 7a1.25 1.25 0 1 1 2.5 0 1.25 1.25 0 0 1-2.5 0Z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+
+              {/* Toggle title */}
+              <button
+                type="button"
+                onClick={() => setShowTitle((v) => !v)}
+                className={`rounded-full p-2 transition-colors hover:bg-accent-muted ${
+                  showTitle ? "text-accent" : "text-warm-400"
+                }`}
+                title={showTitle ? "隐藏标题" : "添加标题"}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-5 w-5"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M2 3.75A.75.75 0 0 1 2.75 3h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 3.75Zm0 4.167a.75.75 0 0 1 .75-.75h9.5a.75.75 0 0 1 0 1.5h-9.5a.75.75 0 0 1-.75-.75Zm0 4.166a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Zm0 4.167a.75.75 0 0 1 .75-.75h9.5a.75.75 0 0 1 0 1.5h-9.5a.75.75 0 0 1-.75-.75Z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+
+              {/* Hashtag */}
+              <button
+                type="button"
+                onClick={() => textareaRef.current?.insertTrigger("#")}
+                disabled={submitting}
+                className="rounded-full p-2 text-warm-400 transition-colors hover:bg-accent-muted hover:text-accent disabled:text-warm-300"
+                title="添加话题 #"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+                  <path fillRule="evenodd" d="M9.493 2.852a.75.75 0 0 0-1.486-.204L7.545 6H4.198a.75.75 0 0 0 0 1.5h3.14l-.69 5H3.302a.75.75 0 0 0 0 1.5h3.14l-.462 3.352a.75.75 0 0 0 1.486.204L7.93 14.5h4.574l-.462 3.352a.75.75 0 0 0 1.486.204L13.99 14.5h3.312a.75.75 0 0 0 0-1.5h-3.106l.69-5h3.346a.75.75 0 0 0 0-1.5h-3.14l.462-3.352a.75.75 0 0 0-1.486-.204L13.577 6H9.003l.462-3.148ZM8.796 7.5l-.69 5h4.574l.69-5H8.796Z" clipRule="evenodd" />
+                </svg>
+              </button>
+
+              {/* Mention */}
+              <button
+                type="button"
+                onClick={() => textareaRef.current?.insertTrigger("@")}
+                disabled={submitting}
+                className="rounded-full p-2 text-warm-400 transition-colors hover:bg-accent-muted hover:text-accent disabled:text-warm-300"
+                title="提及用户 @"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
+                  <path fillRule="evenodd" d="M5.404 14.596A6.5 6.5 0 1 1 16.5 10a1.25 1.25 0 0 1-2.5 0 4 4 0 1 0-.571 2.06A2.75 2.75 0 0 0 18 10a8 8 0 1 0-2.343 5.657.75.75 0 0 0-1.06-1.06 6.5 6.5 0 0 1-9.193 0ZM10 7.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z" clipRule="evenodd" />
+                </svg>
+              </button>
+
+              {uploading && (
+                <span className="ml-1 text-xs text-warm-400">上传中...</span>
+              )}
+            </div>
+
+            {/* Right: char count + submit */}
+            <div className="ml-auto flex items-center gap-3">
+              <span
+                className={`text-xs tabular-nums ${
+                  charCount > 19000
+                    ? charCount > 19800
+                      ? "text-red-500"
+                      : "text-yellow-500"
+                    : "text-warm-400"
+                }`}
+              >
+                {charCount > 0 ? `${charCount}/20000` : ""}
+              </span>
+
+              <button
+                type="submit"
+                disabled={!canSubmit}
+                className="rounded-full bg-accent px-5 py-1.5 text-sm font-medium text-white transition-all hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {submitting ? "发布中..." : "发布"}
+              </button>
+            </div>
+          </div>
         </div>
-      )}
-
-      {/* ── Section selector ── */}
-      {sections.length > 0 && (
-        <div>
-          <label
-            htmlFor="section-select"
-            className="mb-1.5 block text-sm text-warm-800"
-          >
-            板块
-          </label>
-          <select
-            id="section-select"
-            value={selectedSectionId ?? ""}
-            onChange={(e) =>
-              setSelectedSectionId(e.target.value === "" ? null : e.target.value)
-            }
-            disabled={loadingSections}
-            className="m3-input w-full"
-          >
-            <option value="">不选择板块</option>
-            {sections.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* ── Title ── */}
-      <div>
-        <label htmlFor="post-title" className="mb-1.5 block text-sm text-warm-800">
-          标题
-        </label>
-        <input
-          id="post-title"
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="请输入帖子标题"
-          maxLength={100}
-          disabled={submitting}
-          className="m3-input w-full"
-          autoFocus
-        />
-        <p className="mt-1 text-right text-xs text-warm-400">
-          {title.length}/100
-        </p>
-      </div>
-
-      {/* ── Content editor ── */}
-      <MarkdownEditor
-        ref={editorRef}
-        value={content}
-        onChange={setContent}
-        label="内容"
-        maxLength={20000}
-        placeholder="请输入帖子内容..."
-        disabled={submitting}
-      />
-
-      {/* ── Submit ── */}
-      <div className="flex items-center justify-end gap-3 pt-2">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          disabled={submitting}
-          className="m3-btn m3-btn-tonal"
-        >
-          取消
-        </button>
-        <button
-          type="submit"
-          disabled={submitting || !title.trim()}
-          className="m3-btn m3-btn-primary disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {submitting ? (
-            <LoadingSpinner size="sm" text="发布中..." />
-          ) : (
-            "发布"
-          )}
-        </button>
       </div>
     </form>
   );

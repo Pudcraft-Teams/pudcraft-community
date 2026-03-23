@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useToast } from "@/hooks/useToast";
 import { timeAgo } from "@/lib/time";
@@ -46,6 +47,7 @@ export function ForumCommentItem({
   void postId; // reserved for future use (e.g. anchoring)
 
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [optimisticLiked, setOptimisticLiked] = useState(comment.isLiked ?? false);
@@ -97,7 +99,13 @@ export function ForumCommentItem({
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("确定删除这条评论吗？")) {
+    const ok = await confirm({
+      title: "删除确认",
+      message: "确定删除这条评论吗？",
+      confirmText: "删除",
+      danger: true,
+    });
+    if (!ok) {
       return;
     }
 

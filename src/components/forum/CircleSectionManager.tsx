@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import type { SectionItem } from "@/lib/types";
@@ -31,6 +32,7 @@ function parseSectionsPayload(raw: unknown): SectionsResponse {
  * 支持查看、添加、编辑和删除板块。
  */
 export function CircleSectionManager({ circleId }: CircleSectionManagerProps) {
+  const confirm = useConfirm();
   const [sections, setSections] = useState<SectionItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -172,7 +174,12 @@ export function CircleSectionManager({ circleId }: CircleSectionManagerProps) {
 
   const handleDelete = useCallback(
     async (sectionId: string) => {
-      const confirmed = window.confirm("确定要删除该板块吗？板块内的帖子不会被删除。");
+      const confirmed = await confirm({
+        title: "删除确认",
+        message: "确定要删除该板块吗？板块内的帖子不会被删除。",
+        confirmText: "删除",
+        danger: true,
+      });
       if (!confirmed) {
         return;
       }
@@ -199,7 +206,7 @@ export function CircleSectionManager({ circleId }: CircleSectionManagerProps) {
         setDeletingId(null);
       }
     },
-    [circleId, fetchSections],
+    [circleId, confirm, fetchSections],
   );
 
   return (

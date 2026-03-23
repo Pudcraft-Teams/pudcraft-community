@@ -111,15 +111,15 @@ export function ImageUpload({
     shape === "circle" ? (
       <div className="flex flex-col items-center gap-2">
         <div
-          className={`flex items-center justify-center bg-gradient-to-br from-coral to-coral-amber text-xl font-semibold text-white ${shapeClass}`}
+          className={`flex items-center justify-center bg-accent text-xl font-semibold text-white ${shapeClass}`}
           style={{ width: size, height: size }}
         >
           +
         </div>
-        <span className="text-xs text-warm-600">点击上传头像</span>
+        <span className="text-xs text-warm-500">点击上传头像</span>
       </div>
     ) : (
-      <div className="flex flex-col items-center gap-1 text-warm-500">
+      <div className="flex flex-col items-center gap-1 text-warm-400">
         <span className="text-lg">⬆</span>
         <span className="text-xs">点击上传</span>
       </div>
@@ -148,7 +148,7 @@ export function ImageUpload({
             ? "inline-flex cursor-pointer"
             : `cursor-pointer rounded-xl border border-dashed px-4 py-6 text-center transition-colors ${
                 isDragActive
-                  ? "border-[#cbe5eb] bg-[#e2f4f7]"
+                  ? "border-accent/30 bg-accent-muted"
                   : "border-warm-300 bg-warm-50 hover:border-warm-400"
               }`
         }
@@ -219,7 +219,7 @@ export function ImageUpload({
         </div>
       )}
 
-      {error && <p className="mt-1 text-xs text-coral-hover">{error}</p>}
+      {error && <p className="mt-1 text-xs text-accent-hover">{error}</p>}
 
       <ImageCropDialog
         open={openCropDialog}

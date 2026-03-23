@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { CreatePostForm } from "@/components/forum/CreatePostForm";
 import { PageLoading } from "@/components/PageLoading";
-import Link from "next/link";
 
 import type { CircleDetail, SectionItem } from "@/lib/types";
 
@@ -26,8 +26,6 @@ export function CreatePostInCircle({ slug }: CreatePostInCircleProps) {
   const [sections, setSections] = useState<SectionItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const fetchedRef = useRef(false);
 
   // Redirect to login if unauthenticated
   useEffect(() => {
@@ -86,8 +84,7 @@ export function CreatePostInCircle({ slug }: CreatePostInCircleProps) {
   }, [slug]);
 
   useEffect(() => {
-    if (fetchedRef.current || sessionStatus !== "authenticated") return;
-    fetchedRef.current = true;
+    if (sessionStatus !== "authenticated") return;
     void fetchData();
   }, [fetchData, sessionStatus]);
 
@@ -123,14 +120,12 @@ export function CreatePostInCircle({ slug }: CreatePostInCircleProps) {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6">
-      <nav className="mb-6 flex items-center gap-2 text-sm text-warm-400">
+    <div className="mx-auto max-w-2xl py-4">
+      <nav className="mb-4 flex items-center gap-2 text-sm text-warm-400">
         <Link href={`/c/${slug}`} className="m3-link">
-          &larr; 返回 {circle.name}
+          &larr; {circle.name}
         </Link>
       </nav>
-
-      <h1 className="mb-6 text-2xl font-semibold text-warm-800">发帖</h1>
 
       <CreatePostForm
         circleId={circle.id}

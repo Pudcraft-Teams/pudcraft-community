@@ -21,7 +21,7 @@ interface MarkdownRendererProps {
  */
 export function MarkdownRenderer({ content }: MarkdownRendererProps) {
   return (
-    <div className="prose prose-stone max-w-none text-warm-700">
+    <div className="prose prose-stone max-w-none text-warm-800">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema], [rehypeHighlight, { detect: true, ignoreMissing: true }]]}
@@ -37,13 +37,13 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
           h3: ({ children }) => (
             <h3 className="mb-3 mt-6 text-xl font-semibold text-warm-800">{children}</h3>
           ),
-          p: ({ children }) => <p className="my-3 leading-7 text-warm-700">{children}</p>,
+          p: ({ children }) => <p className="my-3 leading-7 text-warm-800">{children}</p>,
           a: ({ href, children }) => (
             <a
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="m3-link font-medium underline decoration-coral/30 underline-offset-4"
+              className="m3-link font-medium underline decoration-accent/30 underline-offset-4"
             >
               {children}
             </a>
@@ -59,7 +59,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
               <code
                 className={
                   isInline
-                    ? "rounded-md bg-[#FBEEE6] px-1 py-0.5 text-sm text-[#8B4533]"
+                    ? "rounded-md bg-warm-100 px-1 py-0.5 text-sm text-warm-800"
                     : `font-mono text-sm ${className ?? ""}`
                 }
               >
@@ -69,7 +69,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
           },
           table: ({ children }) => (
             <div className="my-4 overflow-x-auto">
-              <table className="w-full border-collapse text-sm text-warm-700">{children}</table>
+              <table className="w-full border-collapse text-sm text-warm-800">{children}</table>
             </div>
           ),
           th: ({ children }) => (

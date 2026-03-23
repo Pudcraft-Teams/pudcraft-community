@@ -107,9 +107,7 @@ model Server {
   invites      ServerInvite[]
   members      ServerMember[]
   syncs        WhitelistSync[]
-
-  // 未来扩展：
-  // channels Channel[]
+  circles      Circle[]       @relation("CircleServer")
 
   @@unique([host, port], name: "unique_host_port")
   @@index([status])
@@ -436,6 +434,7 @@ enum CommentStatus {
 enum NotificationType {
   POST_COMMENT
   COMMENT_REPLY
+  MENTION
 }
 
 /// 圈子 —— 论坛的顶级分组
@@ -447,12 +446,14 @@ model Circle {
   icon        String?
   banner      String?
   creatorId   String?  @map("creator_id")
+  serverId    String?  @map("server_id")
   memberCount Int      @default(0) @map("member_count")
   postCount   Int      @default(0) @map("post_count")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   creator     User?              @relation("CircleCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+  server      Server?            @relation("CircleServer", fields: [serverId], references: [id], onDelete: SetNull)
   memberships CircleMembership[]
   sections    Section[]
   posts       Post[]
@@ -501,6 +502,7 @@ model Post {
   id           String     @id @default(cuid())
   title        String
   content      String    @db.Text
+  images       String[]  @default([])
   authorId     String     @map("author_id")
   circleId     String?    @map("circle_id")
   sectionId    String?    @map("section_id")
@@ -519,6 +521,7 @@ model Post {
   likes         PostLike[]
   bookmarks     Bookmark[]
   notifications Notification[]
+  postTags      PostTag[]
 
   @@index([circleId, createdAt(sort: Desc)])
   @@index([createdAt(sort: Desc)])
@@ -635,6 +638,37 @@ model CircleBan {
   @@unique([circleId, userId], name: "unique_circle_ban")
   @@index([circleId])
   @@map("circle_bans")
+}
+
+/// 话题标签 —— 从帖子内容中提取的 #话题
+model Tag {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  displayName String   @map("display_name")
+  aliases     String[] @default([])
+  postCount   Int      @default(0) @map("post_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  posts PostTag[]
+
+  @@index([postCount(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@map("tags")
+}
+
+/// 帖子-话题关联
+model PostTag {
+  id     String @id @default(cuid())
+  postId String @map("post_id")
+  tagId  String @map("tag_id")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, tagId], name: "unique_post_tag")
+  @@index([tagId])
+  @@map("post_tags")
 }
 
 // ============================================

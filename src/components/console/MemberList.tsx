@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -38,13 +39,13 @@ function resolveJoinMethodLabel(joinedVia: "apply" | "invite"): { label: string;
   if (joinedVia === "apply") {
     return {
       label: "申请加入",
-      className: "bg-coral-light text-coral ring-1 ring-coral/20",
+      className: "bg-accent-muted text-accent ring-1 ring-accent/20",
     };
   }
 
   return {
     label: "邀请加入",
-    className: "bg-[#FDF5ED] text-coral-amber ring-1 ring-coral-amber/20",
+    className: "bg-accent-muted text-accent-hover ring-1 ring-accent-hover/20",
   };
 }
 
@@ -64,16 +65,16 @@ function resolveSyncIndicator(status: SyncStatus | null): {
   if (status === "pending" || status === "pushed") {
     return {
       label: "同步中",
-      dotClassName: "bg-coral-amber",
-      textClassName: "text-coral-amber",
+      dotClassName: "bg-accent-hover",
+      textClassName: "text-accent-hover",
     };
   }
 
   if (status === "failed") {
     return {
       label: "同步失败",
-      dotClassName: "bg-coral-hover",
-      textClassName: "text-coral-hover",
+      dotClassName: "bg-accent-hover",
+      textClassName: "text-accent-hover",
     };
   }
 
@@ -89,6 +90,7 @@ function resolveSyncIndicator(status: SyncStatus | null): {
  * 支持分页查看、同步状态指示和移除成员操作。
  */
 export function MemberList({ serverId }: MemberListProps) {
+  const confirm = useConfirm();
   const [members, setMembers] = useState<ServerMemberItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -170,7 +172,12 @@ export function MemberList({ serverId }: MemberListProps) {
   }, [serverId]);
 
   async function handleRemove(memberId: string) {
-    const confirmed = window.confirm("确定要移除该成员吗？");
+    const confirmed = await confirm({
+      title: "移除成员",
+      message: "确定要移除该成员吗？",
+      confirmText: "移除",
+      danger: true,
+    });
     if (!confirmed) {
       return;
     }
@@ -210,7 +217,7 @@ export function MemberList({ serverId }: MemberListProps) {
       </div>
 
       {error && (
-        <div className="mt-3 rounded-lg border border-coral-hover/20 bg-coral-light px-3 py-2 text-sm text-coral-hover">
+        <div className="mt-3 rounded-lg border border-accent-hover/20 bg-accent-muted px-3 py-2 text-sm text-accent-hover">
           {error}
         </div>
       )}
@@ -233,14 +240,14 @@ export function MemberList({ serverId }: MemberListProps) {
               return (
                 <div
                   key={member.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warm-200 bg-[#FFFAF6] px-4 py-3"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warm-200 bg-surface px-4 py-3"
                 >
                   <div className="flex min-w-0 items-center gap-3">
                     <UserAvatar
                       src={member.userImage}
                       name={member.userName}
                       className="h-10 w-10"
-                      fallbackClassName="bg-gradient-to-br from-coral to-coral-amber text-white"
+                      fallbackClassName="bg-accent text-white"
                     />
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
@@ -248,7 +255,7 @@ export function MemberList({ serverId }: MemberListProps) {
                           {member.userName ?? "未知用户"}
                         </span>
                         {member.mcUsername && (
-                          <span className="rounded bg-warm-100 px-1.5 py-0.5 font-mono text-xs text-warm-600">
+                          <span className="rounded bg-warm-100 px-1.5 py-0.5 font-mono text-xs text-warm-500">
                             {member.mcUsername}
                           </span>
                         )}
@@ -277,7 +284,7 @@ export function MemberList({ serverId }: MemberListProps) {
                     type="button"
                     onClick={() => void handleRemove(member.id)}
                     disabled={removingId === member.id}
-                    className="m3-btn rounded-lg border border-coral-hover/20 bg-[#FFFAF6] px-3 py-1.5 text-xs text-coral-hover transition-colors hover:bg-coral-light"
+                    className="m3-btn rounded-lg border border-accent-hover/20 bg-surface px-3 py-1.5 text-xs text-accent-hover transition-colors hover:bg-accent-muted"
                   >
                     {removingId === member.id ? "移除中..." : "移除"}
                   </button>
@@ -293,7 +300,7 @@ export function MemberList({ serverId }: MemberListProps) {
                 type="button"
                 onClick={() => void fetchMembers(page - 1)}
                 disabled={page <= 1 || isLoading}
-                className="m3-btn rounded-lg border border-warm-200 bg-[#FFFAF6] px-3 py-1.5 text-sm text-warm-700 transition-colors hover:bg-warm-50 disabled:opacity-40"
+                className="m3-btn rounded-lg border border-warm-200 bg-surface px-3 py-1.5 text-sm text-warm-800 transition-colors hover:bg-warm-50 disabled:opacity-40"
               >
                 上一页
               </button>
@@ -304,7 +311,7 @@ export function MemberList({ serverId }: MemberListProps) {
                 type="button"
                 onClick={() => void fetchMembers(page + 1)}
                 disabled={page >= totalPages || isLoading}
-                className="m3-btn rounded-lg border border-warm-200 bg-[#FFFAF6] px-3 py-1.5 text-sm text-warm-700 transition-colors hover:bg-warm-50 disabled:opacity-40"
+                className="m3-btn rounded-lg border border-warm-200 bg-surface px-3 py-1.5 text-sm text-warm-800 transition-colors hover:bg-warm-50 disabled:opacity-40"
               >
                 下一页
               </button>

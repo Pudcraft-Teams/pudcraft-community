@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { useToast } from "@/hooks/useToast";
 import { PageLoading } from "@/components/PageLoading";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
@@ -55,6 +56,7 @@ const EMPTY_EDITOR: EditorState = {
 };
 
 export default function AdminChangelogPage() {
+  const confirm = useConfirm();
   const { toast } = useToast();
   const editorRef = useRef<MarkdownEditorHandle>(null);
   const [items, setItems] = useState<AdminChangelogItem[]>([]);
@@ -192,7 +194,13 @@ export default function AdminChangelogPage() {
   };
 
   const handleDelete = async (item: AdminChangelogItem) => {
-    if (!window.confirm(`确定要删除「${item.title}」吗？此操作不可恢复。`)) {
+    const ok = await confirm({
+      title: "删除确认",
+      message: `确定要删除「${item.title}」吗？此操作不可恢复。`,
+      confirmText: "删除",
+      danger: true,
+    });
+    if (!ok) {
       return;
     }
 

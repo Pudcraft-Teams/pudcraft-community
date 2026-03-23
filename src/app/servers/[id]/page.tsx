@@ -370,12 +370,8 @@ export default async function ServerDetailPage({ params }: Props) {
       />
 
       <nav className="mb-6 flex items-center gap-2 text-sm text-warm-500">
-        <Link href="/" className="m3-link">
-          &larr; 返回
-        </Link>
-        <span>/</span>
-        <Link href="/" className="m3-link">
-          首页
+        <Link href="/servers" className="m3-link">
+          &larr; 服务器
         </Link>
         <span>/</span>
         <span className="text-warm-700">服务器详情</span>

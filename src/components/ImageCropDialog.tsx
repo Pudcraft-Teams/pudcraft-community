@@ -130,19 +130,19 @@ export function ImageCropDialog({
       role="presentation"
     >
       <div
-        className="mx-4 w-full max-w-lg overflow-y-auto rounded-2xl bg-[#FFFAF6] p-4 sm:p-6"
+        className="mx-4 w-full max-w-lg overflow-y-auto rounded-xl bg-surface p-4 sm:p-6"
         style={{ maxHeight: "88vh" }}
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-labelledby="crop-dialog-title"
       >
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-warm-800">{title}</h3>
+          <h3 id="crop-dialog-title" className="text-lg font-semibold text-warm-800">{title}</h3>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-warm-500 transition-colors hover:bg-warm-100 hover:text-warm-700"
+            className="rounded-md p-1 text-warm-400 transition-colors hover:bg-warm-100 hover:text-warm-800"
             aria-label="关闭"
           >
             ✕
@@ -171,10 +171,10 @@ export function ImageCropDialog({
           />
         </div>
 
-        <p className="mt-3 text-xs text-warm-500">提示：拖动图片调整显示区域</p>
-        {error && <p className="mt-2 text-sm text-coral-hover">{error}</p>}
+        <p className="mt-3 text-xs text-warm-400">提示：拖动图片调整显示区域</p>
+        {error && <p className="mt-2 text-sm text-accent-hover">{error}</p>}
 
-        <div className="sticky bottom-0 mt-5 flex justify-end gap-2 bg-[#FFFAF6] pt-2">
+        <div className="sticky bottom-0 mt-5 flex justify-end gap-2 bg-surface pt-2">
           <button type="button" onClick={onClose} className="m3-btn m3-btn-tonal">
             取消
           </button>

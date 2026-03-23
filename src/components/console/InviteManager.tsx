@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { timeAgo } from "@/lib/time";
 import type { ServerInviteItem } from "@/lib/types";
@@ -98,6 +99,7 @@ function isExpired(expiresAt: string | null): boolean {
  * 支持创建、查看、复制链接和撤销邀请码。
  */
 export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
+  const confirm = useConfirm();
   const [invites, setInvites] = useState<ServerInviteItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
@@ -208,7 +210,10 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
   }
 
   async function handleRevoke(code: string) {
-    const confirmed = window.confirm("确定要撤销该邀请码吗？撤销后将无法使用。");
+    const confirmed = await confirm({
+      title: "撤销邀请码",
+      message: "确定要撤销该邀请码吗？撤销后将无法使用。",
+    });
     if (!confirmed) {
       return;
     }
@@ -256,14 +261,14 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
       <h2 className="text-lg font-semibold text-warm-800">邀请码管理</h2>
 
       {error && (
-        <div className="mt-3 rounded-lg border border-coral-hover/20 bg-coral-light px-3 py-2 text-sm text-coral-hover">
+        <div className="mt-3 rounded-lg border border-accent-hover/20 bg-accent-muted px-3 py-2 text-sm text-accent-hover">
           {error}
         </div>
       )}
 
       {/* Create invite form */}
       <div className="mt-4 rounded-xl border border-warm-200 bg-warm-50 p-4">
-        <h3 className="text-sm font-medium text-warm-700">创建邀请码</h3>
+        <h3 className="text-sm font-medium text-warm-800">创建邀请码</h3>
         <div className="mt-3 flex flex-wrap items-end gap-3">
           <div className="min-w-[120px]">
             <label htmlFor="invite-max-uses" className="block text-xs text-warm-500">
@@ -314,7 +319,7 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
 
       {/* Active invites list */}
       <div className="mt-4">
-        <h3 className="text-sm font-medium text-warm-700">
+        <h3 className="text-sm font-medium text-warm-800">
           有效邀请码 ({activeInvites.length})
         </h3>
 
@@ -329,7 +334,7 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
             {activeInvites.map((invite) => (
               <div
                 key={invite.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warm-200 bg-[#FFFAF6] px-4 py-3"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warm-200 bg-surface px-4 py-3"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -350,7 +355,7 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
                   <button
                     type="button"
                     onClick={() => handleCopy(invite.code)}
-                    className="m3-btn rounded-lg border border-warm-200 bg-[#FFFAF6] px-3 py-1.5 text-xs text-warm-700 transition-colors hover:bg-warm-50"
+                    className="m3-btn rounded-lg border border-warm-200 bg-surface px-3 py-1.5 text-xs text-warm-800 transition-colors hover:bg-warm-50"
                   >
                     {copiedCode === invite.code ? "已复制 \u2713" : "复制链接"}
                   </button>
@@ -358,7 +363,7 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
                     type="button"
                     onClick={() => void handleRevoke(invite.code)}
                     disabled={revokingCode === invite.code}
-                    className="m3-btn rounded-lg border border-coral-hover/20 bg-[#FFFAF6] px-3 py-1.5 text-xs text-coral-hover transition-colors hover:bg-coral-light"
+                    className="m3-btn rounded-lg border border-accent-hover/20 bg-surface px-3 py-1.5 text-xs text-accent-hover transition-colors hover:bg-accent-muted"
                   >
                     {revokingCode === invite.code ? "撤销中..." : "撤销"}
                   </button>
@@ -398,7 +403,7 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
                   type="button"
                   onClick={() => void handleRevoke(invite.code)}
                   disabled={revokingCode === invite.code}
-                  className="m3-btn rounded-lg border border-warm-200 bg-[#FFFAF6] px-3 py-1.5 text-xs text-warm-500 transition-colors hover:bg-warm-50"
+                  className="m3-btn rounded-lg border border-warm-200 bg-surface px-3 py-1.5 text-xs text-warm-500 transition-colors hover:bg-warm-50"
                 >
                   {revokingCode === invite.code ? "删除中..." : "删除"}
                 </button>

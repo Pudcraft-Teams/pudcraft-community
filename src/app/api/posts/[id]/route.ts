@@ -6,7 +6,9 @@ import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { moderateContent } from "@/lib/moderation";
+import { rateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
+import { unlinkTagsFromPost } from "@/lib/tags";
 import { updatePostSchema } from "@/lib/validation";
 import type { PostDetail } from "@/lib/types";
 
@@ -69,13 +71,19 @@ export async function GET(request: Request, { params }: RouteContext) {
       }
     }
 
-    // Increment viewCount (fire-and-forget)
-    prisma.post
-      .update({
-        where: { id },
-        data: { viewCount: { increment: 1 } },
-      })
-      .catch(() => {});
+    // Increment viewCount: logged-in users only, max 10 per user per post
+    if (userId) {
+      rateLimit(`post-view:${userId}:${id}`, 10, 86400)
+        .then((rl) => {
+          if (rl.allowed) {
+            return prisma.post.update({
+              where: { id },
+              data: { viewCount: { increment: 1 } },
+            });
+          }
+        })
+        .catch(() => {});
+    }
 
     let isLiked: boolean | undefined;
     let isBookmarked: boolean | undefined;
@@ -120,6 +128,7 @@ export async function GET(request: Request, { params }: RouteContext) {
       likeCount: post.likeCount,
       commentCount: post.commentCount,
       isPinned: post.isPinned,
+      images: post.images,
       isLiked,
       isBookmarked,
       createdAt: post.createdAt.toISOString(),
@@ -327,6 +336,8 @@ export async function DELETE(request: Request, { params }: RouteContext) {
     // Soft delete; decrement circle.postCount if needed
     if (post.circleId) {
       await prisma.$transaction(async (tx) => {
+        await unlinkTagsFromPost(tx, id);
+
         await tx.post.update({
           where: { id },
           data: { status: "DELETED" },
@@ -346,9 +357,9 @@ export async function DELETE(request: Request, { params }: RouteContext) {
         }
       });
     } else {
-      await prisma.post.update({
-        where: { id },
-        data: { status: "DELETED" },
+      await prisma.$transaction(async (tx) => {
+        await unlinkTagsFromPost(tx, id);
+        await tx.post.update({ where: { id }, data: { status: "DELETED" } });
       });
     }
 

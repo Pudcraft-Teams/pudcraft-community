@@ -132,7 +132,7 @@ export function FavoriteButton({
   };
 
   const baseSizeClass = size === "sm" ? "h-7 w-7 text-sm" : "h-8 w-8 text-base";
-  const colorClass = favorited ? "text-coral" : "text-warm-500";
+  const colorClass = favorited ? "text-accent" : "text-warm-400";
 
   return (
     <button
@@ -141,7 +141,7 @@ export function FavoriteButton({
       title={favorited ? "已收藏" : "收藏"}
       onClick={handleToggle}
       disabled={isPending}
-      className={`inline-flex items-center justify-center rounded-full border border-warm-200 bg-[#FFFAF6] transition-transform hover:scale-110 hover:bg-warm-100 ${baseSizeClass} ${colorClass} ${className} disabled:cursor-not-allowed disabled:opacity-60`}
+      className={`inline-flex items-center justify-center rounded-full border border-warm-200 bg-surface transition-transform hover:scale-110 hover:bg-warm-100 ${baseSizeClass} ${colorClass} ${className} disabled:cursor-not-allowed disabled:opacity-60`}
     >
       <span aria-hidden>{favorited ? "★" : "☆"}</span>
     </button>

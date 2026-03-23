@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { useToast } from "@/hooks/useToast";
 
 interface DeleteModpackButtonProps {
@@ -38,6 +39,7 @@ export function DeleteModpackButton({
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
@@ -45,7 +47,12 @@ export function DeleteModpackButton({
       return;
     }
 
-    const confirmed = window.confirm(`确定删除整合包「${modpackName}」吗？此操作不可恢复。`);
+    const confirmed = await confirm({
+      title: "删除确认",
+      message: `确定删除整合包「${modpackName}」吗？此操作不可恢复。`,
+      confirmText: "删除",
+      danger: true,
+    });
     if (!confirmed) {
       return;
     }

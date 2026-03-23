@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { useToast } from "@/hooks/useToast";
 import { PageLoading } from "@/components/PageLoading";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -24,6 +25,7 @@ function timeAgo(dateStr: string): string {
 }
 
 export default function AdminUsersPage() {
+  const confirm = useConfirm();
   const { toast } = useToast();
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
@@ -94,7 +96,11 @@ export default function AdminUsersPage() {
   };
 
   const handleUnban = async (id: string) => {
-    if (!window.confirm("确定要解封该用户吗？")) return;
+    const ok = await confirm({
+      title: "解封确认",
+      message: "确定要解封该用户吗？",
+    });
+    if (!ok) return;
 
     setActionLoading(id);
     try {

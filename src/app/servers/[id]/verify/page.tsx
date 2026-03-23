@@ -396,7 +396,7 @@ export default function ServerVerifyPage() {
   if (sessionStatus === "loading" || isLoading) return <PageLoading />;
 
   if (sessionStatus === "unauthenticated") {
-    return <div className="py-12 text-center text-sm text-warm-500">正在跳转到登录页...</div>;
+    return <div className="py-12 text-center text-sm text-warm-400">正在跳转到登录页...</div>;
   }
 
   if (pageError) {
@@ -405,7 +405,7 @@ export default function ServerVerifyPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 px-4">
-      <nav className="flex items-center gap-2 text-sm text-warm-500">
+      <nav className="flex items-center gap-2 text-sm text-warm-400">
         <Link href={`/servers/${id}`} className="m3-link">
           &larr; 返回服务器详情
         </Link>
@@ -413,7 +413,7 @@ export default function ServerVerifyPage() {
 
       <section className="m3-surface p-6">
         <h1 className="text-2xl font-semibold text-warm-800">认领服务器「{serverName}」</h1>
-        <p className="mt-2 text-sm text-warm-600">
+        <p className="mt-2 text-sm text-warm-500">
           认领通过后你将成为该服务器管理员，并获得「已认领」标识。
         </p>
 
@@ -448,8 +448,8 @@ export default function ServerVerifyPage() {
                 onClick={() => setActiveTab("motd")}
                 className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                   activeTab === "motd"
-                    ? "bg-[#FFFAF6] text-warm-800 shadow-sm"
-                    : "text-warm-500 hover:text-warm-700"
+                    ? "bg-surface text-warm-800 shadow-sm"
+                    : "text-warm-400 hover:text-warm-500"
                 }`}
               >
                 MOTD 认领
@@ -459,8 +459,8 @@ export default function ServerVerifyPage() {
                 onClick={() => setActiveTab("plugin")}
                 className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                   activeTab === "plugin"
-                    ? "bg-[#FFFAF6] text-warm-800 shadow-sm"
-                    : "text-warm-500 hover:text-warm-700"
+                    ? "bg-surface text-warm-800 shadow-sm"
+                    : "text-warm-400 hover:text-warm-500"
                 }`}
               >
                 插件认领
@@ -471,7 +471,7 @@ export default function ServerVerifyPage() {
             {activeTab === "motd" && (
               <div className="mt-5 space-y-5">
                 {verifyState.hasPendingClaimByOtherUser && !verifyState.isTokenOwnedByCurrentUser && (
-                  <div className="rounded-xl border border-coral-amber bg-coral-amber px-4 py-3 text-sm text-coral-amber">
+                  <div className="rounded-xl border border-accent-hover bg-accent-hover px-4 py-3 text-sm text-accent-hover">
                     当前已有其他用户在认领该服务器。你重新获取验证码会覆盖之前的认领流程。
                   </div>
                 )}
@@ -479,8 +479,8 @@ export default function ServerVerifyPage() {
                 {!verifyState.verifyToken && (
                   <div className="space-y-4">
                     <div className="m3-surface-soft p-4">
-                      <p className="text-sm font-medium text-warm-700">认领步骤：</p>
-                      <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-warm-600">
+                      <p className="text-sm font-medium text-warm-800">认领步骤：</p>
+                      <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-warm-500">
                         <li>点击下方按钮获取验证码</li>
                         <li>将验证码添加到 server.properties 的 motd= 行</li>
                         <li>重启服务器使 MOTD 生效，然后回到本页点击「开始验证」</li>
@@ -501,7 +501,7 @@ export default function ServerVerifyPage() {
                 {verifyState.verifyToken && (
                   <div className="space-y-4">
                     <div>
-                      <p className="mb-2 text-sm font-medium text-warm-700">你的验证码：</p>
+                      <p className="mb-2 text-sm font-medium text-warm-800">你的验证码：</p>
                       <div className="m3-surface-soft flex items-center justify-between gap-3 px-4 py-3">
                         <code className="break-all font-mono text-sm text-warm-800">
                           {verifyState.verifyToken}
@@ -516,20 +516,20 @@ export default function ServerVerifyPage() {
                       </div>
                     </div>
 
-                    <div className="rounded-xl border border-warm-200 bg-warm-50 px-4 py-3 text-sm text-warm-700">
+                    <div className="rounded-xl border border-warm-200 bg-warm-50 px-4 py-3 text-sm text-warm-800">
                       <p>请将验证码添加到 server.properties 文件中的 motd= 行：</p>
-                      <p className="mt-2 font-mono text-xs text-warm-600">
+                      <p className="mt-2 font-mono text-xs text-warm-500">
                         motd=你的原始MOTD {verifyState.verifyToken}
                       </p>
-                      <p className="mt-3 text-xs text-warm-500">
+                      <p className="mt-3 text-xs text-warm-400">
                         注意：修改 MOTD 后必须重启服务器，变更才会生效。
                       </p>
                     </div>
 
                     {isMotdTokenExpired ? (
-                      <p className="text-sm text-coral-hover">验证码已过期，请重新获取。</p>
+                      <p className="text-sm text-accent-hover">验证码已过期，请重新获取。</p>
                     ) : (
-                      <p className="text-sm text-warm-600">
+                      <p className="text-sm text-warm-500">
                         验证码有效期：还剩 {formatRemainingTime(motdRemainingMs)}
                       </p>
                     )}
@@ -554,7 +554,7 @@ export default function ServerVerifyPage() {
                     </div>
 
                     {isVerifying && (
-                      <p className="text-sm text-warm-500">正在连接服务器，请稍候...</p>
+                      <p className="text-sm text-warm-400">正在连接服务器，请稍候...</p>
                     )}
                   </div>
                 )}
@@ -565,7 +565,7 @@ export default function ServerVerifyPage() {
                   <div className="m3-alert-error space-y-2">
                     <p className="font-medium">验证未通过</p>
                     <p>原因：{motdError}</p>
-                    <p className="text-xs text-coral-hover">
+                    <p className="text-xs text-accent-hover">
                       请确认：验证码已写入 MOTD、服务器已重启、服务器当前在线。
                     </p>
                     {verifyState.verifyToken && !isMotdTokenExpired && (
@@ -586,27 +586,27 @@ export default function ServerVerifyPage() {
             {activeTab === "plugin" && (
               <div className="mt-5 space-y-5">
                 {claimKey.hasPendingClaimByOtherUser && (
-                  <div className="rounded-xl border border-coral-amber bg-coral-amber px-4 py-3 text-sm text-coral-amber">
+                  <div className="rounded-xl border border-accent-hover bg-accent-hover px-4 py-3 text-sm text-accent-hover">
                     当前已有其他用户在认领该服务器。生成新密钥会覆盖之前的认领流程。
                   </div>
                 )}
 
                 <div className="m3-surface-soft p-4">
-                  <p className="text-sm font-medium text-warm-700">认领步骤：</p>
-                  <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-warm-600">
+                  <p className="text-sm font-medium text-warm-800">认领步骤：</p>
+                  <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-warm-500">
                     <li>点击下方按钮生成认领密钥</li>
                     <li>在你的 Minecraft 服务器中安装 Pudcraft 插件</li>
                     <li>将认领密钥和服务器 ID 填入插件配置文件</li>
                     <li>启动 / 重启 Minecraft 服务器，插件会自动完成认领</li>
                   </ol>
-                  <p className="mt-3 text-xs text-warm-500">
+                  <p className="mt-3 text-xs text-warm-400">
                     认领需要从服务器本机发起请求，系统会校验请求来源 IP 是否与服务器地址一致。
                   </p>
                 </div>
 
                 {/* 服务器 ID */}
                 <div>
-                  <p className="mb-2 text-sm font-medium text-warm-700">服务器 ID：</p>
+                  <p className="mb-2 text-sm font-medium text-warm-800">服务器 ID：</p>
                   <div className="m3-surface-soft flex items-center justify-between gap-3 px-4 py-3">
                     <code className="font-mono text-sm text-warm-800">{id}</code>
                     <button
@@ -622,7 +622,7 @@ export default function ServerVerifyPage() {
                 {/* 刚生成的密钥 */}
                 {generatedKey && (
                   <div>
-                    <p className="mb-2 text-sm font-medium text-warm-700">认领密钥（仅显示一次）：</p>
+                    <p className="mb-2 text-sm font-medium text-warm-800">认领密钥（仅显示一次）：</p>
                     <div className="m3-surface-soft flex items-center justify-between gap-3 px-4 py-3">
                       <code className="break-all font-mono text-sm text-warm-800">
                         {generatedKey}
@@ -635,7 +635,7 @@ export default function ServerVerifyPage() {
                         {copiedField === "claim-key" ? "已复制" : "复制"}
                       </button>
                     </div>
-                    <p className="mt-2 text-xs text-coral-amber">
+                    <p className="mt-2 text-xs text-accent-hover">
                       请立即复制并保存。认领成功后此密钥将成为服务器的 API Key，后续无需再次获取。
                     </p>
                   </div>
@@ -643,7 +643,7 @@ export default function ServerVerifyPage() {
 
                 {/* 已有密钥但刷新了页面 */}
                 {!generatedKey && claimKey.hasClaimKey && !isPluginKeyExpired && (
-                  <div className="rounded-xl border border-coral bg-coral-light px-4 py-3 text-sm text-coral">
+                  <div className="rounded-xl border border-accent bg-accent-muted px-4 py-3 text-sm text-accent">
                     <p className="font-medium">认领密钥已生成</p>
                     <p className="mt-1">等待插件从服务器发起认领请求...</p>
                   </div>
@@ -651,14 +651,14 @@ export default function ServerVerifyPage() {
 
                 {/* 倒计时 */}
                 {claimKey.hasClaimKey && !isPluginKeyExpired && (
-                  <p className="text-sm text-warm-600">
+                  <p className="text-sm text-warm-500">
                     密钥有效期：还剩 {formatRemainingTime(pluginRemainingMs)}
                   </p>
                 )}
 
                 {/* 过期 */}
                 {claimKey.hasClaimKey && isPluginKeyExpired && (
-                  <p className="text-sm text-coral-hover">认领密钥已过期，请重新生成。</p>
+                  <p className="text-sm text-accent-hover">认领密钥已过期，请重新生成。</p>
                 )}
 
                 {/* 生成按钮 */}
@@ -677,9 +677,9 @@ export default function ServerVerifyPage() {
 
                 {/* 配置示例 */}
                 {(generatedKey || (claimKey.hasClaimKey && !isPluginKeyExpired)) && (
-                  <div className="rounded-xl border border-warm-200 bg-warm-50 px-4 py-3 text-sm text-warm-700">
+                  <div className="rounded-xl border border-warm-200 bg-warm-50 px-4 py-3 text-sm text-warm-800">
                     <p className="font-medium">插件配置示例：</p>
-                    <pre className="mt-2 overflow-x-auto whitespace-pre rounded-lg bg-warm-100 p-3 font-mono text-xs text-warm-600">
+                    <pre className="mt-2 overflow-x-auto whitespace-pre rounded-lg bg-warm-100 p-3 font-mono text-xs text-warm-500">
 {`# config.yml
 server-id: "${id}"
 api-key: "${generatedKey ?? "pdc_你的认领密钥"}"

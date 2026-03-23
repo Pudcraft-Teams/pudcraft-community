@@ -1,6 +1,3 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { FavoriteButton } from "@/components/FavoriteButton";
@@ -36,67 +33,40 @@ export function ServerCard({
     status,
     isVerified,
     iconUrl,
-    visibility,
     joinMode,
   } = server;
   const checkedAtMs = Date.parse(status.checkedAt);
   const isStale = !Number.isFinite(checkedAtMs) || Date.now() - checkedAtMs > 15 * 60 * 1000;
   const isOnline = status.online;
-  const statusText = isStale ? "状态未知" : isOnline ? "在线" : "离线";
+  const statusText = isStale ? "未知" : isOnline ? "在线" : "离线";
   const isAddressHidden = host === "hidden" && port === 0;
-  const isUnlisted = visibility === "unlisted";
   const showApplyBadge =
     joinMode === "apply" || joinMode === "apply_and_invite";
   const showInviteBadge =
     joinMode === "invite" || joinMode === "apply_and_invite";
 
-  const [pingMs, setPingMs] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (isStale || !isOnline) return;
-    const start = performance.now();
-    fetch(`/api/servers/${server.id}/ping`, { cache: "no-store" })
-      .then(() => {
-        setPingMs(Math.round(performance.now() - start));
-      })
-      .catch(() => {
-        /* ignore */
-      });
-  }, [server.id, isOnline, isStale]);
-
   return (
     <Link
       href={`/servers/${server.psid}`}
-      className={`group relative block overflow-hidden rounded-2xl border border-[#E8DDD4] bg-[#FFFAF6] transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(139,69,51,0.12)] animate-card-in${className ? ` ${className}` : ""}`}
+      className={`group relative block rounded-xl border border-warm-200 bg-surface transition-all duration-150 ease-out hover:border-warm-300 hover:shadow-sm animate-card-in${className ? ` ${className}` : ""}`}
       style={style}
     >
-      {/* 顶部渐变条 */}
-      <div className="h-1 bg-gradient-to-r from-[#D4715E] to-[#D4956A] opacity-60 transition-opacity group-hover:opacity-100" />
-
-      <div className="p-5">
+      <div className="p-4">
         {/* 1. 图标 + 名称 + 状态 */}
-        <div className="mb-4 flex items-start gap-3.5">
-          <span className="relative inline-flex h-12 w-12 shrink-0 overflow-hidden rounded-xl shadow-sm shadow-[#8B4533]/8">
+        <div className="mb-3 flex items-start gap-3">
+          <span className="relative inline-flex h-10 w-10 shrink-0 overflow-hidden rounded-lg">
             <Image
               src={iconUrl || "/default-server-icon.png"}
               alt={`${name} 图标`}
-              width={48}
-              height={48}
+              width={40}
+              height={40}
               className="h-full w-full object-cover"
             />
-            {/* 在线状态点 */}
-            {!isStale && (
-              <span
-                className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#FFFAF6] ${
-                  isOnline ? "bg-[#5B9A6E]" : "bg-[#9C8577]"
-                }`}
-              />
-            )}
           </span>
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
-              <h3 className="truncate text-[15px] font-bold text-[#4A3728] transition-colors group-hover:text-[#D4715E]">
+              <h3 className="truncate text-sm font-semibold text-warm-800 transition-colors group-hover:text-accent">
                 {name}
               </h3>
               {showFavoriteButton && (
@@ -112,9 +82,9 @@ export function ServerCard({
             </div>
             {/* 地址 */}
             {isAddressHidden ? (
-              <p className="mt-0.5 text-xs text-[#9C8577] italic">地址隐藏</p>
+              <p className="mt-0.5 text-xs text-warm-400">地址隐藏</p>
             ) : (
-              <p className="mt-0.5 break-all font-mono text-xs text-[#7A6B5F]">
+              <p className="mt-0.5 break-all font-mono text-xs text-warm-400">
                 {host}
                 {port !== 25565 ? `:${port}` : ""}
               </p>
@@ -124,42 +94,60 @@ export function ServerCard({
 
         {/* 2. 描述 */}
         {description && (
-          <p className="mb-4 line-clamp-2 text-[13px] leading-relaxed text-[#4A3728]">{description}</p>
+          <p className="mb-3 line-clamp-2 text-[13px] leading-relaxed text-warm-500">{description}</p>
         )}
 
         {/* 3. 底部信息栏 */}
         <div className="flex items-center justify-between gap-2">
           {/* 标签 */}
-          <div className="flex min-w-0 flex-wrap gap-1.5">
+          <div className="flex min-w-0 flex-wrap gap-1">
             {tags.slice(0, 3).map((tag) => (
               <span
                 key={tag}
-                className="rounded-md bg-[#FBEEE6] px-2 py-0.5 text-[11px] font-semibold text-[#8B4533]"
+                className="rounded bg-warm-100 px-1.5 py-0.5 text-[11px] font-medium text-warm-500"
               >
                 {tag}
               </span>
             ))}
             {tags.length > 3 && (
-              <span className="rounded-md bg-[#FBEEE6] px-2 py-0.5 text-[11px] font-semibold text-[#9C8577]">
+              <span className="rounded bg-warm-100 px-1.5 py-0.5 text-[11px] font-medium text-warm-400">
                 +{tags.length - 3}
               </span>
             )}
             {isVerified && (
-              <span className="rounded-md bg-[#D4715E]/10 px-2 py-0.5 text-[11px] font-semibold text-[#D4715E]">
-                ✓ 已认领
+              <span className="rounded bg-accent-muted px-1.5 py-0.5 text-[11px] font-medium text-accent">
+                已认领
+              </span>
+            )}
+            {showApplyBadge && (
+              <span className="rounded bg-warm-100 px-1.5 py-0.5 text-[11px] font-medium text-warm-500">
+                需申请
+              </span>
+            )}
+            {showInviteBadge && (
+              <span className="rounded bg-warm-100 px-1.5 py-0.5 text-[11px] font-medium text-warm-500">
+                邀请制
               </span>
             )}
           </div>
 
-          {/* 在线人数 */}
-          {!isStale && isOnline && (
-            <span className="shrink-0 text-xs font-semibold text-[#5B9A6E]">
-              {status.playerCount}/{status.maxPlayers}
-            </span>
-          )}
-          {(isStale || !isOnline) && (
-            <span className="shrink-0 text-xs text-[#9C8577]">{statusText}</span>
-          )}
+          {/* 状态 + 人数 */}
+          <div className="flex shrink-0 items-center gap-2">
+            {!isStale && isOnline && (
+              <>
+                <span className="text-xs font-medium tabular-nums text-forest">
+                  {status.playerCount}/{status.maxPlayers}
+                </span>
+                <span className="h-1.5 w-1.5 rounded-full bg-forest" />
+              </>
+            )}
+            {(isStale || !isOnline) && (
+              <>
+                <span className="text-xs text-warm-400">{statusText}</span>
+                <span className={`h-1.5 w-1.5 rounded-full ${isStale ? "bg-warm-300" : "bg-warm-400"}`} />
+              </>
+            )}
+          </div>
         </div>
       </div>
     </Link>
