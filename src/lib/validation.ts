@@ -459,8 +459,16 @@ export const createCircleSchema = z.object({
 export const updateCircleSchema = z.object({
   name: z.string().trim().min(1).max(50).optional(),
   description: z.string().trim().max(500).optional(),
-  icon: z.string().url().optional().nullable(),
-  banner: z.string().url().optional().nullable(),
+  icon: z
+    .string()
+    .refine((url) => /^https?:\/\//.test(url) || url.startsWith("/"), "仅允许 http/https 链接或相对路径")
+    .optional()
+    .nullable(),
+  banner: z
+    .string()
+    .refine((url) => /^https?:\/\//.test(url) || url.startsWith("/"), "仅允许 http/https 链接或相对路径")
+    .optional()
+    .nullable(),
 });
 
 /** 创建板块请求体 */
@@ -484,7 +492,16 @@ export const createPostSchema = z.object({
   circleId: z.string().cuid().optional().nullable(),
   sectionId: z.string().cuid().optional().nullable(),
   tags: z.array(z.string().trim().min(1).max(50)).max(5).optional().default([]),
-  images: z.array(z.string().url().max(500)).max(9).optional().default([]),
+  images: z
+    .array(
+      z
+        .string()
+        .max(500)
+        .refine((url) => /^https?:\/\//.test(url) || url.startsWith("/"), "仅允许 http/https 链接或相对路径"),
+    )
+    .max(9)
+    .optional()
+    .default([]),
 });
 
 /** 更新帖子请求体 */

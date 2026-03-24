@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdmin, isAdminError } from "@/lib/admin";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "管理后台 | PudCraft Community",
 };

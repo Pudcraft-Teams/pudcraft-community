@@ -140,7 +140,7 @@ export function ForumCommentItem({
           className="h-7 w-7"
           fallbackClassName="bg-gradient-to-br from-accent to-accent-hover text-white"
         />
-        <Link href={`/user/${comment.author.uid}`} className="m3-link text-sm font-medium">
+        <Link href={`/u/${comment.author.uid}`} className="m3-link text-sm font-medium">
           {displayAuthorName(comment.author)}
         </Link>
         <span className="text-xs text-warm-400">·</span>

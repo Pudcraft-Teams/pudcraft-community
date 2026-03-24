@@ -11,6 +11,7 @@ import { CircleSectionManager } from "@/components/forum/CircleSectionManager";
 import { CircleServerBind } from "@/components/forum/CircleServerBind";
 import { ImageUpload } from "@/components/ImageUpload";
 import { PageLoading } from "@/components/PageLoading";
+import { normalizeImageSrc } from "@/lib/image-url";
 import type { CircleDetail, CircleRoleType } from "@/lib/types";
 
 // ─── Constants ───────────────────────────────────
@@ -306,7 +307,7 @@ export function CircleSettings({ circleSlug }: CircleSettingsProps) {
             {circle.icon ? (
               <span className="relative inline-flex h-12 w-12 shrink-0 overflow-hidden rounded-lg">
                 <Image
-                  src={circle.icon}
+                  src={normalizeImageSrc(circle.icon) || circle.icon}
                   alt={`${circle.name} 图标`}
                   width={48}
                   height={48}

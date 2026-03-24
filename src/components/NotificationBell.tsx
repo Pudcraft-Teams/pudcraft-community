@@ -89,9 +89,9 @@ function getForumNotificationLink(notification: ForumNotificationItem): string |
   }
   const { post } = notification;
   if (post.circle) {
-    return `/forum/c/${post.circle.slug}/post/${post.id}`;
+    return `/c/${post.circle.slug}/post/${post.id}`;
   }
-  return `/forum/post/${post.id}`;
+  return `/post/${post.id}`;
 }
 
 /**
@@ -567,7 +567,7 @@ export function NotificationBell() {
 
           <div className="border-t border-warm-200 px-4 py-3 text-center">
             <Link
-              href={activeTab === "server" ? "/notifications" : "/forum/notifications"}
+              href="/notifications"
               onClick={() => setOpen(false)}
               className="text-sm font-medium text-accent transition-colors hover:text-accent-hover"
             >

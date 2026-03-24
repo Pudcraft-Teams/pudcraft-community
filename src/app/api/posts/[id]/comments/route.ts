@@ -351,6 +351,20 @@ async function createForumCommentNotification({
           },
         });
       }
+
+      // Also notify the post author about the reply, if they are
+      // different from the commenter and from the parent comment author
+      if (postAuthorId !== actorId && postAuthorId !== parentAuthorId) {
+        await prisma.notification.create({
+          data: {
+            recipientId: postAuthorId,
+            type: "POST_COMMENT",
+            sourceUserId: actorId,
+            postId,
+            commentId,
+          },
+        });
+      }
       return;
     }
 

@@ -8,11 +8,12 @@ import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { getClientIp } from "@/lib/request-ip";
 import { moderateFields } from "@/lib/moderation";
+import { unlinkTagsFromPost } from "@/lib/tags";
 import { updateCircleSchema } from "@/lib/validation";
 import type { CircleDetail, CircleRoleType } from "@/lib/types";
 
-/** cuid 格式检测：c 开头 + 24 位小写字母数字 */
-const CUID_PATTERN = /^c[a-z0-9]{24}$/;
+/** cuid 格式检测：c 开头 + 20-30 位小写字母数字 */
+const CUID_PATTERN = /^c[a-z0-9]{20,30}$/;
 
 /**
  * 根据参数查找圈子详情（含 creator）：cuid 格式按 id 查，否则按 slug 查。
@@ -248,6 +249,23 @@ export async function DELETE(
       if (membership?.role !== "OWNER") {
         return NextResponse.json({ error: "无权限" }, { status: 403 });
       }
+    }
+
+    // Clean up tag counts for all posts in this circle
+    const postsWithTags = await prisma.post.findMany({
+      where: {
+        circleId,
+        postTags: { some: {} },
+      },
+      select: { id: true },
+    });
+
+    if (postsWithTags.length > 0) {
+      await prisma.$transaction(async (tx) => {
+        for (const post of postsWithTags) {
+          await unlinkTagsFromPost(tx, post.id);
+        }
+      });
     }
 
     await prisma.circle.delete({

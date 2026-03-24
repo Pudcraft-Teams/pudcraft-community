@@ -11,10 +11,10 @@ export default function HomePage() {
     "@type": "WebSite",
     name: "PudCraft Community",
     url: SITE_URL,
-    description: "发现优质 Minecraft 服务器",
+    description: "PudCraft Minecraft 社区论坛，发现圈子、分享动态、交流讨论",
     potentialAction: {
       "@type": "SearchAction",
-      target: `${SITE_URL}/?search={search_term_string}`,
+      target: `${SITE_URL}/search?q={search_term_string}`,
       "query-input": "required name=search_term_string",
     },
   };

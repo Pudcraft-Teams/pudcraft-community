@@ -181,11 +181,13 @@ export function PostCard({ post, onLikeChange, onBookmarkChange }: PostCardProps
         <div className="mb-3 flex gap-1.5 overflow-hidden rounded-lg">
           {post.images.slice(0, 3).map((url, i) => (
             <div key={i} className="relative aspect-square flex-1 overflow-hidden bg-warm-100">
-              <img
+              <Image
                 src={normalizeImageSrc(url) || url}
                 alt=""
-                className="h-full w-full object-cover"
+                fill
+                className="object-cover"
                 loading="lazy"
+                unoptimized
               />
               {i === 2 && post.images.length > 3 && (
                 <div className="absolute inset-0 flex items-center justify-center bg-warm-900/40 text-sm font-medium text-white">

@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
+import { resolveCircleId } from "@/lib/circle-utils";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { getPublicUrl } from "@/lib/storage";
@@ -19,14 +20,10 @@ interface RouteContext {
  */
 export async function GET(request: Request, { params }: RouteContext) {
   try {
-    const { id: circleId } = await params;
+    const { id } = await params;
 
-    // Verify circle exists
-    const circle = await prisma.circle.findUnique({
-      where: { id: circleId },
-      select: { id: true },
-    });
-    if (!circle) {
+    const circleId = await resolveCircleId(id);
+    if (!circleId) {
       return NextResponse.json({ error: "圈子未找到" }, { status: 404 });
     }
 
@@ -98,14 +95,10 @@ export async function POST(_request: Request, { params }: RouteContext) {
     }
     const userId = authResult.user.id;
 
-    const { id: circleId } = await params;
+    const { id } = await params;
 
-    // Verify circle exists
-    const circle = await prisma.circle.findUnique({
-      where: { id: circleId },
-      select: { id: true },
-    });
-    if (!circle) {
+    const circleId = await resolveCircleId(id);
+    if (!circleId) {
       return NextResponse.json({ error: "圈子未找到" }, { status: 404 });
     }
 

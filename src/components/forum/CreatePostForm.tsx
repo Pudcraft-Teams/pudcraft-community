@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { PostTextarea } from "@/components/forum/PostTextarea";
@@ -372,10 +373,12 @@ export function CreatePostForm({
                   key={i}
                   className="group relative h-20 w-20 overflow-hidden rounded-lg border border-warm-200 sm:h-24 sm:w-24"
                 >
-                  <img
+                  <Image
                     src={normalizeImageSrc(url) || url}
                     alt=""
-                    className="h-full w-full object-cover"
+                    fill
+                    className="object-cover"
+                    unoptimized
                   />
                   <button
                     type="button"

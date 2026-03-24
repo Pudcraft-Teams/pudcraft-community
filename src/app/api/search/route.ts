@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { rateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request-ip";
 import { searchQuerySchema } from "@/lib/validation";
 import type { PostItem } from "@/lib/types";
 
@@ -24,6 +26,12 @@ function extractContentPreview(content: string, maxLength = 200): string {
  */
 export async function GET(request: Request) {
   try {
+    const ip = getClientIp(request);
+    const rl = await rateLimit(`search:${ip}`, 30, 60);
+    if (!rl.allowed) {
+      return NextResponse.json({ error: "请求过于频繁，请稍后再试" }, { status: 429 });
+    }
+
     const { searchParams } = new URL(request.url);
 
     const parsed = searchQuerySchema.safeParse({

@@ -145,7 +145,11 @@ export type NotificationType =
   | "application_approved"
   | "application_rejected"
   | "member_removed"
-  | "whitelist_sync_failed";
+  | "whitelist_sync_failed"
+  | "report_resolved"
+  | "report_dismissed"
+  | "content_warning"
+  | "content_takedown";
 
 /** 单条通知数据 */
 export interface NotificationItem {

@@ -488,6 +488,7 @@ model Circle {
   bans        CircleBan[]
 
   @@index([creatorId])
+  @@index([serverId])
   @@index([createdAt(sort: Desc)])
   @@map("circles")
 }

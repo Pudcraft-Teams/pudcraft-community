@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { getPublicUrl } from "@/lib/storage";
 import { queryNotificationsSchema } from "@/lib/validation";
 import type { ForumNotificationItem } from "@/lib/types";
 
@@ -82,7 +83,7 @@ export async function GET(request: Request) {
         id: n.sourceUser.id,
         uid: n.sourceUser.uid,
         name: n.sourceUser.name,
-        image: n.sourceUser.image,
+        image: getPublicUrl(n.sourceUser.image),
       },
       post: n.post
         ? {
