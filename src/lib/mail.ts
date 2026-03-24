@@ -9,7 +9,7 @@ const verificationCodeSchema = z.string().regex(/^\d{6}$/, "验证码必须是 6
 const transporter = nodemailer.createTransport({
   host: env.SMTP_HOST,
   port: env.SMTP_PORT,
-  secure: true,
+  secure: env.SMTP_SECURE,
   auth: {
     user: env.SMTP_USER,
     pass: env.SMTP_PASS,
