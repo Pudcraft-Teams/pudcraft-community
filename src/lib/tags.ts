@@ -5,15 +5,14 @@ type TxClient = Omit<
   "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
 >;
 
-const TAG_PATTERN = /#([\w\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\uff00-\uffef]+)/g;
+const TAG_PATTERN = /#([\w\u4e00-\u9fff\u3400-\u4dbf\uff00-\uffef]+)/g;
 const MAX_TAGS_PER_POST = 5;
 
 /** Extract unique hashtags from text content. Returns at most 5 tags, preserving original casing. */
 export function extractTags(content: string): string[] {
   const seen = new Set<string>();
   const tags: string[] = [];
-  let match: RegExpExecArray | null;
-  while ((match = TAG_PATTERN.exec(content)) !== null) {
+  for (const match of content.matchAll(TAG_PATTERN)) {
     const raw = match[1]!;
     const normalized = raw.toLowerCase();
     if (!seen.has(normalized)) {
@@ -25,7 +24,7 @@ export function extractTags(content: string): string[] {
   return tags;
 }
 
-/** Upsert tags and create PostTag links within a transaction. */
+/** Create tags and link to post within a transaction, avoiding double-counting. */
 export async function linkTagsToPost(
   tx: TxClient,
   postId: string,
@@ -39,15 +38,18 @@ export async function linkTagsToPost(
       update: {},
       select: { id: true },
     });
-    await tx.postTag.upsert({
+    const existingPostTag = await tx.postTag.findUnique({
       where: { unique_post_tag: { postId, tagId: tag.id } },
-      create: { postId, tagId: tag.id },
-      update: {},
     });
-    await tx.tag.update({
-      where: { id: tag.id },
-      data: { postCount: { increment: 1 } },
-    });
+    if (!existingPostTag) {
+      await tx.postTag.create({
+        data: { postId, tagId: tag.id },
+      });
+      await tx.tag.update({
+        where: { id: tag.id },
+        data: { postCount: { increment: 1 } },
+      });
+    }
   }
 }
 

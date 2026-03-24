@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
+import { resolveCircleId } from "@/lib/circle-utils";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 
@@ -35,14 +36,10 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
     }
     const currentUserId = authResult.user.id;
 
-    const { id: circleId, userId: targetUserId } = await params;
+    const { id, userId: targetUserId } = await params;
 
-    // Verify circle exists
-    const circle = await prisma.circle.findUnique({
-      where: { id: circleId },
-      select: { id: true },
-    });
-    if (!circle) {
+    const circleId = await resolveCircleId(id);
+    if (!circleId) {
       return NextResponse.json({ error: "圈子未找到" }, { status: 404 });
     }
 
@@ -162,14 +159,10 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     }
     const currentUserId = authResult.user.id;
 
-    const { id: circleId, userId: targetUserId } = await params;
+    const { id, userId: targetUserId } = await params;
 
-    // Verify circle exists
-    const circle = await prisma.circle.findUnique({
-      where: { id: circleId },
-      select: { id: true },
-    });
-    if (!circle) {
+    const circleId = await resolveCircleId(id);
+    if (!circleId) {
       return NextResponse.json({ error: "圈子未找到" }, { status: 404 });
     }
 

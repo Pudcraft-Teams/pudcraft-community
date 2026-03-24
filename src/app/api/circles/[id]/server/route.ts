@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { resolveCircleId } from "@/lib/circle-utils";
 import { prisma } from "@/lib/db";
@@ -39,12 +40,16 @@ export async function PUT(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "无权限" }, { status: 403 });
     }
 
-    const body = (await request.json().catch(() => null)) as { serverId?: string } | null;
-    const serverId = body?.serverId;
-
-    if (!serverId || typeof serverId !== "string") {
-      return NextResponse.json({ error: "请选择服务器" }, { status: 400 });
+    const bindServerSchema = z.object({ serverId: z.string().cuid() });
+    const body = await request.json().catch(() => null);
+    const parsed = bindServerSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "请选择服务器", details: parsed.error.flatten() },
+        { status: 400 },
+      );
     }
+    const { serverId } = parsed.data;
 
     // Check that the server exists and belongs to this user
     const server = await prisma.server.findUnique({

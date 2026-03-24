@@ -1,18 +1,7 @@
 import { db } from "@/lib/db";
+import type { NotificationType } from "@/lib/types";
 
-export type NotificationType =
-  | "comment_reply"
-  | "server_online"
-  | "server_approved"
-  | "server_rejected"
-  | "application_approved"
-  | "application_rejected"
-  | "member_removed"
-  | "whitelist_sync_failed"
-  | "report_resolved"
-  | "report_dismissed"
-  | "content_warning"
-  | "content_takedown";
+export type { NotificationType };
 
 export interface CreateNotificationParams {
   userId: string;

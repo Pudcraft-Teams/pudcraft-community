@@ -2,18 +2,19 @@ import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 
 const MENTION_PATTERN = /@\[([^\]]+)\]\(uid:(\d+)\)/g;
+const MAX_MENTIONS = 20;
 
 /**
  * Extract mentioned user UIDs from post content.
- * Parses the @[Name](uid:123) format.
+ * Parses the @[Name](uid:123) format. Returns at most 20 UIDs.
  */
 export function extractMentionedUids(content: string): number[] {
   const uids = new Set<number>();
-  let match: RegExpExecArray | null;
 
-  while ((match = MENTION_PATTERN.exec(content)) !== null) {
+  for (const match of content.matchAll(MENTION_PATTERN)) {
     const uid = Number(match[2]);
     if (uid > 0) uids.add(uid);
+    if (uids.size >= MAX_MENTIONS) break;
   }
 
   return [...uids];

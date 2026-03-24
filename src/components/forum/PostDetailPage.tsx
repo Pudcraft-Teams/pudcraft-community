@@ -393,7 +393,7 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
       <article className="m3-surface p-4 sm:p-6">
         {/* ── Author info ── */}
         <div className="mb-4 flex items-center gap-3">
-          <Link href={`/user/${post.author.uid}`}>
+          <Link href={`/u/${post.author.uid}`}>
             <span className="relative inline-flex h-10 w-10 shrink-0 overflow-hidden rounded-full">
               <Image
                 src={normalizeImageSrc(post.author.image) || "/default-avatar.png"}
@@ -407,7 +407,7 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
 
           <div className="min-w-0">
             <Link
-              href={`/user/${post.author.uid}`}
+              href={`/u/${post.author.uid}`}
               className="text-sm font-medium text-warm-800 transition-colors hover:text-accent"
             >
               {post.author.name ?? `用户${post.author.uid}`}
@@ -460,11 +460,14 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
                 rel="noopener noreferrer"
                 className="overflow-hidden rounded-lg"
               >
-                <img
+                <Image
                   src={normalizeImageSrc(url) || url}
                   alt={`图片 ${i + 1}`}
+                  width={800}
+                  height={600}
                   className="w-full rounded-lg object-contain"
                   loading="lazy"
+                  unoptimized
                 />
               </a>
             ))}

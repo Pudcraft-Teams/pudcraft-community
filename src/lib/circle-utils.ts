@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 
-const CUID_PATTERN = /^c[a-z0-9]{24}$/;
+const CUID_PATTERN = /^c[a-z0-9]{20,30}$/;
 
 export async function resolveCircleId(idOrSlug: string): Promise<string | null> {
   const isCuid = CUID_PATTERN.test(idOrSlug);
