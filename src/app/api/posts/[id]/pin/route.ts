@@ -43,9 +43,11 @@ export async function POST(_request: Request, { params }: RouteContext) {
     }
 
     // Permission check
-    let hasPermission = isAdmin;
+    // 圈子帖子：仅圈子 OWNER/ADMIN 可置顶（网站 admin 不能越权）
+    // 广场帖子：仅网站 admin 可置顶
+    let hasPermission = false;
 
-    if (post.circleId && !isAdmin) {
+    if (post.circleId) {
       const membership = await prisma.circleMembership.findUnique({
         where: {
           unique_circle_membership: {
@@ -56,6 +58,8 @@ export async function POST(_request: Request, { params }: RouteContext) {
         select: { role: true },
       });
       hasPermission = membership?.role === "OWNER" || membership?.role === "ADMIN";
+    } else {
+      hasPermission = isAdmin;
     }
 
     if (!hasPermission) {
