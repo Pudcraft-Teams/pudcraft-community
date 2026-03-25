@@ -3,10 +3,17 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-interface EmptyStateAction {
+interface EmptyStateLinkAction {
   label: string;
   href: string;
 }
+
+interface EmptyStateButtonAction {
+  label: string;
+  onClick: () => void;
+}
+
+type EmptyStateAction = EmptyStateLinkAction | EmptyStateButtonAction;
 
 interface EmptyStateProps {
   icon?: ReactNode;
@@ -25,10 +32,19 @@ export function EmptyState({ icon, title, description, action }: EmptyStateProps
       {icon && <div className="mb-3 flex justify-center text-warm-500">{icon}</div>}
       <h3 className="text-base font-semibold text-warm-800">{title}</h3>
       {description && <p className="mt-2 text-sm text-warm-600">{description}</p>}
-      {action && (
+      {action && "href" in action && (
         <Link href={action.href} className="m3-btn m3-btn-primary mt-4 inline-flex">
           {action.label}
         </Link>
+      )}
+      {action && "onClick" in action && (
+        <button
+          type="button"
+          onClick={action.onClick}
+          className="m3-btn m3-btn-primary mt-4 inline-flex"
+        >
+          {action.label}
+        </button>
       )}
     </div>
   );

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { ReportDialog } from "@/components/ReportDialog";
 import { PostContentRenderer } from "@/components/forum/PostContentRenderer";
 import { normalizeImageSrc } from "@/lib/image-url";
 import { ForumCommentSection } from "@/components/forum/ForumCommentSection";
@@ -65,6 +66,9 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
   // Moderation state
   const [canModerate, setCanModerate] = useState(false);
   const [canComment, setCanComment] = useState(false);
+
+  // Report state
+  const [reportOpen, setReportOpen] = useState(false);
 
   const userId = session?.user?.id;
   const isAdmin = session?.user?.role === "admin";
@@ -597,6 +601,31 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
             <span>分享</span>
           </button>
 
+          {/* Report (non-author only) */}
+          {!isAuthor && sessionStatus === "authenticated" && (
+            <button
+              type="button"
+              onClick={() => setReportOpen(true)}
+              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm text-warm-500 transition-colors hover:bg-warm-100 hover:text-warm-700 active:bg-warm-100"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.5}
+                className="h-[18px] w-[18px]"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3 3v14m0-14l9 2v8l-9 2M12 5l5-1v8l-5 1"
+                />
+              </svg>
+              <span>举报</span>
+            </button>
+          )}
+
           {/* ── Admin / Moderator actions ── */}
           {canModerate && (
             <div className="ml-auto flex items-center gap-1 sm:gap-2">
@@ -654,6 +683,14 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
         canComment={canComment}
         canModerate={canModerate}
         currentUserId={userId}
+      />
+
+      {/* ── Report dialog ── */}
+      <ReportDialog
+        targetType="post"
+        targetId={postId}
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
       />
     </div>
   );

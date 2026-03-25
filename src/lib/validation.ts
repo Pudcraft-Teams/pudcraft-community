@@ -612,7 +612,7 @@ export const reportCategoryEnum = z.enum([
 ]);
 
 export const createReportSchema = z.object({
-  targetType: z.enum(["server", "comment", "user"]),
+  targetType: z.enum(["server", "comment", "user", "post", "forum_comment"]),
   targetId: z.string().min(1),
   category: reportCategoryEnum,
   description: z.string().max(500).optional(),
@@ -622,7 +622,7 @@ export const adminQueryReportsSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
   status: z.enum(["all", "pending", "resolved", "dismissed"]).default("pending"),
-  targetType: z.enum(["all", "server", "comment", "user"]).default("all"),
+  targetType: z.enum(["all", "server", "comment", "user", "post", "forum_comment"]).default("all"),
 });
 
 export const adminReportActionSchema = z.object({

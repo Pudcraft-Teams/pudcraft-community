@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useCompose, useComposeDefaults } from "@/components/forum/ComposeDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { PageLoading } from "@/components/PageLoading";
@@ -30,6 +31,8 @@ export function CirclePage({ slug }: CirclePageProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { status: sessionStatus } = useSession();
+  const openCompose = useCompose();
+  const { setDefaults, clearDefaults } = useComposeDefaults();
 
   // ── State ──
   const [circle, setCircle] = useState<CircleDetail | null>(null);
@@ -43,6 +46,16 @@ export function CirclePage({ slug }: CirclePageProps) {
 
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [joinPending, setJoinPending] = useState(false);
+
+  // ── Set compose defaults to this circle ──
+  useEffect(() => {
+    if (circle) {
+      setDefaults({ circleId: circle.id, circleName: circle.name, circleSlug: slug });
+    }
+    return () => {
+      clearDefaults();
+    };
+  }, [circle, slug, setDefaults, clearDefaults]);
 
   // ── Fetch circle detail ──
   const fetchCircle = useCallback(async () => {
@@ -352,7 +365,11 @@ export function CirclePage({ slug }: CirclePageProps) {
               }
               action={
                 circle.isMember
-                  ? { label: "发帖", href: `/c/${slug}/new` }
+                  ? {
+                      label: "发帖",
+                      onClick: () =>
+                        openCompose({ circleId: circle.id, circleName: circle.name, circleSlug: slug }),
+                    }
                   : undefined
               }
             />
@@ -422,8 +439,11 @@ export function CirclePage({ slug }: CirclePageProps) {
 
             {/* Action buttons */}
             {circle.isMember && (
-              <Link
-                href={`/c/${slug}/new`}
+              <button
+                type="button"
+                onClick={() =>
+                  openCompose({ circleId: circle.id, circleName: circle.name, circleSlug: slug })
+                }
                 className="m3-btn m3-btn-primary flex w-full items-center justify-center gap-2"
               >
                 <svg
@@ -435,7 +455,7 @@ export function CirclePage({ slug }: CirclePageProps) {
                   <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
                 </svg>
                 发帖
-              </Link>
+              </button>
             )}
 
             {isOwnerOrAdmin && (
@@ -462,27 +482,6 @@ export function CirclePage({ slug }: CirclePageProps) {
         </aside>
       </div>
 
-      {/* ── Mobile: floating create post button ── */}
-      {circle.isMember && (
-        <Link
-          href={`/c/${slug}/new`}
-          className="fixed bottom-6 right-6 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white shadow-lg transition-transform hover:scale-105 active:scale-95 lg:hidden"
-          aria-label="发帖"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className="h-6 w-6"
-          >
-            <path
-              fillRule="evenodd"
-              d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z"
-              clipRule="evenodd"
-            />
-          </svg>
-        </Link>
-      )}
     </div>
   );
 }
