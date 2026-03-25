@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { getPublicUrl } from "@/lib/storage";
 import type { PostItem } from "@/lib/types";
 
 function extractContentPreview(content: string, maxLength = 200): string {
@@ -76,7 +77,7 @@ export async function GET(request: Request) {
       title: b.post.title,
       contentPreview: extractContentPreview(b.post.content),
       authorId: b.post.authorId,
-      author: b.post.author,
+      author: { ...b.post.author, image: getPublicUrl(b.post.author.image) },
       circleId: b.post.circleId,
       circle: b.post.circle,
       sectionId: b.post.sectionId,
@@ -85,7 +86,7 @@ export async function GET(request: Request) {
       likeCount: b.post.likeCount,
       commentCount: b.post.commentCount,
       isPinned: b.post.isPinned,
-      images: b.post.images,
+      images: b.post.images.map((img) => getPublicUrl(img) ?? img),
       isBookmarked: true,
       createdAt: b.post.createdAt.toISOString(),
     }));

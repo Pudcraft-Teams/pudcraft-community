@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { getClientIp } from "@/lib/request-ip";
 import { moderateFields } from "@/lib/moderation";
+import { getPublicUrl } from "@/lib/storage";
 import { unlinkTagsFromPost } from "@/lib/tags";
 import { updateCircleSchema } from "@/lib/validation";
 import type { CircleDetail, CircleRoleType } from "@/lib/types";
@@ -76,13 +77,17 @@ export async function GET(
       name: circle.name,
       slug: circle.slug,
       description: circle.description,
-      icon: circle.icon,
-      banner: circle.banner,
+      icon: getPublicUrl(circle.icon),
+      banner: getPublicUrl(circle.banner),
       memberCount: circle.memberCount,
       postCount: circle.postCount,
       creatorId: circle.creatorId,
-      creator: circle.creator,
-      server: circle.server,
+      creator: circle.creator
+        ? { ...circle.creator, image: getPublicUrl(circle.creator.image) }
+        : null,
+      server: circle.server
+        ? { ...circle.server, iconUrl: getPublicUrl(circle.server.iconUrl) }
+        : null,
       isMember,
       memberRole,
       createdAt: circle.createdAt.toISOString(),

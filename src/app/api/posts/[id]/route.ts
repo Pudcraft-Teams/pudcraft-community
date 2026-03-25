@@ -8,6 +8,7 @@ import { logger } from "@/lib/logger";
 import { moderateContent } from "@/lib/moderation";
 import { rateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
+import { getPublicUrl } from "@/lib/storage";
 import { unlinkTagsFromPost } from "@/lib/tags";
 import { updatePostSchema } from "@/lib/validation";
 import type { PostDetail } from "@/lib/types";
@@ -119,7 +120,7 @@ export async function GET(request: Request, { params }: RouteContext) {
       title: post.title,
       content: post.content,
       authorId: post.authorId,
-      author: post.author,
+      author: { ...post.author, image: getPublicUrl(post.author.image) },
       circleId: post.circleId,
       circle: post.circle,
       sectionId: post.sectionId,
@@ -128,7 +129,7 @@ export async function GET(request: Request, { params }: RouteContext) {
       likeCount: post.likeCount,
       commentCount: post.commentCount,
       isPinned: post.isPinned,
-      images: post.images,
+      images: post.images.map((img) => getPublicUrl(img) ?? img),
       isLiked,
       isBookmarked,
       createdAt: post.createdAt.toISOString(),
