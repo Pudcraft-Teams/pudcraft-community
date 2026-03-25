@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { rateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
+import { getPublicUrl } from "@/lib/storage";
 import { searchQuerySchema } from "@/lib/validation";
 import type { PostItem } from "@/lib/types";
 
@@ -157,7 +158,7 @@ export async function GET(request: Request) {
 
       return NextResponse.json({
         type: "mention",
-        users,
+        users: users.map((u) => ({ ...u, image: getPublicUrl(u.image) })),
         posts: [],
         nextCursor: null,
       });
@@ -267,7 +268,7 @@ async function mapPostItems(
     title: post.title,
     contentPreview: extractContentPreview(post.content),
     authorId: post.authorId,
-    author: post.author,
+    author: { ...post.author, image: getPublicUrl(post.author.image) },
     circleId: post.circleId,
     circle: post.circle,
     sectionId: post.sectionId,
@@ -276,7 +277,7 @@ async function mapPostItems(
     likeCount: post.likeCount,
     commentCount: post.commentCount,
     isPinned: post.isPinned,
-    images: post.images,
+    images: post.images.map((img) => getPublicUrl(img) ?? img),
     isLiked: userId ? likedPostIdSet.has(post.id) : undefined,
     isBookmarked: userId ? bookmarkedPostIdSet.has(post.id) : undefined,
     createdAt: post.createdAt.toISOString(),

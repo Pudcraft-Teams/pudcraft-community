@@ -9,6 +9,7 @@ import { moderateContent } from "@/lib/moderation";
 import { rateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 import { notifyMentionedUsers } from "@/lib/mentions";
+import { getPublicUrl } from "@/lib/storage";
 import { linkTagsToPost } from "@/lib/tags";
 import { createPostSchema, feedQuerySchema } from "@/lib/validation";
 import type { PostItem, PostFeedResponse } from "@/lib/types";
@@ -131,7 +132,7 @@ export async function GET(request: Request) {
       title: post.title,
       contentPreview: extractContentPreview(post.content),
       authorId: post.authorId,
-      author: post.author,
+      author: { ...post.author, image: getPublicUrl(post.author.image) },
       circleId: post.circleId,
       circle: post.circle,
       sectionId: post.sectionId,
@@ -140,7 +141,7 @@ export async function GET(request: Request) {
       likeCount: post.likeCount,
       commentCount: post.commentCount,
       isPinned: post.isPinned,
-      images: post.images,
+      images: post.images.map((img) => getPublicUrl(img) ?? img),
       isLiked: userId ? likedPostIdSet.has(post.id) : undefined,
       isBookmarked: userId ? bookmarkedPostIdSet.has(post.id) : undefined,
       createdAt: post.createdAt.toISOString(),
