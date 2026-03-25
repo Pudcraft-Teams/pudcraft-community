@@ -147,7 +147,7 @@ export function PostCard({ post, onLikeChange, onBookmarkChange }: PostCardProps
           </span>
         )}
 
-        {post.isPinned && (
+        {post.isPinned && pathname?.startsWith("/c/") && (
           <span className="ml-auto flex shrink-0 items-center gap-0.5 text-xs text-accent">
             <svg
               xmlns="http://www.w3.org/2000/svg"

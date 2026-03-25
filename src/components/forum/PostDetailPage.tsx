@@ -65,6 +65,7 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
 
   // Moderation state
   const [canModerate, setCanModerate] = useState(false);
+  const [canPin, setCanPin] = useState(false);
   const [canComment, setCanComment] = useState(false);
 
   // Report state
@@ -147,8 +148,13 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
   useEffect(() => {
     if (!post) return;
 
+    // 网站 admin 可以删除任何帖子，但不能置顶圈子帖子
     if (isAdmin) {
       setCanModerate(true);
+      // 广场帖子：网站 admin 可置顶；圈子帖子：需圈子管理权限
+      if (!post.circleId) {
+        setCanPin(true);
+      }
     }
 
     // For public (square) posts, any logged-in user can comment
@@ -185,6 +191,7 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
 
         if (role === "OWNER" || role === "ADMIN") {
           setCanModerate(true);
+          setCanPin(true);
         }
       } catch {
         // Silently fail
@@ -627,22 +634,24 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
           )}
 
           {/* ── Admin / Moderator actions ── */}
-          {canModerate && (
+          {(canModerate || canPin) && (
             <div className="ml-auto flex items-center gap-1 sm:gap-2">
-              {/* Pin / Unpin */}
-              <button
-                type="button"
-                onClick={() => {
-                  void handlePin();
-                }}
-                disabled={pinPending}
-                className="m3-btn m3-btn-tonal text-xs disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isPinned ? "取消置顶" : "置顶"}
-              </button>
+              {/* Pin / Unpin (圈子帖子仅圈子管理可操作) */}
+              {canPin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handlePin();
+                  }}
+                  disabled={pinPending}
+                  className="m3-btn m3-btn-tonal text-xs disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isPinned ? "取消置顶" : "置顶"}
+                </button>
+              )}
 
               {/* Delete */}
-              {(isAuthor || canModerate) && (
+              {canModerate && (
                 <button
                   type="button"
                   onClick={() => {

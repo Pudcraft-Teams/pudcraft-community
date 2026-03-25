@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { ForumCommentItem } from "@/components/forum/ForumCommentItem";
 import { EmptyState } from "@/components/EmptyState";
@@ -42,6 +42,19 @@ export function ForumCommentSection({
 
   const [comments, setComments] = useState<ForumComment[]>(initialComments ?? []);
   const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor ?? null);
+
+  // Sync with parent when initial data arrives (async fetch)
+  useEffect(() => {
+    if (initialComments && initialComments.length > 0) {
+      setComments(initialComments);
+    }
+  }, [initialComments]);
+
+  useEffect(() => {
+    if (initialNextCursor !== undefined) {
+      setNextCursor(initialNextCursor ?? null);
+    }
+  }, [initialNextCursor]);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
