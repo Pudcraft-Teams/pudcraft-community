@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
-import { useCompose } from "@/components/forum/ComposeDialog";
 import { NotificationBell } from "@/components/NotificationBell";
 import { UserAvatar } from "@/components/UserAvatar";
 
@@ -14,7 +13,6 @@ import { UserAvatar } from "@/components/UserAvatar";
  */
 export function AuthButtons() {
   const { data: session, status, update } = useSession();
-  const openCompose = useCompose();
   const menuRef = useRef<HTMLDivElement | null>(null);
   const hasRefreshedSessionRef = useRef(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -82,13 +80,6 @@ export function AuthButtons() {
 
   return (
     <div ref={menuRef} className="relative flex items-center gap-2">
-      <button
-        type="button"
-        onClick={() => openCompose()}
-        className="m3-btn m3-btn-primary px-3 py-1.5"
-      >
-        发帖
-      </button>
       <Link href="/submit" className="m3-btn m3-btn-tonal px-3 py-1.5">
         提交服务器
       </Link>
@@ -179,7 +170,6 @@ export function AuthButtons() {
 export function MobileNavMenu() {
   const pathname = usePathname();
   const { data: session, status } = useSession();
-  const mobileCompose = useCompose();
   const [open, setOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
@@ -292,16 +282,6 @@ export function MobileNavMenu() {
                 </>
               ) : (
                 <>
-                  <button
-                    type="button"
-                    className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-accent hover:bg-accent-muted"
-                    onClick={() => {
-                      setOpen(false);
-                      mobileCompose();
-                    }}
-                  >
-                    发帖
-                  </button>
                   <Link
                     href="/submit"
                     className="block rounded-lg px-3 py-2 text-sm text-warm-800 hover:bg-warm-100"

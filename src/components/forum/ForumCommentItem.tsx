@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { ReportDialog } from "@/components/ReportDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useToast } from "@/hooks/useToast";
 import { timeAgo } from "@/lib/time";
@@ -50,6 +51,7 @@ export function ForumCommentItem({
   const confirm = useConfirm();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [optimisticLiked, setOptimisticLiked] = useState(comment.isLiked ?? false);
   const [optimisticLikeCount, setOptimisticLikeCount] = useState(comment.likeCount);
 
@@ -208,7 +210,24 @@ export function ForumCommentItem({
             {isDeleting ? "删除中..." : "删除"}
           </button>
         )}
+
+        {currentUserId && currentUserId !== comment.authorId && (
+          <button
+            type="button"
+            onClick={() => setReportOpen(true)}
+            className="text-sm text-warm-500 transition-colors hover:text-warm-700"
+          >
+            举报
+          </button>
+        )}
       </div>
+
+      <ReportDialog
+        targetType="forum_comment"
+        targetId={comment.id}
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+      />
     </div>
   );
 }

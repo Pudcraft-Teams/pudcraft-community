@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "不能举报自己的服务器" }, { status: 400 });
       }
     } else if (targetType === "comment") {
-      const comment = await prisma.comment.findUnique({
+      const comment = await prisma.serverComment.findUnique({
         where: { id: targetId },
         select: { id: true, authorId: true },
       });
@@ -67,6 +67,28 @@ export async function POST(request: NextRequest) {
       });
       if (!targetUser) {
         return NextResponse.json({ error: "举报的用户不存在" }, { status: 404 });
+      }
+    } else if (targetType === "post") {
+      const post = await prisma.post.findUnique({
+        where: { id: targetId },
+        select: { id: true, authorId: true },
+      });
+      if (!post) {
+        return NextResponse.json({ error: "举报的帖子不存在" }, { status: 404 });
+      }
+      if (post.authorId === userId) {
+        return NextResponse.json({ error: "不能举报自己的帖子" }, { status: 400 });
+      }
+    } else if (targetType === "forum_comment") {
+      const forumComment = await prisma.comment.findUnique({
+        where: { id: targetId },
+        select: { id: true, authorId: true },
+      });
+      if (!forumComment) {
+        return NextResponse.json({ error: "举报的评论不存在" }, { status: 404 });
+      }
+      if (forumComment.authorId === userId) {
+        return NextResponse.json({ error: "不能举报自己的评论" }, { status: 400 });
       }
     }
 
