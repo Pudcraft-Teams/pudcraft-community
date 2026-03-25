@@ -45,12 +45,12 @@ export async function GET(request: Request, { params }: RouteContext) {
       },
     });
 
-    if (!post) {
+    if (!post || post.status === "DELETED") {
       return NextResponse.json({ error: "帖子不存在" }, { status: 404 });
     }
 
-    // Deleted / Hidden posts: visible only to author, site admin, or circle admins
-    if (post.status === "DELETED" || post.status === "HIDDEN") {
+    // Hidden posts: visible only to author, site admin, or circle admins
+    if (post.status === "HIDDEN") {
       const isAuthor = userId === post.authorId;
 
       let isCircleAdmin = false;
