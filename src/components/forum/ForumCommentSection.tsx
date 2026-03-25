@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { ForumCommentItem } from "@/components/forum/ForumCommentItem";
 import { EmptyState } from "@/components/EmptyState";
@@ -22,11 +22,53 @@ interface CreateCommentResponse {
 }
 
 function extractError(payload: unknown): string | undefined {
-  if (typeof payload !== "object" || payload === null) {
-    return undefined;
-  }
+  if (typeof payload !== "object" || payload === null) return undefined;
   const maybeError = (payload as { error?: unknown }).error;
   return typeof maybeError === "string" ? maybeError : undefined;
+}
+
+/** Build 2-level comment tree: roots + replies grouped under root ancestor */
+function buildCommentTree(comments: ForumComment[]) {
+  const map = new Map<string, ForumComment>();
+  for (const c of comments) map.set(c.id, c);
+
+  const roots: ForumComment[] = [];
+  const repliesMap = new Map<string, ForumComment[]>();
+
+  function findRootId(c: ForumComment): string | null {
+    if (!c.parentCommentId) return null;
+    const visited = new Set<string>();
+    let cur = c;
+    while (cur.parentCommentId) {
+      if (visited.has(cur.id)) break;
+      visited.add(cur.id);
+      const parent = map.get(cur.parentCommentId);
+      if (!parent) return cur.parentCommentId;
+      if (!parent.parentCommentId) return parent.id;
+      cur = parent;
+    }
+    return cur.id;
+  }
+
+  for (const c of comments) {
+    if (!c.parentCommentId) {
+      roots.push(c);
+    } else {
+      const rootId = findRootId(c);
+      if (rootId && map.has(rootId)) {
+        if (!repliesMap.has(rootId)) repliesMap.set(rootId, []);
+        repliesMap.get(rootId)!.push(c);
+      } else {
+        roots.push(c);
+      }
+    }
+  }
+
+  for (const replies of repliesMap.values()) {
+    replies.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }
+
+  return { roots, repliesMap };
 }
 
 export function ForumCommentSection({
@@ -43,49 +85,35 @@ export function ForumCommentSection({
   const [comments, setComments] = useState<ForumComment[]>(initialComments ?? []);
   const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor ?? null);
 
-  // Sync with parent when initial data arrives (async fetch)
   useEffect(() => {
-    if (initialComments && initialComments.length > 0) {
-      setComments(initialComments);
-    }
+    if (initialComments && initialComments.length > 0) setComments(initialComments);
   }, [initialComments]);
 
   useEffect(() => {
-    if (initialNextCursor !== undefined) {
-      setNextCursor(initialNextCursor ?? null);
-    }
+    if (initialNextCursor !== undefined) setNextCursor(initialNextCursor ?? null);
   }, [initialNextCursor]);
+
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [replyTarget, setReplyTarget] = useState<{
-    commentId: string;
-    authorName: string;
-  } | null>(null);
 
+  const { roots, repliesMap } = useMemo(() => buildCommentTree(comments), [comments]);
   const commentCount = comments.length;
 
   const loadMore = useCallback(async () => {
     if (!nextCursor || isLoadingMore) return;
-
     setIsLoadingMore(true);
-
     try {
       const response = await fetch(
         `/api/posts/${postId}/comments?cursor=${encodeURIComponent(nextCursor)}`,
       );
       const payload = (await response.json().catch(() => ({}))) as ForumCommentResponse;
-
-      if (!response.ok) {
-        throw new Error(extractError(payload) ?? "评论加载失败");
-      }
-
+      if (!response.ok) throw new Error(extractError(payload) ?? "评论加载失败");
       const nextComments = Array.isArray(payload.comments) ? payload.comments : [];
       setComments((prev) => [...prev, ...nextComments]);
       setNextCursor(payload.nextCursor ?? null);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "评论加载失败";
-      toast.error(message);
+      toast.error(error instanceof Error ? error.message : "评论加载失败");
     } finally {
       setIsLoadingMore(false);
     }
@@ -93,7 +121,7 @@ export function ForumCommentSection({
 
   const handleSubmitComment = async () => {
     const trimmed = content.trim();
-    if (trimmed.length === 0) {
+    if (!trimmed) {
       toast.error("评论内容不能为空");
       return;
     }
@@ -103,28 +131,19 @@ export function ForumCommentSection({
     }
 
     setIsSubmitting(true);
-
     try {
-      const body: Record<string, string> = { content: trimmed };
-      if (replyTarget) {
-        body.parentCommentId = replyTarget.commentId;
-      }
-
       const response = await fetch(`/api/posts/${postId}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ content: trimmed }),
       });
       const payload = (await response.json().catch(() => ({}))) as CreateCommentResponse;
-
       if (!response.ok || !payload.data) {
         toast.error(payload.error ?? "发表评论失败，请稍后重试");
         return;
       }
-
       setComments((prev) => [payload.data as ForumComment, ...prev]);
       setContent("");
-      setReplyTarget(null);
       toast.success("评论发表成功");
     } catch {
       toast.error("网络异常，发表评论失败");
@@ -133,13 +152,29 @@ export function ForumCommentSection({
     }
   };
 
-  const handleReply = (commentId: string, authorName: string) => {
-    setReplyTarget({ commentId, authorName });
-  };
-
-  const handleCancelReply = () => {
-    setReplyTarget(null);
-  };
+  const handleSubmitReply = useCallback(
+    async (parentCommentId: string, replyContent: string): Promise<boolean> => {
+      try {
+        const response = await fetch(`/api/posts/${postId}/comments`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: replyContent, parentCommentId }),
+        });
+        const payload = (await response.json().catch(() => ({}))) as CreateCommentResponse;
+        if (!response.ok || !payload.data) {
+          toast.error(payload.error ?? "回复失败，请稍后重试");
+          return false;
+        }
+        setComments((prev) => [...prev, payload.data as ForumComment]);
+        toast.success("回复成功");
+        return true;
+      } catch {
+        toast.error("网络异常，回复失败");
+        return false;
+      }
+    },
+    [postId, toast],
+  );
 
   const handleDeleted = (commentId: string) => {
     setComments((prev) => prev.filter((c) => c.id !== commentId));
@@ -147,9 +182,7 @@ export function ForumCommentSection({
 
   const handleLikeChange = (commentId: string, liked: boolean, likeCount: number) => {
     setComments((prev) =>
-      prev.map((c) =>
-        c.id === commentId ? { ...c, isLiked: liked, likeCount } : c,
-      ),
+      prev.map((c) => (c.id === commentId ? { ...c, isLiked: liked, likeCount } : c)),
     );
   };
 
@@ -162,35 +195,19 @@ export function ForumCommentSection({
 
       {canComment && status === "authenticated" ? (
         <div className="m3-surface p-4">
-          {replyTarget && (
-            <div className="mb-2 flex items-center gap-2 text-sm text-warm-500">
-              <span>
-                回复 <span className="font-medium text-warm-700">@{replyTarget.authorName}</span>
-              </span>
-              <button
-                type="button"
-                onClick={handleCancelReply}
-                className="rounded px-1.5 py-0.5 text-xs text-warm-400 transition-colors hover:bg-warm-100 hover:text-warm-600"
-              >
-                取消
-              </button>
-            </div>
-          )}
           <textarea
             value={content}
-            onChange={(event) => setContent(event.target.value)}
-            rows={4}
+            onChange={(e) => setContent(e.target.value)}
+            rows={3}
             maxLength={2000}
-            placeholder={replyTarget ? `回复 @${replyTarget.authorName}...` : "写下你的评论..."}
+            placeholder="写下你的评论..."
             className="m3-input w-full"
           />
           <div className="mt-2 flex items-center justify-between">
             <span className="text-xs text-warm-500">{content.length}/2000</span>
             <button
               type="button"
-              onClick={() => {
-                void handleSubmitComment();
-              }}
+              onClick={() => void handleSubmitComment()}
               disabled={isSubmitting}
               className="m3-btn m3-btn-primary disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -199,36 +216,33 @@ export function ForumCommentSection({
           </div>
         </div>
       ) : status !== "authenticated" ? (
-        <div className="m3-surface-soft px-4 py-3 text-sm text-warm-600">
-          登录后参与评论
-        </div>
+        <div className="m3-surface-soft px-4 py-3 text-sm text-warm-600">登录后参与评论</div>
       ) : null}
 
       <div className="mt-6">
-        {comments.length === 0 ? (
+        {roots.length === 0 ? (
           <EmptyState title="暂无评论" description="来发表第一条评论吧" />
         ) : (
           <>
-            {comments.map((comment) => (
+            {roots.map((comment) => (
               <ForumCommentItem
                 key={comment.id}
                 comment={comment}
                 postId={postId}
                 canModerate={canModerate}
+                canComment={canComment}
                 currentUserId={currentUserId}
-                onReply={handleReply}
+                replies={repliesMap.get(comment.id)}
+                onSubmitReply={handleSubmitReply}
                 onDeleted={handleDeleted}
                 onLikeChange={handleLikeChange}
               />
             ))}
-
             {nextCursor && (
               <div className="mt-4 flex justify-center">
                 <button
                   type="button"
-                  onClick={() => {
-                    void loadMore();
-                  }}
+                  onClick={() => void loadMore()}
                   disabled={isLoadingMore}
                   className="m3-btn m3-btn-tonal disabled:cursor-not-allowed disabled:opacity-60"
                 >
