@@ -6,6 +6,8 @@ import { mergeInboxItems, type MobileInboxItem } from "@/lib/mobile/inboxFacade"
 import { prisma } from "@/lib/db";
 import { queryNotificationsSchema } from "@/lib/validation";
 
+const MAX_MERGED_FETCH_WINDOW = 500;
+
 function getForumInboxText(type: "POST_COMMENT" | "COMMENT_REPLY" | "MENTION", sourceUserName: string, postTitle: string) {
   if (type === "POST_COMMENT") {
     return {
@@ -59,6 +61,9 @@ export async function GET(request: Request) {
 
   const { page, limit, unreadOnly } = parsedQuery.data;
   const fetchLimit = page * limit;
+  if (fetchLimit > MAX_MERGED_FETCH_WINDOW) {
+    return NextResponse.json({ error: "分页过深" }, { status: 400 });
+  }
   const serverWhere = {
     userId,
     ...(unreadOnly ? { readAt: null } : {}),
