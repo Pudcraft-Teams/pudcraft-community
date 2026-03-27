@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { mergeInboxItems, type MobileInboxItem } from "@/lib/mobile/inboxFacade";
 import { prisma } from "@/lib/db";
 import { queryNotificationsSchema } from "@/lib/validation";
@@ -40,11 +40,11 @@ function getForumInboxDestination(post: { id: string; circle: { slug: string } |
 }
 
 export async function GET(request: Request) {
-  const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) {
-    return NextResponse.json({ error: "请先登录" }, { status: 401 });
+  const authResult = await requireActiveUser();
+  if (isActiveUserError(authResult)) {
+    return authResult.response;
   }
+  const userId = authResult.user.id;
 
   const { searchParams } = new URL(request.url);
   const parsedQuery = queryNotificationsSchema.safeParse({
@@ -58,6 +58,7 @@ export async function GET(request: Request) {
   }
 
   const { page, limit, unreadOnly } = parsedQuery.data;
+  const fetchLimit = page * limit;
   const serverWhere = {
     userId,
     ...(unreadOnly ? { readAt: null } : {}),
@@ -86,6 +87,7 @@ export async function GET(request: Request) {
       prisma.serverNotification.findMany({
         where: serverWhere,
         orderBy: { createdAt: "desc" },
+        take: fetchLimit,
         select: {
           id: true,
           title: true,
@@ -98,6 +100,7 @@ export async function GET(request: Request) {
       prisma.notification.findMany({
         where: forumWhere,
         orderBy: { createdAt: "desc" },
+        take: fetchLimit,
         select: {
           id: true,
           type: true,
@@ -150,7 +153,7 @@ export async function GET(request: Request) {
     }),
   );
 
-  const notifications = merged.slice((page - 1) * limit, (page - 1) * limit + limit);
+  const notifications = merged.slice((page - 1) * limit, page * limit);
 
   return NextResponse.json({
     notifications,

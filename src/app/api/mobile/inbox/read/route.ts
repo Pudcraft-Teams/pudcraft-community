@@ -1,16 +1,16 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { markNotificationsReadSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
-  const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) {
-    return NextResponse.json({ error: "请先登录" }, { status: 401 });
+  const authResult = await requireActiveUser();
+  if (isActiveUserError(authResult)) {
+    return authResult.response;
   }
+  const userId = authResult.user.id;
 
   const body = await request.json().catch(() => null);
   const parsedBody = markNotificationsReadSchema.safeParse(body);

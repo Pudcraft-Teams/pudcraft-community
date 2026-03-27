@@ -1,13 +1,15 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 
 export async function GET() {
-  const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) {
-    return NextResponse.json({ error: "请先登录" }, { status: 401 });
+  const authResult = await requireActiveUser();
+  if (isActiveUserError(authResult)) {
+    return authResult.response;
   }
+  const userId = authResult.user.id;
 
   const [serverUnread, forumUnread] = await Promise.all([
     prisma.serverNotification.count({ where: { userId, readAt: null } }),
