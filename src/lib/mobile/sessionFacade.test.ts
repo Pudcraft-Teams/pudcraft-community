@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   mergeSetCookieHeaders,
   resolveAuthJsCredentialsCallback,
+  toMobileLoginError,
   toMobileSessionUser,
   toRequestCookieHeader,
 } from "./sessionFacade";
@@ -78,8 +79,23 @@ test("resolveAuthJsCredentialsCallback reads invalid credentials from the redire
   );
 
   assert.deepEqual(result, {
-    kind: "invalid_credentials",
+    kind: "auth_error",
+    reason: "invalid_credentials",
     url: "https://example.com/login?error=CredentialsSignin&code=credentials",
+  });
+});
+
+test("resolveAuthJsCredentialsCallback preserves the banned-user branch from Auth.js", () => {
+  const result = resolveAuthJsCredentialsCallback(
+    200,
+    { url: "/login?error=CredentialsSignin&code=banned" },
+    "https://example.com",
+  );
+
+  assert.deepEqual(result, {
+    kind: "auth_error",
+    reason: "banned",
+    url: "https://example.com/login?error=CredentialsSignin&code=banned",
   });
 });
 
@@ -89,5 +105,23 @@ test("resolveAuthJsCredentialsCallback accepts a successful redirect payload wit
   assert.deepEqual(result, {
     kind: "success",
     url: "https://example.com/",
+  });
+});
+
+test("toMobileLoginError returns structured banned and invalid credential responses", () => {
+  assert.deepEqual(toMobileLoginError("invalid_credentials"), {
+    status: 401,
+    body: {
+      error: "邮箱或密码错误",
+      code: "credentials",
+    },
+  });
+
+  assert.deepEqual(toMobileLoginError("banned"), {
+    status: 403,
+    body: {
+      error: "账号已被封禁",
+      code: "banned",
+    },
   });
 });

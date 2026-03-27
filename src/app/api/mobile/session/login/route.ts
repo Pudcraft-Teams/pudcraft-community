@@ -5,6 +5,7 @@ import {
   mergeSetCookieHeaders,
   readSetCookieHeaders,
   resolveAuthJsCredentialsCallback,
+  toMobileLoginError,
   toRequestCookieHeader,
 } from "@/lib/mobile/sessionFacade";
 
@@ -45,8 +46,9 @@ export async function POST(request: Request) {
   const authPayload = (await authResponse.json().catch(() => null)) as { url?: string | null } | null;
   const authResult = resolveAuthJsCredentialsCallback(authResponse.status, authPayload, origin);
 
-  if (authResult.kind === "invalid_credentials") {
-    const response = NextResponse.json({ error: "邮箱或密码错误" }, { status: 401 });
+  if (authResult.kind === "auth_error") {
+    const loginError = toMobileLoginError(authResult.reason);
+    const response = NextResponse.json(loginError.body, { status: loginError.status });
     appendSetCookieHeaders(response.headers, responseCookies);
     return response;
   }
@@ -62,7 +64,8 @@ export async function POST(request: Request) {
   }
 
   if (sessionResponse.status === 401) {
-    const response = NextResponse.json({ error: "邮箱或密码错误" }, { status: 401 });
+    const loginError = toMobileLoginError("invalid_credentials");
+    const response = NextResponse.json(loginError.body, { status: loginError.status });
     appendSetCookieHeaders(response.headers, responseCookies);
     return response;
   }

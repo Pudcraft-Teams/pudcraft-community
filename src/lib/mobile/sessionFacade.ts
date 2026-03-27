@@ -25,6 +25,8 @@ interface CookieReadableHeaders {
   getSetCookie?: () => string[];
 }
 
+type MobileLoginFailureReason = "invalid_credentials" | "banned";
+
 export function toMobileSessionUser(user: MobileSessionUserSource): MobileSessionUser {
   return {
     id: user.id,
@@ -91,16 +93,24 @@ export function resolveAuthJsCredentialsCallback(
   _status: number,
   payload: AuthJsRedirectPayload | null,
   baseUrl: string,
-): { kind: "success" | "invalid_credentials" | "error"; url: string | null } {
+):
+  | { kind: "success"; url: string }
+  | { kind: "auth_error"; reason: MobileLoginFailureReason; url: string }
+  | { kind: "error"; url: string | null } {
   if (typeof payload?.url !== "string" || payload.url.length === 0) {
     return { kind: "error", url: null };
   }
 
-  const url = new URL(payload.url, baseUrl).toString();
-  const error = new URL(url).searchParams.get("error");
+  const parsedUrl = new URL(payload.url, baseUrl);
+  const url = parsedUrl.toString();
+  const error = parsedUrl.searchParams.get("error");
 
   if (error === "CredentialsSignin") {
-    return { kind: "invalid_credentials", url };
+    return {
+      kind: "auth_error",
+      reason: parsedUrl.searchParams.get("code") === "banned" ? "banned" : "invalid_credentials",
+      url,
+    };
   }
 
   if (error) {
@@ -108,6 +118,29 @@ export function resolveAuthJsCredentialsCallback(
   }
 
   return { kind: "success", url };
+}
+
+export function toMobileLoginError(reason: MobileLoginFailureReason): {
+  status: number;
+  body: { error: string; code: "credentials" | "banned" };
+} {
+  if (reason === "banned") {
+    return {
+      status: 403,
+      body: {
+        error: "账号已被封禁",
+        code: "banned",
+      },
+    };
+  }
+
+  return {
+    status: 401,
+    body: {
+      error: "邮箱或密码错误",
+      code: "credentials",
+    },
+  };
 }
 
 export function appendSetCookieHeaders(headers: Headers, setCookieHeaders: readonly string[]) {
