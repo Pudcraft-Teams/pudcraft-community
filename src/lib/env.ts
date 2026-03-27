@@ -31,7 +31,15 @@ const envSchema = z.object({
   SMTP_FROM: z.string().min(1),
 });
 
-export const env = envSchema.parse(process.env);
+let _smtpEnv: z.infer<typeof envSchema> | null = null;
+
+/** SMTP 配置，首次访问时才校验（避免不需要 SMTP 的模块因缺少环境变量而崩溃） */
+export function getSmtpEnv(): z.infer<typeof envSchema> {
+  if (!_smtpEnv) {
+    _smtpEnv = envSchema.parse(process.env);
+  }
+  return _smtpEnv;
+}
 
 // ─── 内容审查配置（阿里云内容安全 Green 2.0） ─────────
 const contentModerationEnvSchema = z.object({

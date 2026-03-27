@@ -1,20 +1,28 @@
 import nodemailer from "nodemailer";
 import { z } from "zod";
-import { env } from "@/lib/env";
+import { getSmtpEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
 
 const verificationEmailSchema = z.string().trim().email();
 const verificationCodeSchema = z.string().regex(/^\d{6}$/, "验证码必须是 6 位数字");
 
-const transporter = nodemailer.createTransport({
-  host: env.SMTP_HOST,
-  port: env.SMTP_PORT,
-  secure: env.SMTP_SECURE,
-  auth: {
-    user: env.SMTP_USER,
-    pass: env.SMTP_PASS,
-  },
-});
+let _transporter: nodemailer.Transporter | null = null;
+
+function getTransporter(): nodemailer.Transporter {
+  if (!_transporter) {
+    const env = getSmtpEnv();
+    _transporter = nodemailer.createTransport({
+      host: env.SMTP_HOST,
+      port: env.SMTP_PORT,
+      secure: env.SMTP_SECURE,
+      auth: {
+        user: env.SMTP_USER,
+        pass: env.SMTP_PASS,
+      },
+    });
+  }
+  return _transporter;
+}
 
 /**
  * 发送邮箱验证码邮件。
@@ -26,8 +34,8 @@ export async function sendVerificationCode(email: string, code: string): Promise
   const validatedEmail = verificationEmailSchema.parse(email);
   const validatedCode = verificationCodeSchema.parse(code);
 
-  await transporter.sendMail({
-    from: env.SMTP_FROM,
+  await getTransporter().sendMail({
+    from: getSmtpEnv().SMTP_FROM,
     to: validatedEmail,
     subject: "PudCraft 邮箱验证码",
     text: `你的验证码是 ${validatedCode}，10 分钟内有效。`,
@@ -63,8 +71,8 @@ export async function sendResetPasswordCode(email: string, code: string): Promis
   const validatedEmail = verificationEmailSchema.parse(email);
   const validatedCode = verificationCodeSchema.parse(code);
 
-  await transporter.sendMail({
-    from: env.SMTP_FROM,
+  await getTransporter().sendMail({
+    from: getSmtpEnv().SMTP_FROM,
     to: validatedEmail,
     subject: "PudCraft 密码重置验证码",
     text: `你正在重置 PudCraft 账号密码，验证码为 ${validatedCode}，10 分钟内有效。如果这不是你的操作，请忽略此邮件。`,

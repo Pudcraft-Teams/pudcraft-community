@@ -8,7 +8,7 @@ Minecraft 服务器社区平台，包含两大模块：
 ## 技术栈
 
 - **框架**: Next.js 15 (App Router) + React 19 + TypeScript 5 (strict mode)
-- **样式**: Tailwind CSS 3 + Material 3 浅色主题（品牌色 `#e2f4f7`，强调色 teal 系）
+- **样式**: Tailwind CSS 3 + 暖陶社区风（Warm Clay Community UI）
 - **数据库**: Prisma ORM + PostgreSQL，Schema 在 `prisma/schema.prisma`
 - **认证**: NextAuth v5 (beta) + Credentials Provider + JWT session
 - **队列**: BullMQ + Redis (ioredis)
@@ -66,6 +66,7 @@ Commit message 格式: `<type>: <description>`
 | `src/app/u/[uid]/` | 用户主页（帖子、圈子） | - |
 | `src/app/new/` | 发帖页（广场或选择圈子） | - |
 | `src/app/circles/create/` | 创建圈子页 | - |
+| `src/app/search/` | 全局搜索页 | - |
 | `src/components/` | 可复用 UI 组件 | API 调用、数据库访问 |
 | `src/components/console/` | 控制台专用组件（设置、申请管理、成员列表等） | 通用 UI 组件 |
 | `src/components/forum/` | 论坛专用组件（PostCard、CircleCard、评论、设置等） | 通用 UI 组件 |
@@ -118,6 +119,7 @@ Commit message 格式: `<type>: <description>`
 - **角色**: user(默认) | admin；Owner 通过 MOTD Token 认领；圈子内角色 OWNER/ADMIN/MEMBER
 - **私有服务器**: 地址和端口对非成员隐藏；API Key 仅展示一次
 - **防滥用**: 邮箱验证码 60 秒冷却 + IP 日限 10 封；验证码错 5 次锁 15 分钟
+- **举报限频**: 根据过去 30 天被驳回举报次数，日限 10/3/1 次
 - **外链**: 用户链接必须 `rel="noopener noreferrer" target="_blank"`
 - **禁止** `dangerouslySetInnerHTML` 渲染用户输入（JSON-LD 等可控内容除外）
 
@@ -143,7 +145,7 @@ Commit message 格式: `<type>: <description>`
 
 ### 主要模型 — 服务器系统
 - **User**: 用户（含 UID、邮箱、头像、简介、封禁状态）
-- **Server**: 服务器（含 PSID、地址、状态、可见性、加入模式）
+- **Server**: 服务器（含 PSID、地址、状态、可见性、加入模式、reviewStatus）
 - **ServerStatus**: 服务器状态历史记录
 - **ServerComment**: 服务器评论（2层嵌套，DB 表 `comments`）
 - **Favorite**: 服务器收藏
@@ -161,11 +163,16 @@ Commit message 格式: `<type>: <description>`
 - **CircleMembership**: 圈子成员（角色枚举 OWNER/ADMIN/MEMBER）
 - **Section**: 圈子子板块
 - **Post**: 帖子（circleId 可选，null = 大别野/广场直发；content 为 Json）
-- **Comment**: 帖子评论（无限嵌套自引用，前端平铺，DB 表 `forum_comments`）
+- **Comment**: 帖子评论（无限嵌套自引用，前端 2 级嵌套展示，DB 表 `forum_comments`）
 - **PostLike / CommentLike**: 帖子/评论点赞（各自独立表，有 FK）
 - **Bookmark**: 帖子收藏
+- **Tag**: 话题标签（name 唯一、aliases、postCount 缓存）
+- **PostTag**: 帖子-话题关联
 - **Notification**: 论坛通知（POST_COMMENT/COMMENT_REPLY，DB 表 `forum_notifications`）
 - **CircleBan**: 圈内禁言（支持到期时间）
+
+### 主要模型 — 管理系统
+- **Report**: 举报（targetType: server/comment/post/forum_comment/user，含信誉机制）
 
 ## Worker 规则
 
@@ -188,6 +195,7 @@ Commit message 格式: `<type>: <description>`
 |------|------|
 | `/` | 信息流广场（大别野），全站帖子 feed |
 | `/explore` | 圈子发现页 |
+| `/search` | 全局搜索（帖子、话题、用户） |
 | `/circles/create` | 创建圈子 |
 | `/c/:slug` | 圈子主页（feed + 子板块筛选） |
 | `/c/:slug/new` | 在圈子内发帖 |
@@ -200,13 +208,28 @@ Commit message 格式: `<type>: <description>`
 
 ## UI 规则
 
-- Material 3 浅色主题，品牌色 `#e2f4f7`，强调色 teal-600/teal-500
-- 移动端优先，断点: sm:640 md:768 lg:1024
-- 卡片: 白底 + `border-gray-200` + `rounded-xl` + 轻微阴影
-- 在线 `emerald-500` / 离线 `gray-400` / 低延迟 `teal-600` / 中延迟 `yellow-500` / 高延迟 `red-500`
+- **主题**: 暖陶社区风（Warm Clay Community UI），受 MD3 语义层级启发，但不是标准 Material 3
+- **品牌主色**: `#C2703C`（陶土橙）
+- **悬停主色**: `#A85F32`
+- **页面背景**: `#F9F8F6`（暖灰白）
+- **卡片背景**: `#FFFFFF`（净白表面）
+- **弱强调背景**: `#FBF4EF`（浅陶米）
+- **主标题**: `#1A1816`（深棕黑）
+- **正文**: `#1A1816`
+- **次要文字**: `#6F6862`
+- **边框**: `#E7E4E0`
+- **强边框**: `#D5D0CA`
+- **辅助成功色**: `#5C946E`（森林绿）
+- **字体**: Plus Jakarta Sans + PingFang SC 回退
+- **圆角**: 卡片 `rounded-2xl`，按钮 `rounded-xl`
+- **阴影**: 轻量暖灰阴影，避免厚重悬浮感
+- **移动端优先**，断点: sm:640 md:768 lg:1024
+- **状态色**: 成功/在线优先使用 `#5C946E`，警告/强调使用陶土橙系，中性色统一走 warm token
+- 组件命名中若保留 `m3-*`，视为历史 token 命名，不代表继续遵循标准 MD3 视觉规范
 - 图片上传前端裁切 1:1 + WebP 压缩
 - 使用统一 Toast / EmptyState / LoadingSpinner 组件
 - 使用 Next.js `<Image>` 替代 `<img>`
+- 发帖使用全局 FAB（浮动按钮），已登录时显示
 
 ## 部署架构
 
@@ -235,9 +258,34 @@ Commit message 格式: `<type>: <description>`
 - **管理员**: 服务器审核、用户管理、内容审查、更新日志
 - **圈子**: CRUD、成员加入/退出/角色管理、子板块 CRUD、禁言管理
 - **帖子**: CRUD、Feed（游标分页）、置顶、大别野模式
-- **论坛评论**: 发表（含通知触发）、删除、游标分页
+- **论坛评论**: 发表（含通知触发）、删除、游标分页、2级嵌套展示
 - **点赞/收藏**: PostLike、CommentLike、Bookmark toggle
+- **话题**: Tag 自动提取、搜索、管理
+- **搜索**: 全局搜索（帖子、话题、用户）
+- **举报**: 提交举报、管理员处置（server/comment/post/forum_comment/user）
 - **论坛通知**: 列表、已读标记、未读计数（与服务器通知合并显示）
+
+## 业务规则速查
+
+### 帖子状态
+- `PUBLISHED`: 正常展示
+- `HIDDEN`: 仅作者和管理员可见
+- `DELETED`: 对所有用户返回 404（数据库保留记录）
+
+### 置顶权限
+- **广场帖子**: 仅全站 admin 可置顶
+- **圈子帖子**: 仅圈子 OWNER/ADMIN 可置顶，全站 admin 不可置顶圈子内帖子
+- 置顶标记仅在圈子页面内显示
+
+### 评论展示
+- 数据库：无限嵌套自引用（parentCommentId）
+- 前端：2 级嵌套（根评论 + 回复串），超过 2 级平铺显示 "AuthorA ▸ @AuthorB"
+- 行内回复框：点击回复在评论下方展开小输入框
+
+### 举报
+- 类型：server / comment / post / forum_comment / user
+- 分类：misinformation / pornography / harassment / fraud / other
+- 信誉机制：根据过去 30 天被驳回次数，日限 10/3/1 次
 
 ## 部署踩坑记录
 
