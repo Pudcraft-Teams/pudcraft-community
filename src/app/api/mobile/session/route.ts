@@ -12,10 +12,10 @@ export async function GET() {
     user: toMobileSessionUser({
       id: session.user.id,
       uid: session.user.uid,
-      name: session.user.name,
+      name: session.user.name ?? null,
       email: session.user.email ?? "",
       image: session.user.image ?? null,
-      role: session.user.role,
+      role: session.user.role ?? "user",
     }),
   });
 }
