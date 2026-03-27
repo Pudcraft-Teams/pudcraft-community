@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   mergeSetCookieHeaders,
+  readSetCookieHeaders,
   resolveAuthJsCredentialsCallback,
   toMobileLoginError,
   toMobileSessionUser,
@@ -69,6 +70,21 @@ test("mergeSetCookieHeaders keeps the latest cookie values and builds a request 
     toRequestCookieHeader(merged),
     "authjs.csrf-token=csrf-2; authjs.callback-url=https%3A%2F%2Fexample.com%2F; authjs.session-token=session-1",
   );
+});
+
+test("readSetCookieHeaders falls back to splitting a combined header without breaking expires commas", () => {
+  const combinedHeader =
+    "authjs.csrf-token=csrf-1; Path=/; HttpOnly; Expires=Wed, 01 Jan 2025 00:00:00 GMT, authjs.session-token=session-1; Path=/; HttpOnly; SameSite=Lax";
+  const headers = {
+    get(name: string) {
+      return name === "set-cookie" ? combinedHeader : null;
+    },
+  };
+
+  assert.deepEqual(readSetCookieHeaders(headers), [
+    "authjs.csrf-token=csrf-1; Path=/; HttpOnly; Expires=Wed, 01 Jan 2025 00:00:00 GMT",
+    "authjs.session-token=session-1; Path=/; HttpOnly; SameSite=Lax",
+  ]);
 });
 
 test("resolveAuthJsCredentialsCallback reads invalid credentials from the redirect payload", () => {

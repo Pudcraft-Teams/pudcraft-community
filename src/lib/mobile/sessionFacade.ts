@@ -51,10 +51,25 @@ export function splitSetCookieHeader(header: string | null | undefined): string[
     return [];
   }
 
-  return header
-    .split(/,(?=[^;,\s]+=)/)
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0);
+  const cookies: string[] = [];
+  let start = 0;
+
+  for (let index = 0; index < header.length - 1; index += 1) {
+    if (header[index] !== "," || header[index + 1] !== " ") {
+      continue;
+    }
+
+    if (!COOKIE_RECORD_START.test(header.slice(index + 2))) {
+      continue;
+    }
+
+    cookies.push(header.slice(start, index).trim());
+    start = index + 2;
+  }
+
+  cookies.push(header.slice(start).trim());
+
+  return cookies.filter((value) => value.length > 0);
 }
 
 export function mergeSetCookieHeaders(...groups: ReadonlyArray<readonly string[]>): string[] {
@@ -162,3 +177,5 @@ function getCookiePair(setCookie: string): { name: string; value: string } | nul
     value: cookie.slice(separatorIndex + 1).trim(),
   };
 }
+
+const COOKIE_RECORD_START = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+=/
