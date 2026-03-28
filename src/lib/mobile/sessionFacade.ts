@@ -1,3 +1,7 @@
+import { NextResponse } from "next/server";
+import { getForwardedClientIpHeaders } from "@/lib/request-ip";
+import { loginSchema } from "@/lib/validation";
+
 export interface MobileSessionUser {
   id: string;
   uid: number;
@@ -23,6 +27,27 @@ interface AuthJsRedirectPayload {
 interface CookieReadableHeaders {
   get(name: string): string | null;
   getSetCookie?: () => string[];
+}
+
+interface MobileSessionAuthResult {
+  user?: {
+    id?: string | null;
+  } | null;
+}
+
+interface ActiveMobileSessionUserRecord extends MobileSessionUserSource {
+  id: string;
+  uid: number;
+  isBanned: boolean;
+}
+
+interface MobileLoginPostDependencies {
+  fetchImpl?: typeof fetch;
+}
+
+interface MobileSessionGetDependencies {
+  authImpl: () => Promise<MobileSessionAuthResult | null>;
+  loadUserById: (userId: string) => Promise<ActiveMobileSessionUserRecord | null>;
 }
 
 type MobileLoginFailureReason = "invalid_credentials" | "banned";
@@ -164,6 +189,104 @@ export function appendSetCookieHeaders(headers: Headers, setCookieHeaders: reado
   }
 }
 
+export async function handleMobileLoginPost(request: Request, deps: MobileLoginPostDependencies = {}) {
+  const fetchImpl = deps.fetchImpl ?? fetch;
+  const body = await request.json().catch(() => null);
+  const parsed = loginSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "校验失败", details: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const origin = new URL(request.url).origin;
+  const forwardedIpHeaders = getForwardedClientIpHeaders(request);
+
+  const csrfResponse = await fetchImpl(`${origin}/api/auth/csrf`, {
+    cache: "no-store",
+    ...(Object.keys(forwardedIpHeaders).length > 0 ? { headers: forwardedIpHeaders } : {}),
+  });
+  const csrfCookies = readSetCookieHeaders(csrfResponse.headers);
+  const { csrfToken } = (await csrfResponse.json()) as { csrfToken: string };
+
+  const form = new URLSearchParams({
+    email: parsed.data.email,
+    password: parsed.data.password,
+    csrfToken,
+    callbackUrl: `${origin}/`,
+    json: "true",
+  });
+
+  const authHeaders: Record<string, string> = {
+    "content-type": "application/x-www-form-urlencoded",
+    "X-Auth-Return-Redirect": "1",
+    ...forwardedIpHeaders,
+  };
+  if (csrfCookies.length > 0) {
+    authHeaders.cookie = toRequestCookieHeader(csrfCookies);
+  }
+
+  const authResponse = await fetchImpl(`${origin}${CREDENTIALS_CALLBACK}`, {
+    method: "POST",
+    headers: authHeaders,
+    body: form.toString(),
+    redirect: "manual",
+  });
+  const authCookies = readSetCookieHeaders(authResponse.headers);
+  const responseCookies = mergeSetCookieHeaders(csrfCookies, authCookies);
+  const authPayload = (await authResponse.json().catch(() => null)) as { url?: string | null } | null;
+  const authResult = resolveAuthJsCredentialsCallback(authResponse.status, authPayload, origin);
+
+  if (authResult.kind === "auth_error") {
+    const loginError = toMobileLoginError(authResult.reason);
+    const response = NextResponse.json(loginError.body, { status: loginError.status });
+    appendSetCookieHeaders(response.headers, responseCookies);
+    return response;
+  }
+
+  const sessionResponse = await fetchImpl(`${origin}/api/mobile/session`, {
+    headers: responseCookies.length > 0 ? { cookie: toRequestCookieHeader(responseCookies) } : {},
+    cache: "no-store",
+  });
+  if (authResult.kind === "error") {
+    const response = NextResponse.json({ error: "登录失败" }, { status: 500 });
+    appendSetCookieHeaders(response.headers, responseCookies);
+    return response;
+  }
+
+  if (sessionResponse.status === 401) {
+    const loginError = toMobileLoginError("invalid_credentials");
+    const response = NextResponse.json(loginError.body, { status: loginError.status });
+    appendSetCookieHeaders(response.headers, responseCookies);
+    return response;
+  }
+
+  const payload = await sessionResponse.json();
+
+  const response = NextResponse.json(payload, { status: sessionResponse.status });
+  appendSetCookieHeaders(response.headers, responseCookies);
+  return response;
+}
+
+export async function handleMobileSessionGet(deps: MobileSessionGetDependencies) {
+  const session = await deps.authImpl();
+  const userId = session?.user?.id;
+  if (!userId) {
+    return NextResponse.json({ error: "请先登录" }, { status: 401 });
+  }
+
+  const user = await deps.loadUserById(userId);
+  if (!user) {
+    return NextResponse.json({ error: "用户不存在" }, { status: 401 });
+  }
+
+  if (user.isBanned) {
+    return NextResponse.json({ error: "账号已被封禁" }, { status: 403 });
+  }
+
+  return NextResponse.json({
+    user: toMobileSessionUser(user),
+  });
+}
+
 function getCookiePair(setCookie: string): { name: string; value: string } | null {
   const cookie = setCookie.split(";", 1)[0]?.trim() ?? "";
   const separatorIndex = cookie.indexOf("=");
@@ -179,3 +302,4 @@ function getCookiePair(setCookie: string): { name: string; value: string } | nul
 }
 
 const COOKIE_RECORD_START = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+=/
+const CREDENTIALS_CALLBACK = "/api/auth/callback/credentials";

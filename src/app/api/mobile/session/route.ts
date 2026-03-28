@@ -1,21 +1,33 @@
-import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { toMobileSessionUser } from "@/lib/mobile/sessionFacade";
+import { db } from "@/lib/db";
+import { handleMobileSessionGet } from "@/lib/mobile/sessionFacade";
+import { getPublicUrl } from "@/lib/storage";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id || typeof session.user.uid !== "number") {
-    return NextResponse.json({ error: "请先登录" }, { status: 401 });
-  }
+  return handleMobileSessionGet({
+    authImpl: auth,
+    loadUserById: async (userId) => {
+      const user = await db.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          uid: true,
+          name: true,
+          email: true,
+          image: true,
+          role: true,
+          isBanned: true,
+        },
+      });
 
-  return NextResponse.json({
-    user: toMobileSessionUser({
-      id: session.user.id,
-      uid: session.user.uid,
-      name: session.user.name ?? null,
-      email: session.user.email ?? "",
-      image: session.user.image ?? null,
-      role: session.user.role ?? "user",
-    }),
+      if (!user) {
+        return null;
+      }
+
+      return {
+        ...user,
+        image: getPublicUrl(user.image),
+      };
+    },
   });
 }

@@ -56,3 +56,21 @@ export function getClientIp(source: HeadersSource): string {
 
   return "unknown";
 }
+
+export function getForwardedClientIpHeaders(source: HeadersSource): Record<string, string> {
+  const headers = normalizeHeaders(source);
+  if (!headers) {
+    return {};
+  }
+
+  const forwardedHeaders: Record<string, string> = {};
+
+  for (const headerName of getTrustedIpHeaderNames()) {
+    const value = headers.get(headerName)?.trim();
+    if (value) {
+      forwardedHeaders[headerName] = value;
+    }
+  }
+
+  return forwardedHeaders;
+}

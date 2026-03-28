@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  handleMobileLoginPost,
+  handleMobileSessionGet,
   mergeSetCookieHeaders,
   readSetCookieHeaders,
   resolveAuthJsCredentialsCallback,
@@ -8,6 +10,10 @@ import {
   toMobileSessionUser,
   toRequestCookieHeader,
 } from "./sessionFacade";
+
+function readRequestHeaders(init?: RequestInit): Headers {
+  return new Headers(init?.headers);
+}
 
 test("toMobileSessionUser strips web-only fields and keeps the native summary", () => {
   const result = toMobileSessionUser({
@@ -140,4 +146,115 @@ test("toMobileLoginError returns structured banned and invalid credential respon
       code: "banned",
     },
   });
+});
+
+test("handleMobileLoginPost forwards trusted client IP headers into the Auth.js proxy callback", async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+    calls.push({ url, init });
+
+    if (url.endsWith("/api/auth/csrf")) {
+      return new Response(JSON.stringify({ csrfToken: "csrf-1" }), {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+          "set-cookie": "authjs.csrf-token=csrf-1; Path=/; HttpOnly; SameSite=Lax",
+        },
+      });
+    }
+
+    if (url.endsWith("/api/auth/callback/credentials")) {
+      return new Response(JSON.stringify({ url: "/" }), {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+          "set-cookie": "authjs.session-token=session-1; Path=/; HttpOnly; SameSite=Lax",
+        },
+      });
+    }
+
+    if (url.endsWith("/api/mobile/session")) {
+      return Response.json({
+        user: {
+          id: "u1",
+          uid: 100000001,
+          name: "HePudding",
+          email: "test@example.com",
+          image: null,
+          role: "user",
+        },
+      });
+    }
+
+    throw new Error(`Unexpected fetch URL: ${url}`);
+  };
+
+  const response = await handleMobileLoginPost(
+    new Request("https://example.com/api/mobile/session/login", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-real-ip": "203.0.113.10",
+        "cf-connecting-ip": "203.0.113.11",
+      },
+      body: JSON.stringify({
+        email: "test@example.com",
+        password: "secret",
+      }),
+    }),
+    { fetchImpl },
+  );
+
+  assert.equal(response.status, 200);
+
+  const csrfCall = calls.find((call) => call.url.endsWith("/api/auth/csrf"));
+  assert.ok(csrfCall);
+  assert.equal(readRequestHeaders(csrfCall.init).get("x-real-ip"), "203.0.113.10");
+  assert.equal(readRequestHeaders(csrfCall.init).get("cf-connecting-ip"), "203.0.113.11");
+
+  const authCall = calls.find((call) => call.url.endsWith("/api/auth/callback/credentials"));
+  assert.ok(authCall);
+  const authHeaders = readRequestHeaders(authCall.init);
+  assert.equal(authHeaders.get("x-real-ip"), "203.0.113.10");
+  assert.equal(authHeaders.get("cf-connecting-ip"), "203.0.113.11");
+  assert.equal(authHeaders.get("x-auth-return-redirect"), "1");
+  assert.equal(authHeaders.get("content-type"), "application/x-www-form-urlencoded");
+  assert.match(authHeaders.get("cookie") ?? "", /authjs\.csrf-token=csrf-1/);
+});
+
+test("handleMobileSessionGet rejects stale JWTs for deleted users", async () => {
+  const response = await handleMobileSessionGet({
+    authImpl: async () => ({
+      user: {
+        id: "user-1",
+      },
+    }),
+    loadUserById: async () => null,
+  });
+
+  assert.equal(response.status, 401);
+  assert.deepEqual(await response.json(), { error: "用户不存在" });
+});
+
+test("handleMobileSessionGet rejects stale JWTs for banned users", async () => {
+  const response = await handleMobileSessionGet({
+    authImpl: async () => ({
+      user: {
+        id: "user-1",
+      },
+    }),
+    loadUserById: async () => ({
+      id: "user-1",
+      uid: 100000001,
+      name: "HePudding",
+      email: "test@example.com",
+      image: null,
+      role: "user",
+      isBanned: true,
+    }),
+  });
+
+  assert.equal(response.status, 403);
+  assert.deepEqual(await response.json(), { error: "账号已被封禁" });
 });
