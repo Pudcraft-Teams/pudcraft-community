@@ -30,7 +30,7 @@ interface CirclePageProps {
 export function CirclePage({ slug }: CirclePageProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { status: sessionStatus } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const openCompose = useCompose();
   const { setDefaults, clearDefaults } = useComposeDefaults();
 
@@ -195,9 +195,18 @@ export function CirclePage({ slug }: CirclePageProps) {
     );
 
     try {
-      const res = await fetch(`/api/circles/${circle.id}/members`, {
-        method: nextJoined ? "POST" : "DELETE",
-      });
+      const leaveUserId = session?.user?.id;
+      if (!nextJoined && !leaveUserId) {
+        throw new Error("missing user id for leave");
+      }
+      const res = await fetch(
+        nextJoined
+          ? `/api/circles/${circle.id}/members`
+          : `/api/circles/${circle.id}/members/${leaveUserId}`,
+        {
+          method: nextJoined ? "POST" : "DELETE",
+        },
+      );
       if (!res.ok) {
         // Revert on failure
         setCircle((prev) =>
@@ -223,7 +232,7 @@ export function CirclePage({ slug }: CirclePageProps) {
     } finally {
       setJoinPending(false);
     }
-  }, [circle, joinPending, sessionStatus, router, pathname, slug]);
+  }, [circle, joinPending, sessionStatus, router, pathname, slug, session?.user?.id]);
 
   // ── Render: loading ──
   if (isLoading) return <PageLoading />;
