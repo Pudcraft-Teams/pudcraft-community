@@ -176,7 +176,7 @@ test("toMobileLoginError returns structured banned and invalid credential respon
   });
 });
 
-test("resolveTrustedAuthBaseUrl trims NEXTAUTH_URL and never uses request-derived origins", async () => {
+test("resolveTrustedAuthBaseUrl trims NEXTAUTH_URL", async () => {
   const baseUrl = await withEnv(
     {
       NEXTAUTH_URL: "https://community.example.com///",
@@ -187,6 +187,78 @@ test("resolveTrustedAuthBaseUrl trims NEXTAUTH_URL and never uses request-derive
   );
 
   assert.equal(baseUrl, "https://community.example.com");
+});
+
+test("handleMobileLoginPost falls back to a localhost request origin when auth base env vars are missing", async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  const response = await withEnv(
+    {
+      NEXTAUTH_URL: undefined,
+      AUTH_URL: undefined,
+      VERCEL_URL: undefined,
+    },
+    () =>
+      handleMobileLoginPost(
+        new Request("http://localhost:3000/api/mobile/session/login", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-real-ip": "127.0.0.1",
+          },
+          body: JSON.stringify({
+            email: "test@example.com",
+            password: "secret",
+          }),
+        }),
+        {
+          fetchImpl: async (input, init) => {
+            const url =
+              typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+            calls.push({ url, init });
+
+            if (url.endsWith("/api/auth/csrf")) {
+              return new Response(JSON.stringify({ csrfToken: "csrf-local" }), {
+                status: 200,
+                headers: {
+                  "content-type": "application/json",
+                  "set-cookie": "authjs.csrf-token=csrf-local; Path=/; HttpOnly; SameSite=Lax",
+                },
+              });
+            }
+
+            if (url.endsWith("/api/auth/callback/credentials")) {
+              return new Response(JSON.stringify({ url: "/" }), {
+                status: 200,
+                headers: {
+                  "content-type": "application/json",
+                  "set-cookie": "authjs.session-token=session-local; Path=/; HttpOnly; SameSite=Lax",
+                },
+              });
+            }
+
+            if (url.endsWith("/api/mobile/session")) {
+              return Response.json({
+                user: {
+                  id: "u1",
+                  uid: 100000001,
+                  name: "HePudding",
+                  email: "test@example.com",
+                  image: null,
+                  role: "user",
+                },
+              });
+            }
+
+            throw new Error(`Unexpected fetch URL: ${url}`);
+          },
+        },
+      ),
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(calls[0]?.url, "http://localhost:3000/api/auth/csrf");
+  assert.equal(calls[1]?.url, "http://localhost:3000/api/auth/callback/credentials");
+  assert.equal(calls[2]?.url, "http://localhost:3000/api/mobile/session");
 });
 
 test("handleMobileLoginPost forwards trusted client IP headers into the Auth.js proxy callback", async () => {

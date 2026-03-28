@@ -193,7 +193,10 @@ export function appendSetCookieHeaders(headers: Headers, setCookieHeaders: reado
   }
 }
 
-export function resolveTrustedAuthBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
+export function resolveTrustedAuthBaseUrl(
+  env: NodeJS.ProcessEnv = process.env,
+  request?: Request,
+): string {
   const configuredUrl = normalizeTrustedBaseUrl(env.NEXTAUTH_URL ?? env.AUTH_URL);
   if (configuredUrl) {
     return configuredUrl;
@@ -202,6 +205,11 @@ export function resolveTrustedAuthBaseUrl(env: NodeJS.ProcessEnv = process.env):
   const vercelUrl = env.VERCEL_URL?.trim();
   if (vercelUrl) {
     return `https://${vercelUrl.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`;
+  }
+
+  const localRequestUrl = resolveLocalRequestOrigin(request);
+  if (localRequestUrl) {
+    return localRequestUrl;
   }
 
   throw new Error("Missing trusted auth base URL for mobile session facade");
@@ -215,7 +223,7 @@ export async function handleMobileLoginPost(request: Request, deps: MobileLoginP
     return NextResponse.json({ error: "校验失败", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const authBaseUrl = resolveTrustedAuthBaseUrl();
+  const authBaseUrl = resolveTrustedAuthBaseUrl(process.env, request);
   const forwardedIpHeaders = getForwardedClientIpHeaders(request);
 
   const csrfResponse = await fetchImpl(`${authBaseUrl}/api/auth/csrf`, {
@@ -289,7 +297,7 @@ export async function handleMobileSessionDelete(
   deps: MobileSessionDeleteDependencies = {},
 ) {
   const fetchImpl = deps.fetchImpl ?? fetch;
-  const authBaseUrl = resolveTrustedAuthBaseUrl();
+  const authBaseUrl = resolveTrustedAuthBaseUrl(process.env, request);
   const forwardedIpHeaders = getForwardedClientIpHeaders(request);
   const requestCookieHeader = request.headers.get("cookie");
 
@@ -367,6 +375,34 @@ function normalizeTrustedBaseUrl(value: string | undefined): string | null {
   }
 
   return value.trim().replace(/\/+$/, "") || null;
+}
+
+function resolveLocalRequestOrigin(request?: Request): string | null {
+  if (!request) {
+    return null;
+  }
+
+  try {
+    const url = new URL(request.url);
+    if (!isTrustedLocalhostHostname(url.hostname)) {
+      return null;
+    }
+
+    return url.origin.replace(/\/+$/, "");
+  } catch {
+    return null;
+  }
+}
+
+function isTrustedLocalhostHostname(hostname: string): boolean {
+  const normalizedHostname = hostname.trim().toLowerCase();
+  return (
+    normalizedHostname === "localhost" ||
+    normalizedHostname === "127.0.0.1" ||
+    normalizedHostname === "[::1]" ||
+    normalizedHostname === "::1" ||
+    normalizedHostname === "::ffff:127.0.0.1"
+  );
 }
 
 function mergeRequestCookieHeader(
