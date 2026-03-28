@@ -45,6 +45,10 @@ interface MobileLoginPostDependencies {
   fetchImpl?: typeof fetch;
 }
 
+interface MobileSessionDeleteDependencies {
+  fetchImpl?: typeof fetch;
+}
+
 interface MobileSessionGetDependencies {
   authImpl: () => Promise<MobileSessionAuthResult | null>;
   loadUserById: (userId: string) => Promise<ActiveMobileSessionUserRecord | null>;
@@ -189,6 +193,20 @@ export function appendSetCookieHeaders(headers: Headers, setCookieHeaders: reado
   }
 }
 
+export function resolveTrustedAuthBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
+  const configuredUrl = normalizeTrustedBaseUrl(env.NEXTAUTH_URL ?? env.AUTH_URL);
+  if (configuredUrl) {
+    return configuredUrl;
+  }
+
+  const vercelUrl = env.VERCEL_URL?.trim();
+  if (vercelUrl) {
+    return `https://${vercelUrl.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`;
+  }
+
+  throw new Error("Missing trusted auth base URL for mobile session facade");
+}
+
 export async function handleMobileLoginPost(request: Request, deps: MobileLoginPostDependencies = {}) {
   const fetchImpl = deps.fetchImpl ?? fetch;
   const body = await request.json().catch(() => null);
@@ -197,10 +215,10 @@ export async function handleMobileLoginPost(request: Request, deps: MobileLoginP
     return NextResponse.json({ error: "校验失败", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const origin = new URL(request.url).origin;
+  const authBaseUrl = resolveTrustedAuthBaseUrl();
   const forwardedIpHeaders = getForwardedClientIpHeaders(request);
 
-  const csrfResponse = await fetchImpl(`${origin}/api/auth/csrf`, {
+  const csrfResponse = await fetchImpl(`${authBaseUrl}/api/auth/csrf`, {
     cache: "no-store",
     ...(Object.keys(forwardedIpHeaders).length > 0 ? { headers: forwardedIpHeaders } : {}),
   });
@@ -211,7 +229,7 @@ export async function handleMobileLoginPost(request: Request, deps: MobileLoginP
     email: parsed.data.email,
     password: parsed.data.password,
     csrfToken,
-    callbackUrl: `${origin}/`,
+    callbackUrl: `${authBaseUrl}/`,
     json: "true",
   });
 
@@ -224,7 +242,7 @@ export async function handleMobileLoginPost(request: Request, deps: MobileLoginP
     authHeaders.cookie = toRequestCookieHeader(csrfCookies);
   }
 
-  const authResponse = await fetchImpl(`${origin}${CREDENTIALS_CALLBACK}`, {
+  const authResponse = await fetchImpl(`${authBaseUrl}${CREDENTIALS_CALLBACK}`, {
     method: "POST",
     headers: authHeaders,
     body: form.toString(),
@@ -233,7 +251,7 @@ export async function handleMobileLoginPost(request: Request, deps: MobileLoginP
   const authCookies = readSetCookieHeaders(authResponse.headers);
   const responseCookies = mergeSetCookieHeaders(csrfCookies, authCookies);
   const authPayload = (await authResponse.json().catch(() => null)) as { url?: string | null } | null;
-  const authResult = resolveAuthJsCredentialsCallback(authResponse.status, authPayload, origin);
+  const authResult = resolveAuthJsCredentialsCallback(authResponse.status, authPayload, authBaseUrl);
 
   if (authResult.kind === "auth_error") {
     const loginError = toMobileLoginError(authResult.reason);
@@ -242,7 +260,7 @@ export async function handleMobileLoginPost(request: Request, deps: MobileLoginP
     return response;
   }
 
-  const sessionResponse = await fetchImpl(`${origin}/api/mobile/session`, {
+  const sessionResponse = await fetchImpl(`${authBaseUrl}/api/mobile/session`, {
     headers: responseCookies.length > 0 ? { cookie: toRequestCookieHeader(responseCookies) } : {},
     cache: "no-store",
   });
@@ -262,6 +280,62 @@ export async function handleMobileLoginPost(request: Request, deps: MobileLoginP
   const payload = await sessionResponse.json();
 
   const response = NextResponse.json(payload, { status: sessionResponse.status });
+  appendSetCookieHeaders(response.headers, responseCookies);
+  return response;
+}
+
+export async function handleMobileSessionDelete(
+  request: Request,
+  deps: MobileSessionDeleteDependencies = {},
+) {
+  const fetchImpl = deps.fetchImpl ?? fetch;
+  const authBaseUrl = resolveTrustedAuthBaseUrl();
+  const forwardedIpHeaders = getForwardedClientIpHeaders(request);
+  const requestCookieHeader = request.headers.get("cookie");
+
+  const csrfRequestHeaders: Record<string, string> = {
+    ...forwardedIpHeaders,
+  };
+  if (requestCookieHeader) {
+    csrfRequestHeaders.cookie = requestCookieHeader;
+  }
+
+  const csrfResponse = await fetchImpl(`${authBaseUrl}/api/auth/csrf`, {
+    cache: "no-store",
+    ...(Object.keys(csrfRequestHeaders).length > 0 ? { headers: csrfRequestHeaders } : {}),
+  });
+  const csrfCookies = readSetCookieHeaders(csrfResponse.headers);
+  const { csrfToken } = (await csrfResponse.json()) as { csrfToken: string };
+
+  const signoutHeaders: Record<string, string> = {
+    "content-type": "application/x-www-form-urlencoded",
+    "X-Auth-Return-Redirect": "1",
+    ...forwardedIpHeaders,
+  };
+  const signoutCookieHeader = mergeRequestCookieHeader(requestCookieHeader, csrfCookies);
+  if (signoutCookieHeader) {
+    signoutHeaders.cookie = signoutCookieHeader;
+  }
+
+  const form = new URLSearchParams({
+    csrfToken,
+    callbackUrl: `${authBaseUrl}/`,
+    json: "true",
+  });
+
+  const signoutResponse = await fetchImpl(`${authBaseUrl}${SIGNOUT_ENDPOINT}`, {
+    method: "POST",
+    headers: signoutHeaders,
+    body: form.toString(),
+    redirect: "manual",
+  });
+  const signoutCookies = readSetCookieHeaders(signoutResponse.headers);
+  const responseCookies = mergeSetCookieHeaders(csrfCookies, signoutCookies);
+
+  const response = NextResponse.json(
+    signoutResponse.ok ? { ok: true } : { error: "登出失败" },
+    { status: signoutResponse.ok ? 200 : 500 },
+  );
   appendSetCookieHeaders(response.headers, responseCookies);
   return response;
 }
@@ -287,6 +361,47 @@ export async function handleMobileSessionGet(deps: MobileSessionGetDependencies)
   });
 }
 
+function normalizeTrustedBaseUrl(value: string | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  return value.trim().replace(/\/+$/, "") || null;
+}
+
+function mergeRequestCookieHeader(
+  requestCookieHeader: string | null | undefined,
+  setCookieHeaders: readonly string[],
+): string {
+  const cookies = new Map<string, string>();
+
+  for (const cookie of requestCookieHeader?.split(";") ?? []) {
+    const separatorIndex = cookie.indexOf("=");
+    if (separatorIndex <= 0) {
+      continue;
+    }
+
+    const name = cookie.slice(0, separatorIndex).trim();
+    const value = cookie.slice(separatorIndex + 1).trim();
+    if (!name) {
+      continue;
+    }
+
+    cookies.set(name, value);
+  }
+
+  for (const setCookie of setCookieHeaders) {
+    const pair = getCookiePair(setCookie);
+    if (!pair) {
+      continue;
+    }
+
+    cookies.set(pair.name, pair.value);
+  }
+
+  return [...cookies.entries()].map(([name, value]) => `${name}=${value}`).join("; ");
+}
+
 function getCookiePair(setCookie: string): { name: string; value: string } | null {
   const cookie = setCookie.split(";", 1)[0]?.trim() ?? "";
   const separatorIndex = cookie.indexOf("=");
@@ -303,3 +418,4 @@ function getCookiePair(setCookie: string): { name: string; value: string } | nul
 
 const COOKIE_RECORD_START = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+=/
 const CREDENTIALS_CALLBACK = "/api/auth/callback/credentials";
+const SIGNOUT_ENDPOINT = "/api/auth/signout";

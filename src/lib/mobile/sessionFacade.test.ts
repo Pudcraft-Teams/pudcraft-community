@@ -2,9 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   handleMobileLoginPost,
+  handleMobileSessionDelete,
   handleMobileSessionGet,
   mergeSetCookieHeaders,
   readSetCookieHeaders,
+  resolveTrustedAuthBaseUrl,
   resolveAuthJsCredentialsCallback,
   toMobileLoginError,
   toMobileSessionUser,
@@ -13,6 +15,32 @@ import {
 
 function readRequestHeaders(init?: RequestInit): Headers {
   return new Headers(init?.headers);
+}
+
+async function withEnv<T>(patch: Partial<NodeJS.ProcessEnv>, run: () => T | Promise<T>): Promise<T> {
+  const previousEntries = Object.entries(patch).map(([key]) => [key, process.env[key]] as const);
+
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === undefined) {
+      delete process.env[key];
+      continue;
+    }
+
+    process.env[key] = value;
+  }
+
+  try {
+    return await run();
+  } finally {
+    for (const [key, value] of previousEntries) {
+      if (value === undefined) {
+        delete process.env[key];
+        continue;
+      }
+
+      process.env[key] = value;
+    }
+  }
 }
 
 test("toMobileSessionUser strips web-only fields and keeps the native summary", () => {
@@ -148,79 +176,182 @@ test("toMobileLoginError returns structured banned and invalid credential respon
   });
 });
 
+test("resolveTrustedAuthBaseUrl trims NEXTAUTH_URL and never uses request-derived origins", async () => {
+  const baseUrl = await withEnv(
+    {
+      NEXTAUTH_URL: "https://community.example.com///",
+      AUTH_URL: undefined,
+      VERCEL_URL: undefined,
+    },
+    () => resolveTrustedAuthBaseUrl(),
+  );
+
+  assert.equal(baseUrl, "https://community.example.com");
+});
+
 test("handleMobileLoginPost forwards trusted client IP headers into the Auth.js proxy callback", async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = [];
-  const fetchImpl: typeof fetch = async (input, init) => {
-    const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
-    calls.push({ url, init });
+  const response = await withEnv(
+    {
+      NEXTAUTH_URL: "https://community.example.com",
+      AUTH_URL: undefined,
+      VERCEL_URL: undefined,
+    },
+    () =>
+      handleMobileLoginPost(
+        new Request("https://malicious.example.net/api/mobile/session/login", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-real-ip": "203.0.113.10",
+            "cf-connecting-ip": "203.0.113.11",
+          },
+          body: JSON.stringify({
+            email: "test@example.com",
+            password: "secret",
+          }),
+        }),
+        {
+          fetchImpl: async (input, init) => {
+            const url =
+              typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+            calls.push({ url, init });
 
-    if (url.endsWith("/api/auth/csrf")) {
-      return new Response(JSON.stringify({ csrfToken: "csrf-1" }), {
-        status: 200,
-        headers: {
-          "content-type": "application/json",
-          "set-cookie": "authjs.csrf-token=csrf-1; Path=/; HttpOnly; SameSite=Lax",
+            if (url.endsWith("/api/auth/csrf")) {
+              return new Response(JSON.stringify({ csrfToken: "csrf-1" }), {
+                status: 200,
+                headers: {
+                  "content-type": "application/json",
+                  "set-cookie": "authjs.csrf-token=csrf-1; Path=/; HttpOnly; SameSite=Lax",
+                },
+              });
+            }
+
+            if (url.endsWith("/api/auth/callback/credentials")) {
+              return new Response(JSON.stringify({ url: "/" }), {
+                status: 200,
+                headers: {
+                  "content-type": "application/json",
+                  "set-cookie": "authjs.session-token=session-1; Path=/; HttpOnly; SameSite=Lax",
+                },
+              });
+            }
+
+            if (url.endsWith("/api/mobile/session")) {
+              return Response.json({
+                user: {
+                  id: "u1",
+                  uid: 100000001,
+                  name: "HePudding",
+                  email: "test@example.com",
+                  image: null,
+                  role: "user",
+                },
+              });
+            }
+
+            throw new Error(`Unexpected fetch URL: ${url}`);
+          },
         },
-      });
-    }
-
-    if (url.endsWith("/api/auth/callback/credentials")) {
-      return new Response(JSON.stringify({ url: "/" }), {
-        status: 200,
-        headers: {
-          "content-type": "application/json",
-          "set-cookie": "authjs.session-token=session-1; Path=/; HttpOnly; SameSite=Lax",
-        },
-      });
-    }
-
-    if (url.endsWith("/api/mobile/session")) {
-      return Response.json({
-        user: {
-          id: "u1",
-          uid: 100000001,
-          name: "HePudding",
-          email: "test@example.com",
-          image: null,
-          role: "user",
-        },
-      });
-    }
-
-    throw new Error(`Unexpected fetch URL: ${url}`);
-  };
-
-  const response = await handleMobileLoginPost(
-    new Request("https://example.com/api/mobile/session/login", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-real-ip": "203.0.113.10",
-        "cf-connecting-ip": "203.0.113.11",
-      },
-      body: JSON.stringify({
-        email: "test@example.com",
-        password: "secret",
-      }),
-    }),
-    { fetchImpl },
+      ),
   );
 
   assert.equal(response.status, 200);
 
   const csrfCall = calls.find((call) => call.url.endsWith("/api/auth/csrf"));
   assert.ok(csrfCall);
+  assert.equal(csrfCall.url, "https://community.example.com/api/auth/csrf");
   assert.equal(readRequestHeaders(csrfCall.init).get("x-real-ip"), "203.0.113.10");
   assert.equal(readRequestHeaders(csrfCall.init).get("cf-connecting-ip"), "203.0.113.11");
 
   const authCall = calls.find((call) => call.url.endsWith("/api/auth/callback/credentials"));
   assert.ok(authCall);
+  assert.equal(authCall.url, "https://community.example.com/api/auth/callback/credentials");
   const authHeaders = readRequestHeaders(authCall.init);
   assert.equal(authHeaders.get("x-real-ip"), "203.0.113.10");
   assert.equal(authHeaders.get("cf-connecting-ip"), "203.0.113.11");
   assert.equal(authHeaders.get("x-auth-return-redirect"), "1");
   assert.equal(authHeaders.get("content-type"), "application/x-www-form-urlencoded");
   assert.match(authHeaders.get("cookie") ?? "", /authjs\.csrf-token=csrf-1/);
+
+  const sessionCall = calls.find((call) => call.url.endsWith("/api/mobile/session"));
+  assert.ok(sessionCall);
+  assert.equal(sessionCall.url, "https://community.example.com/api/mobile/session");
+});
+
+test("handleMobileSessionDelete clears the Auth.js session through the trusted server-side logout flow", async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+
+  const response = await withEnv(
+    {
+      NEXTAUTH_URL: "https://community.example.com",
+      AUTH_URL: undefined,
+      VERCEL_URL: undefined,
+    },
+    () =>
+      handleMobileSessionDelete(
+        new Request("https://malicious.example.net/api/mobile/session", {
+          method: "DELETE",
+          headers: {
+            cookie: "authjs.session-token=session-1; authjs.callback-url=https%3A%2F%2Fcommunity.example.com%2F",
+            "x-real-ip": "203.0.113.10",
+          },
+        }),
+        {
+          fetchImpl: async (input, init) => {
+            const url =
+              typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+            calls.push({ url, init });
+
+            if (url.endsWith("/api/auth/csrf")) {
+              return new Response(JSON.stringify({ csrfToken: "csrf-logout" }), {
+                status: 200,
+                headers: {
+                  "content-type": "application/json",
+                  "set-cookie": "authjs.csrf-token=csrf-logout; Path=/; HttpOnly; SameSite=Lax",
+                },
+              });
+            }
+
+            if (url.endsWith("/api/auth/signout")) {
+              return new Response(JSON.stringify({ url: "/" }), {
+                status: 200,
+                headers: {
+                  "content-type": "application/json",
+                  "set-cookie":
+                    "authjs.session-token=; Path=/; HttpOnly; Max-Age=0; SameSite=Lax, authjs.callback-url=https%3A%2F%2Fcommunity.example.com%2F; Path=/; HttpOnly; Max-Age=0; SameSite=Lax",
+                },
+              });
+            }
+
+            throw new Error(`Unexpected fetch URL: ${url}`);
+          },
+        },
+      ),
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { ok: true });
+
+  const csrfCall = calls.find((call) => call.url.endsWith("/api/auth/csrf"));
+  assert.ok(csrfCall);
+  assert.equal(csrfCall.url, "https://community.example.com/api/auth/csrf");
+  assert.match(readRequestHeaders(csrfCall.init).get("cookie") ?? "", /authjs\.session-token=session-1/);
+
+  const signoutCall = calls.find((call) => call.url.endsWith("/api/auth/signout"));
+  assert.ok(signoutCall);
+  assert.equal(signoutCall.url, "https://community.example.com/api/auth/signout");
+  const signoutHeaders = readRequestHeaders(signoutCall.init);
+  assert.equal(signoutHeaders.get("x-real-ip"), "203.0.113.10");
+  assert.equal(signoutHeaders.get("content-type"), "application/x-www-form-urlencoded");
+  assert.equal(signoutHeaders.get("x-auth-return-redirect"), "1");
+  assert.match(signoutHeaders.get("cookie") ?? "", /authjs\.session-token=session-1/);
+  assert.match(signoutHeaders.get("cookie") ?? "", /authjs\.csrf-token=csrf-logout/);
+
+  const responseSetCookie = response.headers.get("set-cookie") ?? "";
+  assert.match(responseSetCookie, /authjs\.csrf-token=csrf-logout/);
+  assert.match(responseSetCookie, /authjs\.session-token=; Path=\//);
+  assert.match(responseSetCookie, /authjs\.callback-url=https%3A%2F%2Fcommunity\.example\.com%2F/);
 });
 
 test("handleMobileSessionGet rejects stale JWTs for deleted users", async () => {
