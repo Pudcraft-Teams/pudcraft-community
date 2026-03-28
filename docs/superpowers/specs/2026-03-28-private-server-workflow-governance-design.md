@@ -300,8 +300,8 @@ WHERE status = 'pending';
 - `visibility` 从 `public` 切换为 `private | unlisted` 时，也必须在同一数据库事务内调用 `syncServerOwnerMembership(...)`
 - 对 `visibility = public -> private | unlisted` 的切换：
   - 若 `ownerId` 为空，设置变更直接拒绝
-  - 调用方必须提供 `ownerMcUsername`
-  - 若无法提供 `ownerMcUsername`，设置变更必须中止，不能接受“服务器已变私密，但 OWNER 成员记录缺失”的中间态
+  - 调用方必须按私密目标签名提供 `ownerMcUsername`
+  - 若新 owner 当前没有成员记录且无法提供 `ownerMcUsername`，设置变更必须中止，不能接受“服务器已变私密，但 OWNER 成员记录缺失”的中间态
 - 对 `visibility = private | unlisted -> public` 的切换：
   - 不要求删除现有成员、申请、邀请或 sync 历史
   - 私密域的“必须存在 OWNER 成员记录”约束自此不再强制执行
@@ -339,6 +339,7 @@ WHERE status = 'pending';
   - `role = null`
   - `membershipId = null`
 - `latestApplication` 仅用于玩家端显示态时，只返回 `pending | rejected | cancelled`
+- `hasResidualHistory` 默认为 `false`
 - 若最近历史申请是 `approved` 但当前无成员，则返回 `latestApplication = null` 且 `hasResidualHistory = true`
 - 控制台如需完整历史，必须继续使用 `GET /applications`、`GET /members` 等专用接口，不复用该接口
 
