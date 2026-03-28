@@ -53,6 +53,20 @@
 - 对纯公开服务器，`Server.ownerId` 仍然独立于私密成员模型，私密成员真相源规则不生效。
 - 对 `visibility != public` 且 `Server.ownerId` 非空的服务器，必须存在一条同步的 `ServerMember(role=OWNER)` 记录。
 
+数据库层增加 partial unique index：
+
+```sql
+CREATE UNIQUE INDEX server_members_one_owner_per_server_idx
+ON server_members (server_id)
+WHERE role = 'OWNER';
+```
+
+说明：
+
+- 该约束允许公开服务器在 `server_members` 中不存在任何 `OWNER`
+- 一旦存在 `OWNER` 记录，同一服务器最多只能有一条
+- 对私密服务器“必须存在且只能有一条 OWNER”由服务层和迁移回填共同保证
+
 ### 2. 申请模型从“单记录覆盖”改为“保留历史”
 
 `ServerApplication` 不再使用 `unique(serverId, userId)` 复用同一条记录。
@@ -252,7 +266,7 @@ WHERE status = 'pending';
 
 - `getServerActorContext(serverId, userId)`
 - `requireServerRole(serverId, userId, allowedRoles)`
-- `syncServerOwnerMembership(serverId)`
+- `syncServerOwnerMembership(tx, { serverId, nextOwnerId, ownerMcUsername? })`
 
 返回信息应至少包含：
 
@@ -268,14 +282,22 @@ WHERE status = 'pending';
 
 规则：
 
-- 任何已有的 owner 变更、重新认领、转让流程，只要最终修改了 `Server.ownerId`，都必须调用 `syncServerOwnerMembership(serverId)`
+- 任何已有的 owner 变更、重新认领、转让流程，只要最终修改了 `Server.ownerId`，都必须通过统一服务完成，不允许裸写 `Server.ownerId`
+- ownerId 更新与 `syncServerOwnerMembership(...)` 必须在同一数据库事务内完成，保证公开域 owner 与私密域角色不会短暂分离
+- 触发点至少包括：
+  - 认领成功
+  - 所有权转让成功
+  - 任何管理员工具直接修改 `ownerId`
 - 对 `visibility = public` 的服务器，仅更新 `Server.ownerId`，不强制维护私密成员角色
 - 对 `visibility != public` 的服务器：
-  - 新 owner 若无成员记录，创建 `ServerMember(role=OWNER, joinedVia=claim)`
   - 新 owner 若已有成员记录，提升为 `OWNER`
+  - 新 owner 若无成员记录，只有在可提供 `ownerMcUsername` 时才创建 `ServerMember(role=OWNER, joinedVia=claim)`
+  - 若新 owner 在私密服务器流程中没有可用 `mcUsername`，则 owner 变更必须中止并返回业务错误，不能接受“DB 已变更但白名单无法对齐”的中间态
   - 旧 owner 若存在 `OWNER` 成员记录，降级为 `MEMBER`
   - 不自动把旧 owner 提升为 `ADMIN`
-- 所有权变更本身不生成白名单 remove/add 事件；仅角色收敛
+- 若新 owner 原本不是该私密服务器成员，但本次变更创建了新的 `OWNER` 成员记录，则必须写入 `WhitelistSync(action=add, source=owner_bootstrap)`
+- 若新 owner 原本已是 `MEMBER` / `ADMIN`，不额外生成 add sync，因为白名单成员资格已存在
+- 所有权变更本身不自动为旧 owner 生成 remove sync；旧 owner 保留成员资格并降级为 `MEMBER`
 
 ## API 设计
 
@@ -283,7 +305,7 @@ WHERE status = 'pending';
 
 #### `GET /api/servers/:id/membership`
 
-从当前的弱状态接口升级为当前 actor 状态接口，返回：
+这是玩家端专用的当前 actor 状态接口，不用于控制台审批、审计或历史查询。返回：
 
 - `isMember`
 - `role`
@@ -296,6 +318,7 @@ WHERE status = 'pending';
 
 - `latestApplication` 仅用于玩家端显示态时，只返回 `pending | rejected | cancelled`
 - 若最近历史申请是 `approved` 但当前无成员，则返回 `latestApplication = null` 且 `hasResidualHistory = true`
+- 控制台如需完整历史，必须继续使用 `GET /applications`、`GET /members` 等专用接口，不复用该接口
 
 #### `POST /api/servers/:id/applications`
 
@@ -417,6 +440,11 @@ WHERE status = 'pending';
 
 - `ServerSettings` 继续只给 `OWNER`
 - `ADMIN` 控制台隐藏私密策略设置和 API Key 模块，但保留申请、成员、邀请码、同步状态模块
+
+该规则与权限模型一致：
+
+- API Key 仅 `OWNER` 可查看和重置
+- `ADMIN` 无 API Key 的页面入口、模块可见性与接口权限
 
 ## 这轮顺手补上的产品能力
 
