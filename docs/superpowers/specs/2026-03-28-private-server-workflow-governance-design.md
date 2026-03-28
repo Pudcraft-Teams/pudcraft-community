@@ -266,7 +266,16 @@ WHERE status = 'pending';
 
 - `getServerActorContext(serverId, userId)`
 - `requireServerRole(serverId, userId, allowedRoles)`
-- `syncServerOwnerMembership(tx, { serverId, nextOwnerId, ownerMcUsername? })`
+- `syncServerOwnerMembership(tx, args)`
+
+其中 `args` 使用显式分支，而不是可选参数碰运气：
+
+- 公开目标：
+  - `{ serverId, nextOwnerId, targetVisibility: "public" }`
+- 私密目标：
+  - `{ serverId, nextOwnerId, targetVisibility: "private" | "unlisted", ownerMcUsername: string }`
+
+实现可以在“新 owner 已有成员记录”时忽略传入的 `ownerMcUsername`，但私密目标调用方仍必须提供该值，避免调用时机不明确。
 
 返回信息应至少包含：
 
@@ -288,11 +297,18 @@ WHERE status = 'pending';
   - 认领成功
   - 所有权转让成功
   - 任何管理员工具直接修改 `ownerId`
+- `visibility` 从 `public` 切换为 `private | unlisted` 时，也必须在同一数据库事务内调用 `syncServerOwnerMembership(...)`
+- 对 `visibility = public -> private | unlisted` 的切换：
+  - 若 `ownerId` 为空，设置变更直接拒绝
+  - 调用方必须提供 `ownerMcUsername`
+  - 若无法提供 `ownerMcUsername`，设置变更必须中止，不能接受“服务器已变私密，但 OWNER 成员记录缺失”的中间态
+- 对 `visibility = private | unlisted -> public` 的切换：
+  - 不要求删除现有成员、申请、邀请或 sync 历史
+  - 私密域的“必须存在 OWNER 成员记录”约束自此不再强制执行
 - 对 `visibility = public` 的服务器，仅更新 `Server.ownerId`，不强制维护私密成员角色
 - 对 `visibility != public` 的服务器：
   - 新 owner 若已有成员记录，提升为 `OWNER`
-  - 新 owner 若无成员记录，只有在可提供 `ownerMcUsername` 时才创建 `ServerMember(role=OWNER, joinedVia=claim)`
-  - 若新 owner 在私密服务器流程中没有可用 `mcUsername`，则 owner 变更必须中止并返回业务错误，不能接受“DB 已变更但白名单无法对齐”的中间态
+  - 新 owner 若无成员记录，则创建 `ServerMember(role=OWNER, joinedVia=claim)`，并使用调用方提供的 `ownerMcUsername`
   - 旧 owner 若存在 `OWNER` 成员记录，降级为 `MEMBER`
   - 不自动把旧 owner 提升为 `ADMIN`
 - 若新 owner 原本不是该私密服务器成员，但本次变更创建了新的 `OWNER` 成员记录，则必须写入 `WhitelistSync(action=add, source=owner_bootstrap)`
@@ -316,6 +332,12 @@ WHERE status = 'pending';
 
 其中：
 
+- `isMember = true` 时：
+  - `role` 必须为 `OWNER | ADMIN | MEMBER`
+  - `membershipId` 必须为非空
+- `isMember = false` 时：
+  - `role = null`
+  - `membershipId = null`
 - `latestApplication` 仅用于玩家端显示态时，只返回 `pending | rejected | cancelled`
 - 若最近历史申请是 `approved` 但当前无成员，则返回 `latestApplication = null` 且 `hasResidualHistory = true`
 - 控制台如需完整历史，必须继续使用 `GET /applications`、`GET /members` 等专用接口，不复用该接口
