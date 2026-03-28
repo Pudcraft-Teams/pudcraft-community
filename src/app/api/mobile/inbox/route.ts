@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { getPublicUrl } from "@/lib/storage";
 import { handleMobileInboxGet } from "@/lib/mobile/inboxFacade";
 
 export async function GET(request: Request) {
@@ -60,7 +61,10 @@ export async function GET(request: Request) {
                 createdAt: true,
                 sourceUser: {
                   select: {
+                    id: true,
+                    uid: true,
                     name: true,
+                    image: true,
                   },
                 },
                 post: {
@@ -84,7 +88,13 @@ export async function GET(request: Request) {
           serverUnread,
           forumUnread,
           serverNotifications,
-          forumNotifications,
+          forumNotifications: forumNotifications.map((notification) => ({
+            ...notification,
+            sourceUser: {
+              ...notification.sourceUser,
+              image: getPublicUrl(notification.sourceUser.image),
+            },
+          })),
         };
       },
     });

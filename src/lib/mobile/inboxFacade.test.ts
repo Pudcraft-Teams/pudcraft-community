@@ -49,6 +49,68 @@ test("handleMobileInboxGet caps totalPages to the supported merged fetch window"
   });
 });
 
+test("handleMobileInboxGet includes structured sourceUser for forum notifications", async () => {
+  const sourceUser = {
+    id: "user-2",
+    uid: 100000002,
+    name: "Alex",
+    image: "https://example.com/alex.png",
+  };
+
+  const response = await handleMobileInboxGet(new Request("https://example.com/api/mobile/inbox?page=1&limit=20"), {
+    requireActiveUserImpl: async () => ({
+      user: {
+        id: "user-1",
+      },
+    }),
+    loadInboxData: async () => ({
+      serverTotal: 0,
+      forumTotal: 1,
+      serverUnread: 0,
+      forumUnread: 1,
+      serverNotifications: [],
+      forumNotifications: [
+        {
+          id: "forum-1",
+          type: "MENTION",
+          isRead: false,
+          createdAt: new Date("2026-03-27T13:00:00.000Z"),
+          sourceUser,
+          post: {
+            id: "post-1",
+            title: "A forum post",
+            circle: {
+              slug: "general",
+            },
+          },
+        },
+      ],
+    }),
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    notifications: [
+      {
+        id: "forum-1",
+        kind: "forum",
+        title: "Alex 在帖子中提到了你",
+        body: "A forum post",
+        destination: "/c/general/post/post-1",
+        read: false,
+        createdAt: "2026-03-27T13:00:00.000Z",
+        sourceUser,
+      },
+    ],
+    total: 1,
+    unreadCount: 1,
+    serverUnread: 0,
+    forumUnread: 1,
+    page: 1,
+    totalPages: 1,
+  });
+});
+
 test("handleMobileInboxGet rejects pages beyond the supported merged fetch window", async () => {
   let loadInboxDataCalled = false;
 

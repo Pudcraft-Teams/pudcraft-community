@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { queryNotificationsSchema } from "@/lib/validation";
 
+export interface MobileInboxSourceUser {
+  id: string;
+  uid: number;
+  name: string | null;
+  image: string | null;
+}
+
 export interface MobileInboxItem {
   id: string;
   kind: "server" | "forum";
@@ -9,6 +16,7 @@ export interface MobileInboxItem {
   destination: string | null;
   read: boolean;
   createdAt: string;
+  sourceUser?: MobileInboxSourceUser;
 }
 
 interface MobileInboxAuthResult {
@@ -32,9 +40,7 @@ interface ForumInboxNotificationRecord {
   type: "POST_COMMENT" | "COMMENT_REPLY" | "MENTION";
   isRead: boolean;
   createdAt: Date;
-  sourceUser: {
-    name: string | null;
-  };
+  sourceUser: MobileInboxSourceUser;
   post: {
     id: string;
     title: string;
@@ -149,6 +155,7 @@ export async function handleMobileInboxGet(request: Request, deps: MobileInboxGe
         destination: getForumInboxDestination(notification.post),
         read: notification.isRead,
         createdAt: notification.createdAt.toISOString(),
+        sourceUser: notification.sourceUser,
       };
     }),
   );
