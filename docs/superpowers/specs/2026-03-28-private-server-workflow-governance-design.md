@@ -49,7 +49,9 @@
 
 - 每个服务器在私密服务器域内只能有一名 `OWNER`。
 - `Server.ownerId` 继续作为公开域所有权字段保留。
-- 只要 `Server.ownerId` 非空，就必须存在一条同步的 `ServerMember(role=OWNER)` 记录。
+- 只有进入私密服务器域的服务器才要求同步 `OWNER` 成员记录，判定条件为 `visibility != public`。
+- 对纯公开服务器，`Server.ownerId` 仍然独立于私密成员模型，私密成员真相源规则不生效。
+- 对 `visibility != public` 且 `Server.ownerId` 非空的服务器，必须存在一条同步的 `ServerMember(role=OWNER)` 记录。
 
 ### 2. 申请模型从“单记录覆盖”改为“保留历史”
 
@@ -61,6 +63,7 @@
 - 同一时间只允许一条 `pending` 申请。
 - `approved` 表示这条申请曾通过，不表示当前仍持有成员身份。
 - 当前成员资格的唯一真相源是 `ServerMember`。
+- 面向玩家端的 membership payload 不把“无成员但最近申请是 `approved`”渲染成活跃状态；这类记录只作为残余历史保留。
 
 数据库层使用 PostgreSQL partial unique index 约束：
 
@@ -112,6 +115,7 @@ WHERE status = 'pending';
 1. 只要存在 `ServerMember`，页面统一视为“已加入”
 2. 只有不存在 `ServerMember` 时，才看最新申请状态
 3. 若无成员且无申请，则视为“未加入”
+4. 若无成员且最近历史申请为 `approved`，页面仍视为“未加入/已离开”，并通过残余历史标记暴露给调用方
 
 ### 状态定义
 
@@ -119,6 +123,27 @@ WHERE status = 'pending';
 - `申请中`: 无 `ServerMember`，存在最新 `pending` 申请
 - `已加入`: 存在 `ServerMember`
 - `已离开/被移除`: 无 `ServerMember`，但保留历史申请与 sync
+
+### membership payload 归一化规则
+
+`GET /api/servers/:id/membership` 返回给玩家端的状态必须是归一化后的显示状态，而不是直接暴露原始申请表状态。
+
+规则：
+
+- 若存在 `ServerMember`，返回成员态，不再暴露 `latestApplication` 作为主状态
+- 若不存在 `ServerMember`：
+  - 最近申请为 `pending`，返回 `latestApplication.status = pending`
+  - 最近申请为 `rejected`，返回 `latestApplication.status = rejected`
+  - 最近申请为 `cancelled`，返回 `latestApplication.status = cancelled`
+  - 最近申请为 `approved`，则 `latestApplication` 置空，并返回 `hasResidualHistory = true`
+
+这样保证玩家端显示态只落在：
+
+- 已加入
+- 申请中
+- 申请未通过
+- 申请已撤回
+- 未加入
 
 ### 关键状态流转
 
@@ -200,7 +225,6 @@ WHERE status = 'pending';
 - 查看成员列表
 - 移除普通成员
 - 查看同步状态
-- 查看和重置 API Key
 
 不可执行：
 
@@ -208,6 +232,7 @@ WHERE status = 'pending';
 - 提升/降级他人角色
 - 移除 `OWNER`
 - 移除其他 `ADMIN`
+- 查看或重置 API Key
 - 删除服务器
 - 修改公开服务器基础资料
 - 转移所有权
@@ -227,6 +252,7 @@ WHERE status = 'pending';
 
 - `getServerActorContext(serverId, userId)`
 - `requireServerRole(serverId, userId, allowedRoles)`
+- `syncServerOwnerMembership(serverId)`
 
 返回信息应至少包含：
 
@@ -235,6 +261,21 @@ WHERE status = 'pending';
 - `membershipId`
 - `role`
 - `availableCapabilities`
+
+### 所有权变更规则
+
+公开域的所有权变更仍不在本次功能内重构，但必须定义私密域同步规则，避免残留两个 `OWNER`。
+
+规则：
+
+- 任何已有的 owner 变更、重新认领、转让流程，只要最终修改了 `Server.ownerId`，都必须调用 `syncServerOwnerMembership(serverId)`
+- 对 `visibility = public` 的服务器，仅更新 `Server.ownerId`，不强制维护私密成员角色
+- 对 `visibility != public` 的服务器：
+  - 新 owner 若无成员记录，创建 `ServerMember(role=OWNER, joinedVia=claim)`
+  - 新 owner 若已有成员记录，提升为 `OWNER`
+  - 旧 owner 若存在 `OWNER` 成员记录，降级为 `MEMBER`
+  - 不自动把旧 owner 提升为 `ADMIN`
+- 所有权变更本身不生成白名单 remove/add 事件；仅角色收敛
 
 ## API 设计
 
@@ -248,7 +289,13 @@ WHERE status = 'pending';
 - `role`
 - `membershipId`
 - `latestApplication`
+- `hasResidualHistory`
 - `availableActions`
+
+其中：
+
+- `latestApplication` 仅用于玩家端显示态时，只返回 `pending | rejected | cancelled`
+- 若最近历史申请是 `approved` 但当前无成员，则返回 `latestApplication = null` 且 `hasResidualHistory = true`
 
 #### `POST /api/servers/:id/applications`
 
@@ -291,6 +338,9 @@ WHERE status = 'pending';
 
 - 仅 `OWNER` 可用
 - 用于 `MEMBER <-> ADMIN` 角色切换
+- 请求体仅允许 `role: ADMIN | MEMBER`
+- 目标成员当前角色不得为 `OWNER`
+- 不允许通过此接口变更自己
 
 #### `DELETE /api/servers/:id/membership`
 
@@ -304,12 +354,12 @@ WHERE status = 'pending';
 - `GET /api/servers/:id/invites`
 - `POST /api/servers/:id/invites`
 - `DELETE /api/servers/:id/invites/:code`
-- `POST /api/servers/:id/api-key`
 - `GET /api/servers/:id/sync/status`
 
 仍保持 owner-only：
 
 - `PUT /api/servers/:id/settings`
+- `POST /api/servers/:id/api-key`
 
 ## 页面与交互设计
 
@@ -366,7 +416,7 @@ WHERE status = 'pending';
 ### 控制台设置页
 
 - `ServerSettings` 继续只给 `OWNER`
-- `ADMIN` 控制台隐藏私密策略设置，但保留申请、成员、邀请码、同步状态和 API Key 模块
+- `ADMIN` 控制台隐藏私密策略设置和 API Key 模块，但保留申请、成员、邀请码、同步状态模块
 
 ## 这轮顺手补上的产品能力
 
@@ -386,6 +436,46 @@ WHERE status = 'pending';
 - 更复杂的私密服务器通知中心
 - 手动重推某条 sync 的控制台工具
 - 更复杂的成员组织结构
+
+## 并发与冲突处理
+
+申请审批、邀请码加入、成员移除、主动退服存在同一用户并发竞争窗口，本次实现必须在规范层面要求串行化或清晰冲突返回。
+
+要求：
+
+- `approve` / `join by invite` / `remove member` / `leave membership` 都必须在数据库事务内完成
+- 成员存在性检查必须放在事务内，不允许先查后写
+- `ServerApplication` 使用 partial unique index 保证单个用户单服最多一条 `pending`
+- `ServerMember` 继续依赖 `unique(serverId, userId)` 保证单成员唯一
+- 对同一 `(serverId, userId)` 的 join/approve 冲突，优先依赖数据库唯一约束 + 显式业务冲突转换为 `409`
+- 若实现中仅靠唯一约束仍不足以稳定表达冲突，可在事务内对目标申请或成员候选行加锁，例如 `SELECT ... FOR UPDATE`
+
+必须补测试的并发场景：
+
+- 同一用户同时“申请审批通过”和“邀请码加入”
+- 同一用户同时“被移除”和“主动退服”
+- 同一用户短时间内重复提交申请
+- 同一邀请码接近用尽时的并发加入
+
+## 历史数据保留与查询排序
+
+- `ServerApplication` 本次不引入自动清理保留期，历史记录默认长期保留
+- 最近申请的查询排序必须使用 `createdAt DESC, id DESC`
+- 控制台申请列表仍使用分页
+- 玩家端 membership 接口只取归一化所需的最近记录，不暴露完整历史分页
+
+## Sync 状态说明
+
+`WhitelistSync.source` 仅表示事件来源，不替代同步生命周期状态。
+
+同步生命周期继续沿用现有状态：
+
+- `pending`
+- `pushed`
+- `acked`
+- `failed`
+
+UI 上“同步中 / 已同步 / 同步失败”的文案来源于 `status`，不是 `source`。
 
 ## UI 实现约束
 
