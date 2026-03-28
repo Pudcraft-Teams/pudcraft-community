@@ -61,6 +61,20 @@ interface MobileInboxGetDependencies {
 
 export const DEFAULT_MAX_MERGED_FETCH_WINDOW = 500;
 
+export interface MobileInboxUnreadSummary {
+  serverUnread: number;
+  forumUnread: number;
+  unreadCount: number;
+}
+
+export function buildMobileInboxUnreadSummary(serverUnread: number, forumUnread: number): MobileInboxUnreadSummary {
+  return {
+    serverUnread,
+    forumUnread,
+    unreadCount: serverUnread + forumUnread,
+  };
+}
+
 export function mergeInboxItems(
   serverItems: MobileInboxItem[],
   forumItems: MobileInboxItem[],
@@ -144,7 +158,7 @@ export async function handleMobileInboxGet(request: Request, deps: MobileInboxGe
   return NextResponse.json({
     notifications: merged.slice((page - 1) * limit, page * limit),
     total,
-    unreadCount: inboxData.serverUnread + inboxData.forumUnread,
+    ...buildMobileInboxUnreadSummary(inboxData.serverUnread, inboxData.forumUnread),
     page,
     totalPages: getMobileInboxTotalPages(total, limit, maxMergedFetchWindow),
   });

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { buildMobileInboxUnreadSummary } from "@/lib/mobile/inboxFacade";
 
 export async function GET() {
   try {
@@ -18,7 +19,10 @@ export async function GET() {
       prisma.notification.count({ where: { recipientId: userId, isRead: false } }),
     ]);
 
-    return NextResponse.json({ total: serverUnread + forumUnread, serverUnread, forumUnread });
+    return NextResponse.json({
+      total: serverUnread + forumUnread,
+      ...buildMobileInboxUnreadSummary(serverUnread, forumUnread),
+    });
   } catch (error) {
     logger.error("[api/mobile/inbox/unread-summary] Unexpected GET error", error);
     return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });

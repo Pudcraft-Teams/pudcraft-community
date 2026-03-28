@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { buildMobileInboxUnreadSummary } from "@/lib/mobile/inboxFacade";
 import { markNotificationsReadSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
@@ -73,7 +74,10 @@ export async function POST(request: Request) {
       }),
     ]);
 
-    return NextResponse.json({ success: true, unreadCount: serverUnread + forumUnread });
+    return NextResponse.json({
+      success: true,
+      ...buildMobileInboxUnreadSummary(serverUnread, forumUnread),
+    });
   } catch (error) {
     logger.error("[api/mobile/inbox/read] Unexpected POST error", error);
     return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });

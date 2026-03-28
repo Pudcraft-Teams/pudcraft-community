@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { handleMobileInboxGet, mergeInboxItems } from "./inboxFacade";
+import { buildMobileInboxUnreadSummary, handleMobileInboxGet, mergeInboxItems } from "./inboxFacade";
 
 test("mergeInboxItems sorts forum and server notifications newest first", () => {
   const items = mergeInboxItems(
@@ -10,6 +10,14 @@ test("mergeInboxItems sorts forum and server notifications newest first", () => 
 
   assert.equal(items[0]?.id, "forum-1");
   assert.equal(items[1]?.id, "server-1");
+});
+
+test("buildMobileInboxUnreadSummary preserves split unread counts", () => {
+  assert.deepEqual(buildMobileInboxUnreadSummary(7, 5), {
+    serverUnread: 7,
+    forumUnread: 5,
+    unreadCount: 12,
+  });
 });
 
 test("handleMobileInboxGet caps totalPages to the supported merged fetch window", async () => {
@@ -34,6 +42,8 @@ test("handleMobileInboxGet caps totalPages to the supported merged fetch window"
     notifications: [],
     total: 600,
     unreadCount: 12,
+    serverUnread: 7,
+    forumUnread: 5,
     page: 1,
     totalPages: 25,
   });
