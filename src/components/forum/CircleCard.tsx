@@ -17,7 +17,7 @@ interface CircleCardProps {
 export function CircleCard({ circle, isMember, onJoinChange }: CircleCardProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { status: sessionStatus } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
 
   const [joined, setJoined] = useState(isMember ?? false);
   const [loading, setLoading] = useState(false);
@@ -49,7 +49,11 @@ export function CircleCard({ circle, isMember, onJoinChange }: CircleCardProps) 
           });
           if (!res.ok) throw new Error("join failed");
         } else {
-          const res = await fetch(`/api/circles/${circle.id}/members`, {
+          const leaveUserId = session?.user?.id;
+          if (!leaveUserId) {
+            throw new Error("missing user id for leave");
+          }
+          const res = await fetch(`/api/circles/${circle.id}/members/${leaveUserId}`, {
             method: "DELETE",
           });
           if (!res.ok) throw new Error("leave failed");
@@ -62,7 +66,7 @@ export function CircleCard({ circle, isMember, onJoinChange }: CircleCardProps) 
         setLoading(false);
       }
     },
-    [joined, loading, circle.id, onJoinChange, sessionStatus, pathname, router],
+    [joined, loading, circle.id, onJoinChange, sessionStatus, pathname, router, session?.user?.id],
   );
 
   return (
