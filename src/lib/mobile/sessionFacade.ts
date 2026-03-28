@@ -398,6 +398,7 @@ function isTrustedLocalhostHostname(hostname: string): boolean {
   const normalizedHostname = hostname.trim().toLowerCase();
   return (
     normalizedHostname === "localhost" ||
+    normalizedHostname.endsWith(".localhost") ||
     normalizedHostname === "127.0.0.1" ||
     normalizedHostname === "[::1]" ||
     normalizedHostname === "::1" ||
