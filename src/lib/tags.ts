@@ -55,9 +55,8 @@ export function resolvePostTags(input: {
   content?: string | null;
   tags?: string[] | null;
 }): string[] {
-  const normalizedTags = normalizeTagList(input.tags ?? []);
-  if (normalizedTags.length > 0) {
-    return normalizedTags;
+  if (Array.isArray(input.tags)) {
+    return normalizeTagList(input.tags);
   }
 
   return extractTags(input.content ?? "");

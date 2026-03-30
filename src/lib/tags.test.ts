@@ -18,3 +18,12 @@ test("resolvePostTags normalizes explicit tags before saving", () => {
 
   assert.deepEqual(tags, ["Alpha", "beta", "Gamma", "Delta", "Epsilon"]);
 });
+
+test("resolvePostTags preserves explicit empty tag lists instead of re-extracting from content", () => {
+  const tags = resolvePostTags({
+    content: "这里有 #不会 #被重新提取",
+    tags: [],
+  });
+
+  assert.deepEqual(tags, []);
+});

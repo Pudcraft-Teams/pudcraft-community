@@ -3,6 +3,7 @@ import test from "node:test";
 import { isAllowedMarkdownImageSrc } from "@/components/MarkdownRenderer";
 
 const TRUSTED_ORIGIN = "https://community.example.com";
+const STORAGE_ORIGIN = "https://cdn.example.com";
 
 test("isAllowedMarkdownImageSrc allows relative and same-origin image urls", () => {
   assert.equal(isAllowedMarkdownImageSrc("/uploads/a.webp"), true);
@@ -20,4 +21,14 @@ test("isAllowedMarkdownImageSrc blocks remote origins and malformed urls", () =>
 test("isAllowedMarkdownImageSrc allows blob and data urls", () => {
   assert.equal(isAllowedMarkdownImageSrc("blob:abc123", TRUSTED_ORIGIN), true);
   assert.equal(isAllowedMarkdownImageSrc("data:image/png;base64,AAAA", TRUSTED_ORIGIN), true);
+});
+
+test("isAllowedMarkdownImageSrc allows configured first-party storage origins", () => {
+  assert.equal(
+    isAllowedMarkdownImageSrc("https://cdn.example.com/pudcraft/editor-images/1.webp", [
+      TRUSTED_ORIGIN,
+      STORAGE_ORIGIN,
+    ]),
+    true,
+  );
 });

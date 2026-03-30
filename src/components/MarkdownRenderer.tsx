@@ -11,22 +11,49 @@ const sanitizeSchema = {
   tagNames: [...(defaultSchema.tagNames ?? []), "u"],
 };
 
-const TRUSTED_SITE_ORIGIN = (() => {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (!siteUrl) {
+function toOrigin(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) {
     return null;
   }
 
   try {
-    return new URL(siteUrl).origin;
+    return new URL(trimmed).origin;
   } catch {
     return null;
   }
-})();
+}
+
+function getTrustedMarkdownImageOrigins(): string[] {
+  const origins = [
+    toOrigin(process.env.NEXT_PUBLIC_SITE_URL),
+    toOrigin(process.env.NEXT_PUBLIC_STORAGE_PUBLIC_BASE_URL),
+    toOrigin(process.env.S3_PUBLIC_BASE_URL),
+    toOrigin(process.env.OSS_PUBLIC_BASE_URL),
+  ].filter((value): value is string => value !== null);
+
+  return [...new Set(origins)];
+}
+
+const TRUSTED_MARKDOWN_IMAGE_ORIGINS = getTrustedMarkdownImageOrigins();
+
+function normalizeTrustedOrigins(
+  trustedOrigins: string | readonly string[] | null,
+): string[] {
+  if (trustedOrigins === null) {
+    return [];
+  }
+
+  if (typeof trustedOrigins === "string") {
+    return trustedOrigins ? [trustedOrigins] : [];
+  }
+
+  return trustedOrigins.filter((origin) => origin.length > 0);
+}
 
 export function isAllowedMarkdownImageSrc(
   src: string,
-  trustedOrigin: string | null = TRUSTED_SITE_ORIGIN,
+  trustedOrigins: string | readonly string[] | null = TRUSTED_MARKDOWN_IMAGE_ORIGINS,
 ): boolean {
   const value = src.trim();
   if (!value) {
@@ -43,7 +70,7 @@ export function isAllowedMarkdownImageSrc(
 
   try {
     const url = new URL(value);
-    return trustedOrigin !== null && url.origin === trustedOrigin;
+    return normalizeTrustedOrigins(trustedOrigins).includes(url.origin);
   } catch {
     return false;
   }
