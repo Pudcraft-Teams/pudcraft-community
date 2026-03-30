@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { canAccessServer, isPrivilegedServerViewer } from "@/lib/server-access";
+import { buildServerStatusResponse } from "@/lib/serverStatus";
 import { getPublicUrl } from "@/lib/storage";
 import type { ServerListItem } from "@/lib/types";
 
@@ -99,14 +100,7 @@ export async function GET() {
         favoriteCount: server.favoriteCount,
         isVerified: server.isVerified,
         verifiedAt: server.verifiedAt?.toISOString() ?? null,
-        status: {
-          online: server.isOnline,
-          playerCount: server.playerCount,
-          maxPlayers: server.maxPlayers,
-          motd: null,
-          favicon: null,
-          checkedAt: (server.lastPingedAt ?? server.updatedAt).toISOString(),
-        },
+        status: buildServerStatusResponse(server),
       }];
     });
 

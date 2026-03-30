@@ -35,8 +35,7 @@ export function ServerCard({
     iconUrl,
     joinMode,
   } = server;
-  const checkedAtMs = Date.parse(status.checkedAt);
-  const isStale = !Number.isFinite(checkedAtMs);
+  const isStale = status.isStale;
   const isOnline = status.online;
   const statusText = isStale ? "未知" : isOnline ? "在线" : "离线";
   const isAddressHidden = host === "hidden" && port === 0;

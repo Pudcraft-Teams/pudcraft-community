@@ -9,6 +9,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { resolveUserCuid } from "@/lib/lookup";
+import { buildServerStatusResponse } from "@/lib/serverStatus";
 import { getPublicUrl } from "@/lib/storage";
 import type { ServerListItem } from "@/lib/types";
 import { userLookupIdSchema } from "@/lib/validation";
@@ -122,14 +123,7 @@ export default async function UserProfilePage({ params }: PageProps) {
     iconUrl: getPublicUrl(server.iconUrl),
     isVerified: server.isVerified,
     verifiedAt: server.verifiedAt?.toISOString() ?? null,
-    status: {
-      online: server.isOnline,
-      playerCount: server.playerCount,
-      maxPlayers: server.maxPlayers,
-      motd: null,
-      favicon: null,
-      checkedAt: (server.lastPingedAt ?? server.updatedAt).toISOString(),
-    },
+    status: buildServerStatusResponse(server),
   }));
 
   return (

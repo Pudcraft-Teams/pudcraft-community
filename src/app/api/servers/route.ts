@@ -11,6 +11,7 @@ import { generateAndReservePsid } from "@/lib/numeric-id";
 import { getClientIp } from "@/lib/request-ip";
 import { rateLimit } from "@/lib/rate-limit";
 import { getInitialServerSubmissionState } from "@/lib/server-access";
+import { buildServerStatusResponse } from "@/lib/serverStatus";
 import {
   getPublicUrl,
   ImageModerationError,
@@ -196,14 +197,7 @@ export async function GET(request: Request) {
         rejectReason: server.rejectReason,
         visibility: server.visibility as ServerVisibility,
         joinMode: server.joinMode as ServerJoinMode,
-        status: {
-          online: server.isOnline,
-          playerCount: server.playerCount,
-          maxPlayers: server.maxPlayers,
-          motd: null,
-          favicon: null,
-          checkedAt: (server.lastPingedAt ?? server.updatedAt).toISOString(),
-        },
+        status: buildServerStatusResponse(server),
       };
     });
 
@@ -425,7 +419,7 @@ export async function POST(request: Request) {
           description: server.description,
           tags: server.tags,
           ownerId: server.ownerId,
-          reviewStatus: server.status,
+          reviewStatus: server.reviewStatus,
           iconUrl: getPublicUrl(iconKey),
         },
       },

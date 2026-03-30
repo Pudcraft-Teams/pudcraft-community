@@ -11,6 +11,7 @@ export interface ServerStatusResponse {
   motd: string | null;
   favicon: string | null;
   checkedAt: string;
+  isStale: boolean;
 }
 
 /** 服务器列表项（不含 content，用于卡片展示） */

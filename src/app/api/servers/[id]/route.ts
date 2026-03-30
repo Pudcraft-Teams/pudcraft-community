@@ -15,6 +15,7 @@ import {
 } from "@/lib/server-access";
 import { canSeeServerAddress, isServerMember } from "@/lib/server-membership";
 import { getClientIp } from "@/lib/request-ip";
+import { buildServerStatusResponse } from "@/lib/serverStatus";
 import {
   deleteFile,
   deleteObject,
@@ -174,14 +175,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         : {}),
       createdAt: server.createdAt.toISOString(),
       updatedAt: server.updatedAt.toISOString(),
-      status: {
-        online: server.isOnline,
-        playerCount: server.playerCount,
-        maxPlayers: server.maxPlayers,
-        motd: null,
-        favicon: null,
-        checkedAt: (server.lastPingedAt ?? server.updatedAt).toISOString(),
-      },
+      status: buildServerStatusResponse(server),
     };
 
     return NextResponse.json({ data });
