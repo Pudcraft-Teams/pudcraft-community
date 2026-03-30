@@ -131,6 +131,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const shouldRefreshProfile =
           !!user || trigger === "update" || token.profileHydrated !== true || typeof token.uid !== "number";
 
+        if (!user && !shouldRefreshProfile) {
+          const latestSessionState = await db.user.findUnique({
+            where: { id: token.id },
+            select: {
+              passwordHash: true,
+              isBanned: true,
+            },
+          });
+
+          if (!latestSessionState) {
+            return invalidateToken(token);
+          }
+
+          const tokenStateValid = isSessionTokenStateValid({
+            tokenSessionVersion:
+              typeof token.sessionVersion === "string" ? token.sessionVersion : undefined,
+            latestPasswordHash: latestSessionState.passwordHash,
+            isBanned: latestSessionState.isBanned,
+          });
+
+          if (!tokenStateValid) {
+            return invalidateToken(token);
+          }
+        }
+
         if (shouldRefreshProfile) {
           const latestUser = await db.user.findUnique({
             where: { id: token.id },
