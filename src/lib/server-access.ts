@@ -22,12 +22,20 @@ export function isServerAdmin(currentUserRole?: string | null): boolean {
   return currentUserRole === "admin";
 }
 
-export function isPrivilegedServerViewer(options: ServerAccessOptions & { isMember?: boolean }): boolean {
+export function isServerStaffViewer(options: ServerAccessOptions): boolean {
   if (isServerAdmin(options.currentUserRole)) {
     return true;
   }
 
   if (isServerOwner(options.ownerId, options.currentUserId)) {
+    return true;
+  }
+
+  return false;
+}
+
+export function isPrivilegedServerViewer(options: ServerAccessOptions & { isMember?: boolean }): boolean {
+  if (isServerStaffViewer(options)) {
     return true;
   }
 
@@ -39,7 +47,7 @@ export function canAccessServer(options: ServerAccessOptions): boolean {
     return true;
   }
 
-  return isPrivilegedServerViewer(options);
+  return isServerStaffViewer(options);
 }
 
 export function canViewServerDetails(options: ServerVisibilityAccessOptions): boolean {

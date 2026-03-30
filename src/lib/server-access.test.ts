@@ -43,6 +43,20 @@ test("canViewServerDetails allows private server members", () => {
   );
 });
 
+test("canViewServerDetails keeps non-approved private servers owner/admin-only", () => {
+  assert.equal(
+    canViewServerDetails({
+      status: "pending",
+      visibility: "private",
+      ownerId: "owner-1",
+      currentUserId: "user-2",
+      currentUserRole: "user",
+      isMember: true,
+    }),
+    false,
+  );
+});
+
 test("canListServerInPublicOwnerContext only exposes public servers to strangers", () => {
   assert.equal(
     canListServerInPublicOwnerContext({
