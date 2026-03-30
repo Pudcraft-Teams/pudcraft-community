@@ -56,7 +56,19 @@ function normalizeIpCandidate(value: string): string | null {
   return null;
 }
 
-function extractIpFromHeaderValue(value: string | null): string | null {
+function selectTrustedIpCandidate(headerName: string, candidates: string[]): string | null {
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  if (headerName.includes("forwarded-for")) {
+    return candidates[0] ?? null;
+  }
+
+  return candidates.at(-1) ?? null;
+}
+
+function extractIpFromHeaderValue(headerName: string, value: string | null): string | null {
   if (!value) {
     return null;
   }
@@ -67,7 +79,7 @@ function extractIpFromHeaderValue(value: string | null): string | null {
     .map((part) => normalizeIpCandidate(part))
     .filter((part): part is string => part !== null);
 
-  return candidates.at(-1) ?? null;
+  return selectTrustedIpCandidate(headerName, candidates);
 }
 
 export function getClientIp(source: HeadersSource): string {
@@ -77,7 +89,7 @@ export function getClientIp(source: HeadersSource): string {
   }
 
   for (const headerName of getTrustedIpHeaderNames()) {
-    const ip = extractIpFromHeaderValue(headers.get(headerName));
+    const ip = extractIpFromHeaderValue(headerName, headers.get(headerName));
     if (ip) {
       return ip;
     }
@@ -95,7 +107,7 @@ export function getForwardedClientIpHeaders(source: HeadersSource): Record<strin
   const forwardedHeaders: Record<string, string> = {};
 
   for (const headerName of getTrustedIpHeaderNames()) {
-    const ip = extractIpFromHeaderValue(headers.get(headerName));
+    const ip = extractIpFromHeaderValue(headerName, headers.get(headerName));
     if (ip) {
       forwardedHeaders[headerName] = ip;
     }
