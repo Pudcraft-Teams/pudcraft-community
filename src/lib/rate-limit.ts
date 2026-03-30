@@ -6,6 +6,20 @@ interface RateLimitResult {
   remaining: number;
 }
 
+export function createRateLimitResult(count: number, limit: number): RateLimitResult {
+  return {
+    allowed: count <= limit,
+    remaining: Math.max(0, limit - count),
+  };
+}
+
+export function createRateLimitFailureResult(_limit: number): RateLimitResult {
+  return {
+    allowed: false,
+    remaining: 0,
+  };
+}
+
 /**
  * Redis 固定窗口限流。
  * key 建议格式：`{action}:{identifier}`，函数内部会统一加 `rl:` 前缀。
@@ -29,13 +43,9 @@ export async function rateLimit(
       await redis.expire(redisKey, windowSeconds);
     }
 
-    return {
-      allowed: count <= limit,
-      remaining: Math.max(0, limit - count),
-    };
+    return createRateLimitResult(count, limit);
   } catch (error) {
     logger.error("[rate-limit] redis operation failed", error);
-    // Redis 异常时降级放行，避免核心流程不可用。
-    return { allowed: true, remaining: limit };
+    return createRateLimitFailureResult(limit);
   }
 }

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { rateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
+import { toPublicUserLookupId } from "@/lib/server-access";
 
 /**
  * GET /api/users/search?q=xxx&limit=6
@@ -48,7 +49,6 @@ export async function GET(request: Request) {
         ],
       },
       select: {
-        id: true,
         uid: true,
         name: true,
         image: true,
@@ -57,7 +57,14 @@ export async function GET(request: Request) {
       orderBy: { uid: "asc" },
     });
 
-    return NextResponse.json({ users });
+    return NextResponse.json({
+      users: users.map((user) => ({
+        id: toPublicUserLookupId(user.uid),
+        uid: user.uid,
+        name: user.name,
+        image: user.image,
+      })),
+    });
   } catch (err) {
     logger.error("[api/users/search] Unexpected error", err);
     return NextResponse.json({ error: "搜索失败" }, { status: 500 });

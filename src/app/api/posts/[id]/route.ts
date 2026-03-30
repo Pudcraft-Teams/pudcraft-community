@@ -5,11 +5,11 @@ import { auth } from "@/lib/auth";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { moderateContent } from "@/lib/moderation";
+import { buildPostModerationFields, moderateFields } from "@/lib/moderation";
 import { rateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 import { getPublicUrl } from "@/lib/storage";
-import { unlinkTagsFromPost } from "@/lib/tags";
+import { replaceTagsForPost, unlinkTagsFromPost, resolvePostTags } from "@/lib/tags";
 import { updatePostSchema } from "@/lib/validation";
 import type { PostDetail } from "@/lib/types";
 
@@ -164,6 +164,7 @@ export async function PUT(request: Request, { params }: RouteContext) {
         id: true,
         authorId: true,
         circleId: true,
+        content: true,
         status: true,
       },
     });
@@ -207,19 +208,20 @@ export async function PUT(request: Request, { params }: RouteContext) {
       );
     }
 
-    const { title, content, sectionId } = parsed.data;
+    const { title, content, sectionId, tags } = parsed.data;
 
-    // Moderate changed title if present
-    if (title) {
+    // Moderate changed title/content if present
+    const moderationFields = buildPostModerationFields({ title, content });
+    if (Object.keys(moderationFields).length > 0) {
       const clientIp = getClientIp(request);
-      const modResult = await moderateContent(title, "comment", {
+      const modResult = await moderateFields(moderationFields, "comment", {
         userId,
         userIp: clientIp,
       });
 
       if (!modResult.passed) {
         return NextResponse.json(
-          { error: "标题包含违规内容，请修改后重新提交", detail: modResult.reason },
+          { error: "帖子内容包含违规信息，请修改后重新提交", detail: modResult.reason },
           { status: 422 },
         );
       }
@@ -245,17 +247,29 @@ export async function PUT(request: Request, { params }: RouteContext) {
     if (title !== undefined) updateData.title = title;
     if (content !== undefined) updateData.content = content;
     if (sectionId !== undefined) updateData.sectionId = sectionId;
+    const nextTags =
+      content !== undefined || tags !== undefined
+        ? resolvePostTags({ content: content ?? post.content, tags })
+        : null;
 
-    const updated = await prisma.post.update({
-      where: { id },
-      data: updateData,
-      select: {
-        id: true,
-        title: true,
-        circleId: true,
-        sectionId: true,
-        updatedAt: true,
-      },
+    const updated = await prisma.$transaction(async (tx) => {
+      const nextPost = await tx.post.update({
+        where: { id },
+        data: updateData,
+        select: {
+          id: true,
+          title: true,
+          circleId: true,
+          sectionId: true,
+          updatedAt: true,
+        },
+      });
+
+      if (nextTags !== null) {
+        await replaceTagsForPost(tx, id, nextTags);
+      }
+
+      return nextPost;
     });
 
     return NextResponse.json({

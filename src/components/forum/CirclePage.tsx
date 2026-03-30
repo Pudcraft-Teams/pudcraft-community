@@ -22,12 +22,38 @@ import type {
 
 interface CirclePageProps {
   slug: string;
+  initialCircle?: CircleDetail;
+  initialSections?: SectionItem[];
+  initialPosts?: PostItem[];
+  initialNextCursor?: string | null;
+}
+
+const SHANGHAI_TIME_ZONE = "Asia/Shanghai";
+
+function formatCalendarDate(dateValue: string): string {
+  const date = new Date(dateValue);
+  if (!Number.isFinite(date.getTime())) {
+    return "未知";
+  }
+
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: SHANGHAI_TIME_ZONE,
+  }).format(date);
 }
 
 /**
  * Circle homepage -- shows banner, info, section tabs, and post feed.
  */
-export function CirclePage({ slug }: CirclePageProps) {
+export function CirclePage({
+  slug,
+  initialCircle,
+  initialSections = [],
+  initialPosts = [],
+  initialNextCursor = null,
+}: CirclePageProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { status: sessionStatus } = useSession();
@@ -35,12 +61,12 @@ export function CirclePage({ slug }: CirclePageProps) {
   const { setDefaults, clearDefaults } = useComposeDefaults();
 
   // ── State ──
-  const [circle, setCircle] = useState<CircleDetail | null>(null);
-  const [sections, setSections] = useState<SectionItem[]>([]);
-  const [posts, setPosts] = useState<PostItem[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [circle, setCircle] = useState<CircleDetail | null>(initialCircle ?? null);
+  const [sections, setSections] = useState<SectionItem[]>(initialSections);
+  const [posts, setPosts] = useState<PostItem[]>(initialPosts);
+  const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!initialCircle);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,6 +135,11 @@ export function CirclePage({ slug }: CirclePageProps) {
 
   // ── Initial load ──
   useEffect(() => {
+    if (initialCircle) {
+      setIsLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
     async function load() {
@@ -140,7 +171,7 @@ export function CirclePage({ slug }: CirclePageProps) {
     return () => {
       cancelled = true;
     };
-  }, [fetchCircle, fetchSections, fetchPosts]);
+  }, [fetchCircle, fetchSections, fetchPosts, initialCircle]);
 
   // ── Section tab click ──
   const handleSectionChange = useCallback(
@@ -296,7 +327,7 @@ export function CirclePage({ slug }: CirclePageProps) {
               <span className="mx-1.5">&middot;</span>
               {circle.postCount} 帖子
               <span className="mx-1.5">&middot;</span>
-              创建于 {timeAgo(circle.createdAt)}
+              创建于 <span suppressHydrationWarning>{timeAgo(circle.createdAt)}</span>
             </p>
           </div>
 
@@ -422,9 +453,7 @@ export function CirclePage({ slug }: CirclePageProps) {
                 </div>
                 <div className="flex items-center justify-between">
                   <dt className="text-warm-400">创建时间</dt>
-                  <dd className="text-warm-500">
-                    {new Date(circle.createdAt).toLocaleDateString("zh-CN")}
-                  </dd>
+                  <dd className="text-warm-500">{formatCalendarDate(circle.createdAt)}</dd>
                 </div>
                 {circle.creator && (
                   <div className="flex items-center justify-between">

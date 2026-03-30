@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import NextAuth from "next-auth";
 import { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
@@ -13,6 +14,47 @@ const BCRYPT_ROUNDS = 12;
 
 class BannedUserError extends CredentialsSignin {
   code = "banned";
+}
+
+interface SessionTokenStateValidationInput {
+  tokenSessionVersion: string | undefined;
+  latestPasswordHash: string;
+  isBanned: boolean;
+}
+
+export function createPasswordSessionVersion(passwordHash: string): string {
+  return createHash("sha256").update(passwordHash).digest("hex");
+}
+
+export function isSessionTokenStateValid({
+  tokenSessionVersion,
+  latestPasswordHash,
+  isBanned,
+}: SessionTokenStateValidationInput): boolean {
+  if (isBanned) {
+    return false;
+  }
+
+  if (!tokenSessionVersion) {
+    return false;
+  }
+
+  return tokenSessionVersion === createPasswordSessionVersion(latestPasswordHash);
+}
+
+function invalidateToken<T extends Record<string, unknown>>(token: T): T {
+  return {
+    ...token,
+    id: undefined,
+    name: undefined,
+    email: undefined,
+    picture: undefined,
+    role: undefined,
+    uid: undefined,
+    profileHydrated: false,
+    sessionVersion: undefined,
+    invalidated: true,
+  };
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -98,17 +140,36 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               image: true,
               role: true,
               uid: true,
+              passwordHash: true,
+              isBanned: true,
             },
           });
 
-          if (latestUser) {
-            token.name = latestUser.name;
-            token.email = latestUser.email;
-            token.picture = getPublicUrl(latestUser.image);
-            token.role = latestUser.role;
-            token.uid = latestUser.uid;
+          if (!latestUser) {
+            return invalidateToken(token);
           }
 
+          const nextSessionVersion = createPasswordSessionVersion(latestUser.passwordHash);
+          const tokenStateValid =
+            !!user ||
+            isSessionTokenStateValid({
+              tokenSessionVersion:
+                typeof token.sessionVersion === "string" ? token.sessionVersion : undefined,
+              latestPasswordHash: latestUser.passwordHash,
+              isBanned: latestUser.isBanned,
+            });
+
+          if (!tokenStateValid) {
+            return invalidateToken(token);
+          }
+
+          token.name = latestUser.name;
+          token.email = latestUser.email;
+          token.picture = getPublicUrl(latestUser.image);
+          token.role = latestUser.role;
+          token.uid = latestUser.uid;
+          token.sessionVersion = nextSessionVersion;
+          token.invalidated = false;
           token.profileHydrated = true;
         }
       }
@@ -125,6 +186,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return token;
     },
     session({ session, token }) {
+      if (token.invalidated === true) {
+        return {
+          ...session,
+          user: undefined,
+        };
+      }
+
       if (session.user && typeof token.id === "string") {
         session.user.id = token.id;
       }

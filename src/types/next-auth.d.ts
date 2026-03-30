@@ -2,7 +2,7 @@ import type { DefaultSession } from "next-auth";
 
 declare module "next-auth" {
   interface Session {
-    user: {
+    user?: {
       id: string;
       uid: number;
       role: string;
@@ -16,5 +16,7 @@ declare module "next-auth/jwt" {
     uid?: number;
     role?: string;
     profileHydrated?: boolean;
+    sessionVersion?: string;
+    invalidated?: boolean;
   }
 }

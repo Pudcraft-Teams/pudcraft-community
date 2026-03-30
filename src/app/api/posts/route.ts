@@ -5,12 +5,12 @@ import { auth } from "@/lib/auth";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { moderateContent } from "@/lib/moderation";
+import { buildPostModerationFields, moderateFields } from "@/lib/moderation";
 import { rateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 import { notifyMentionedUsers } from "@/lib/mentions";
 import { getPublicUrl } from "@/lib/storage";
-import { linkTagsToPost } from "@/lib/tags";
+import { linkTagsToPost, resolvePostTags } from "@/lib/tags";
 import { createPostSchema, feedQuerySchema } from "@/lib/validation";
 import type { PostItem, PostFeedResponse } from "@/lib/types";
 
@@ -187,6 +187,7 @@ export async function POST(request: Request) {
     }
 
     const { title, content, circleId, sectionId, tags, images } = parsed.data;
+    const resolvedTags = resolvePostTags({ content, tags });
 
     // Circle-related validations
     if (circleId) {
@@ -251,18 +252,21 @@ export async function POST(request: Request) {
       }
     }
 
-    // Content moderation on title
+    // Content moderation on title + content excerpt
     const clientIp = getClientIp(request);
-    const modResult = await moderateContent(title, "comment", {
-      userId,
-      userIp: clientIp,
-    });
+    const moderationFields = buildPostModerationFields({ title, content });
+    if (Object.keys(moderationFields).length > 0) {
+      const modResult = await moderateFields(moderationFields, "comment", {
+        userId,
+        userIp: clientIp,
+      });
 
-    if (!modResult.passed) {
-      return NextResponse.json(
-        { error: "标题包含违规内容，请修改后重新提交", detail: modResult.reason },
-        { status: 422 },
-      );
+      if (!modResult.passed) {
+        return NextResponse.json(
+          { error: "帖子内容包含违规信息，请修改后重新提交", detail: modResult.reason },
+          { status: 422 },
+        );
+      }
     }
 
     // Create the post, increment circle.postCount if needed
@@ -291,8 +295,8 @@ export async function POST(request: Request) {
           data: { postCount: { increment: 1 } },
         });
 
-        if (tags.length > 0) {
-          await linkTagsToPost(tx, created.id, tags);
+        if (resolvedTags.length > 0) {
+          await linkTagsToPost(tx, created.id, resolvedTags);
         }
 
         return created;
@@ -336,8 +340,8 @@ export async function POST(request: Request) {
         },
       });
 
-      if (tags.length > 0) {
-        await linkTagsToPost(tx, created.id, tags);
+      if (resolvedTags.length > 0) {
+        await linkTagsToPost(tx, created.id, resolvedTags);
       }
 
       return created;

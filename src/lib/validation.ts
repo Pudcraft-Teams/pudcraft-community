@@ -509,6 +509,7 @@ export const updatePostSchema = z.object({
   title: z.string().trim().min(1).max(100).optional(),
   content: z.string().trim().min(1).max(50000).optional(),
   sectionId: z.string().cuid().optional().nullable(),
+  tags: z.array(z.string().trim().min(1).max(50)).max(5).optional(),
 });
 
 /** 发表论坛评论/回复请求体 */

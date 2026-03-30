@@ -8,7 +8,11 @@ import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { resolveServerCuid } from "@/lib/lookup";
-import { canAccessServer } from "@/lib/server-access";
+import {
+  canViewServerDetails,
+  isPrivilegedServerViewer,
+  shouldExposeServerOwnerId,
+} from "@/lib/server-access";
 import { canSeeServerAddress, isServerMember } from "@/lib/server-membership";
 import { getClientIp } from "@/lib/request-ip";
 import {
@@ -98,33 +102,43 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     }
 
     const session = await auth();
+    let isMember = false;
 
-    // ─── 审核状态访问控制 ───
-    if (server.status !== "approved") {
-      const canAccessCurrentServer = canAccessServer({
+    if (
+      server.visibility !== "public" &&
+      session?.user?.id &&
+      !isPrivilegedServerViewer({
         status: server.status,
         ownerId: server.ownerId,
-        currentUserId: session?.user?.id,
-        currentUserRole: session?.user?.role,
-      });
-      if (!canAccessCurrentServer) {
-        return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
-      }
+        currentUserId: session.user.id,
+        currentUserRole: session.user.role,
+      })
+    ) {
+      isMember = await isServerMember(server.id, session.user.id);
     }
 
-    // ─── 地址可见性检查 ───
+    const accessOptions = {
+      status: server.status,
+      visibility: server.visibility,
+      ownerId: server.ownerId,
+      currentUserId: session?.user?.id,
+      currentUserRole: session?.user?.role,
+      isMember,
+    };
+
+    if (!canViewServerDetails(accessOptions)) {
+      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+    }
+
     const canSeeAddress = await canSeeServerAddress(
       { visibility: server.visibility, ownerId: server.ownerId },
       session?.user?.id,
       session?.user?.role,
       server.id,
+      isMember,
     );
 
-    // ─── 成员状态检查 ───
-    let isMember = false;
-    if (session?.user?.id) {
-      isMember = await isServerMember(server.id, session.user.id);
-    }
+    const exposeOwnerId = shouldExposeServerOwnerId(accessOptions);
 
     const data: ServerDetail = {
       id: server.id,
@@ -134,7 +148,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       port: canSeeAddress ? server.port : 0,
       description: server.description,
       content: server.content,
-      ownerId: server.ownerId,
+      ownerId: exposeOwnerId ? server.ownerId : null,
       tags: server.tags,
       iconUrl: getPublicUrl(server.iconUrl),
       imageUrl: getPublicUrl(server.imageUrl),

@@ -8,6 +8,10 @@ interface ActiveUser {
   name: string | null;
 }
 
+interface ActiveUserRecord extends ActiveUser {
+  isBanned: boolean;
+}
+
 interface ActiveUserSuccess {
   user: ActiveUser;
 }
@@ -22,23 +26,15 @@ export function isActiveUserError(result: ActiveUserResult): result is ActiveUse
   return "response" in result;
 }
 
-/**
- * 统一登录态 + 封禁态校验。
- * 用于敏感 API：未登录返回 401，被封禁返回 403。
- */
-export async function requireActiveUser(): Promise<ActiveUserResult> {
-  const session = await auth();
-  const userId = session?.user?.id;
+export function resolveActiveUserResult(
+  userId: string | null | undefined,
+  user: ActiveUserRecord | null,
+): ActiveUserResult {
   if (!userId) {
     return {
       response: NextResponse.json({ error: "请先登录" }, { status: 401 }),
     };
   }
-
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    select: { id: true, role: true, name: true, isBanned: true },
-  });
 
   if (!user) {
     return {
@@ -59,4 +55,21 @@ export async function requireActiveUser(): Promise<ActiveUserResult> {
       name: user.name,
     },
   };
+}
+
+/**
+ * 统一登录态 + 封禁态校验。
+ * 用于敏感 API：未登录返回 401，被封禁返回 403。
+ */
+export async function requireActiveUser(): Promise<ActiveUserResult> {
+  const session = await auth();
+  const userId = session?.user?.id;
+  const user = userId
+    ? await db.user.findUnique({
+        where: { id: userId },
+        select: { id: true, role: true, name: true, isBanned: true },
+      })
+    : null;
+
+  return resolveActiveUserResult(userId, user);
 }

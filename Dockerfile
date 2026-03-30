@@ -1,7 +1,10 @@
 FROM node:24-alpine AS base
 
+ARG ESBUILD_VERSION=0.27.3
+
 # Stage 1: Build application
 FROM base AS builder
+ARG ESBUILD_VERSION
 RUN corepack enable
 WORKDIR /app
 
@@ -25,7 +28,7 @@ ENV SMTP_FROM="Build <build@example.com>"
 RUN pnpm build
 
 # esbuild binary is unavailable via pnpm strict mode; install globally
-RUN npm install -g esbuild && \
+RUN npm install -g esbuild@${ESBUILD_VERSION} && \
     esbuild src/worker/index.ts \
     --bundle \
     --platform=node \

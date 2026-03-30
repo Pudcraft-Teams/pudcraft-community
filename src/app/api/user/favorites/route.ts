@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { canAccessServer, isPrivilegedServerViewer } from "@/lib/server-access";
 import { getPublicUrl } from "@/lib/storage";
 import type { ServerListItem } from "@/lib/types";
 
@@ -15,6 +16,7 @@ export async function GET() {
   try {
     const session = await auth();
     const userId = session?.user?.id;
+    const currentUserRole = session?.user?.role;
     if (!userId) {
       return NextResponse.json({ error: "请先登录" }, { status: 401 });
     }
@@ -40,6 +42,8 @@ export async function GET() {
             maxPlayers: true,
             lastPingedAt: true,
             updatedAt: true,
+            visibility: true,
+            ownerId: true,
             status: true,
             rejectReason: true,
           },
@@ -48,14 +52,47 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
-    const data: ServerListItem[] = favorites.map((favorite) => {
+    const nonPublicServerIds = favorites
+      .filter((favorite) => favorite.server.visibility !== "public")
+      .map((favorite) => favorite.server.id);
+    const memberships =
+      nonPublicServerIds.length > 0
+        ? await prisma.serverMember.findMany({
+            where: { userId, serverId: { in: nonPublicServerIds } },
+            select: { serverId: true },
+          })
+        : [];
+    const memberServerIds = new Set(memberships.map((membership) => membership.serverId));
+
+    const data: ServerListItem[] = favorites.flatMap((favorite) => {
       const server = favorite.server;
-      return {
+      if (
+        !canAccessServer({
+          status: server.status,
+          ownerId: server.ownerId,
+          currentUserId: userId,
+          currentUserRole,
+        })
+      ) {
+        return [];
+      }
+
+      const canSeeAddress =
+        server.visibility === "public" ||
+        isPrivilegedServerViewer({
+          status: server.status,
+          ownerId: server.ownerId,
+          currentUserId: userId,
+          currentUserRole,
+          isMember: memberServerIds.has(server.id),
+        });
+
+      return [{
         id: server.id,
         psid: server.psid,
         name: server.name,
-        host: server.host,
-        port: server.port,
+        host: canSeeAddress ? server.host : "hidden",
+        port: canSeeAddress ? server.port : 0,
         description: server.description,
         tags: server.tags,
         iconUrl: getPublicUrl(server.iconUrl),
@@ -70,7 +107,7 @@ export async function GET() {
           favicon: null,
           checkedAt: (server.lastPingedAt ?? server.updatedAt).toISOString(),
         },
-      };
+      }];
     });
 
     return NextResponse.json({

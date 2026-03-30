@@ -2,7 +2,6 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
-import { auth } from "@/lib/auth";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -42,11 +41,11 @@ function hasOwnProperty<T extends object>(value: T, key: string): boolean {
  */
 export async function GET() {
   try {
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    const authResult = await requireActiveUser();
+    if (isActiveUserError(authResult)) {
+      return authResult.response;
     }
+    const userId = authResult.user.id;
 
     const user = await prisma.user.findUnique({
       where: { id: userId },

@@ -19,6 +19,9 @@ import type { PostDetail, ForumComment, ForumCommentResponse } from "@/lib/types
 interface PostDetailPageProps {
   postId: string;
   circleSlug?: string;
+  initialPost?: PostDetail;
+  initialComments?: ForumComment[];
+  initialNextCursor?: string | null;
 }
 
 interface PostDetailApiResponse {
@@ -38,30 +41,38 @@ interface DeleteResponse {
 }
 
 
-export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
+export function PostDetailPage({
+  postId,
+  circleSlug,
+  initialPost,
+  initialComments,
+  initialNextCursor = null,
+}: PostDetailPageProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { data: session, status: sessionStatus } = useSession();
   const { toast } = useToast();
   const confirm = useConfirm();
 
-  const [post, setPost] = useState<PostDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [post, setPost] = useState<PostDetail | null>(initialPost ?? null);
+  const [isLoading, setIsLoading] = useState(!initialPost);
   const [error, setError] = useState<string | null>(null);
 
   // Like/bookmark/pin local state
-  const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(0);
+  const [liked, setLiked] = useState(initialPost?.isLiked ?? false);
+  const [likeCount, setLikeCount] = useState(initialPost?.likeCount ?? 0);
   const [likePending, setLikePending] = useState(false);
-  const [bookmarked, setBookmarked] = useState(false);
+  const [bookmarked, setBookmarked] = useState(initialPost?.isBookmarked ?? false);
   const [bookmarkPending, setBookmarkPending] = useState(false);
-  const [isPinned, setIsPinned] = useState(false);
+  const [isPinned, setIsPinned] = useState(initialPost?.isPinned ?? false);
   const [pinPending, setPinPending] = useState(false);
   const [deletePending, setDeletePending] = useState(false);
 
   // Comments state
-  const [comments, setComments] = useState<ForumComment[]>([]);
-  const [commentNextCursor, setCommentNextCursor] = useState<string | null>(null);
+  const [comments, setComments] = useState<ForumComment[]>(initialComments ?? []);
+  const [commentNextCursor, setCommentNextCursor] = useState<string | null>(
+    initialNextCursor,
+  );
 
   // Moderation state
   const [canModerate, setCanModerate] = useState(false);
@@ -76,6 +87,15 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
 
   // Fetch post detail
   useEffect(() => {
+    if (initialPost) {
+      setLiked(initialPost.isLiked ?? false);
+      setLikeCount(initialPost.likeCount);
+      setBookmarked(initialPost.isBookmarked ?? false);
+      setIsPinned(initialPost.isPinned);
+      setIsLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
     async function fetchPost() {
@@ -115,10 +135,16 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
     return () => {
       cancelled = true;
     };
-  }, [postId]);
+  }, [initialPost, postId]);
 
   // Fetch initial comments
   useEffect(() => {
+    if (initialComments) {
+      setComments(initialComments);
+      setCommentNextCursor(initialNextCursor);
+      return;
+    }
+
     let cancelled = false;
 
     async function fetchComments() {
@@ -142,7 +168,7 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
     return () => {
       cancelled = true;
     };
-  }, [postId]);
+  }, [initialComments, initialNextCursor, postId]);
 
   // Determine moderation & comment permissions
   useEffect(() => {
@@ -424,7 +450,7 @@ export function PostDetailPage({ postId, circleSlug }: PostDetailPageProps) {
               {post.author.name ?? `用户${post.author.uid}`}
             </Link>
             <p className="text-xs text-warm-400">
-              {timeAgo(post.createdAt)}
+              <span suppressHydrationWarning>{timeAgo(post.createdAt)}</span>
               {post.section && (
                 <span className="ml-2 rounded-full bg-warm-100 px-2 py-0.5 text-xs text-warm-500">
                   {post.section.name}

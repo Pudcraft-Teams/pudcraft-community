@@ -6,6 +6,10 @@ import { prisma } from "@/lib/db";
 import { isPrivateServersEnabled } from "@/lib/features";
 import { logger } from "@/lib/logger";
 import { resolveServerCuid } from "@/lib/lookup";
+import {
+  canJoinServerViaInvite,
+  shouldDeletePendingApplicationAfterInviteJoin,
+} from "@/lib/server-membership";
 import { publishWhitelistChange } from "@/lib/whitelist-pubsub";
 import { serverLookupIdSchema, joinByInviteSchema } from "@/lib/validation";
 
@@ -60,6 +64,10 @@ export async function POST(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
     }
 
+    if (!canJoinServerViaInvite(server.joinMode)) {
+      return NextResponse.json({ error: "当前加入模式不支持邀请码" }, { status: 400 });
+    }
+
     // 在事务中完成所有检查和写操作，避免竞态条件
     const result = await prisma.$transaction(async (tx) => {
       // 查找邀请码
@@ -94,6 +102,17 @@ export async function POST(request: Request, { params }: RouteContext) {
 
       if (existingMember) {
         return { error: "你已经是该服务器成员", status: 409 } as const;
+      }
+
+      const existingApplication = await tx.serverApplication.findUnique({
+        where: { unique_server_application: { serverId: server.id, userId } },
+        select: { id: true, status: true },
+      });
+
+      if (shouldDeletePendingApplicationAfterInviteJoin(existingApplication?.status)) {
+        await tx.serverApplication.delete({
+          where: { id: existingApplication!.id },
+        });
       }
 
       const member = await tx.serverMember.create({

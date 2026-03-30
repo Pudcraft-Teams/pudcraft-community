@@ -102,11 +102,29 @@ export async function POST(
 
     const server = await prisma.server.findUnique({
       where: { id: cuid },
-      select: { isVerified: true, ownerId: true },
+      select: {
+        isVerified: true,
+        ownerId: true,
+        verifyUserId: true,
+        verifyExpiresAt: true,
+      },
     });
 
     if (!server) {
       return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+    }
+
+    if (server.ownerId && server.ownerId !== userId) {
+      return NextResponse.json({ error: "无权限" }, { status: 403 });
+    }
+
+    if (
+      server.verifyUserId &&
+      server.verifyUserId !== userId &&
+      server.verifyExpiresAt &&
+      server.verifyExpiresAt > new Date()
+    ) {
+      return NextResponse.json({ error: "已有其他用户正在进行认领" }, { status: 409 });
     }
 
     const { raw, hash } = generateApiKey();

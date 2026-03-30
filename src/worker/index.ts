@@ -1,3 +1,4 @@
+import { db } from "../lib/db";
 import { logger } from "../lib/logger";
 import { pingWorker } from "./ping-worker";
 import { startScheduler } from "./scheduler";
@@ -12,6 +13,7 @@ const shutdown = async () => {
   clearInterval(timer);
   await pingWorker.close();
   await verifyWorker.close();
+  await db.$disconnect();
   process.exit(0);
 };
 

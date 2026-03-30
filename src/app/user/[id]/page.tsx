@@ -28,7 +28,7 @@ function resolveDisplayName(name: string | null, email: string): string {
   return name?.trim() || email.split("@")[0] || "用户";
 }
 
-const getUser = cache(async (rawId: string) => {
+const getUser = cache(async (rawId: string, viewerUserId?: string, viewerRole?: string) => {
   const parsed = userLookupIdSchema.safeParse(rawId);
   if (!parsed.success) {
     return null;
@@ -38,6 +38,8 @@ const getUser = cache(async (rawId: string) => {
   if (!cuid) {
     return null;
   }
+
+  const canViewNonPublicServers = viewerUserId === cuid || viewerRole === "admin";
 
   return prisma.user.findUnique({
     where: { id: cuid },
@@ -52,6 +54,7 @@ const getUser = cache(async (rawId: string) => {
       servers: {
         where: {
           status: "approved",
+          ...(canViewNonPublicServers ? {} : { visibility: "public" }),
         },
         orderBy: { createdAt: "desc" },
         select: {
@@ -70,6 +73,7 @@ const getUser = cache(async (rawId: string) => {
           maxPlayers: true,
           lastPingedAt: true,
           updatedAt: true,
+          visibility: true,
         },
       },
     },
@@ -97,7 +101,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
  */
 export default async function UserProfilePage({ params }: PageProps) {
   const [{ id }, session] = await Promise.all([params, auth()]);
-  const user = await getUser(id);
+  const user = await getUser(id, session?.user?.id, session?.user?.role);
 
   if (!user) {
     notFound();
@@ -105,13 +109,14 @@ export default async function UserProfilePage({ params }: PageProps) {
 
   const displayName = resolveDisplayName(user.name, user.email);
   const isOwnProfile = session?.user?.id === user.id;
+  const canViewNonPublicServers = isOwnProfile || session?.user?.role === "admin";
 
   const servers: ServerListItem[] = user.servers.map((server) => ({
     id: server.id,
     psid: server.psid,
     name: server.name,
-    host: server.host,
-    port: server.port,
+    host: server.visibility === "public" || canViewNonPublicServers ? server.host : "hidden",
+    port: server.visibility === "public" || canViewNonPublicServers ? server.port : 0,
     description: server.description,
     tags: server.tags,
     iconUrl: getPublicUrl(server.iconUrl),

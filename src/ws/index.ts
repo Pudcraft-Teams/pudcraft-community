@@ -2,9 +2,9 @@ import { createServer } from "http";
 import { WebSocketServer } from "ws";
 import type { WebSocket } from "ws";
 import Redis from "ioredis";
-import { PrismaClient } from "@prisma/client";
 import { createHash } from "crypto";
 import { addConnection, removeConnection, getConnections } from "./connections";
+import { db } from "../lib/db";
 import { getRedisConnectionOptions } from "../lib/redis-config";
 
 const WHITELIST_CHANNEL = "whitelist:change";
@@ -12,19 +12,36 @@ const WS_PORT = Number(process.env.WS_PORT) || 3001;
 const HEARTBEAT_INTERVAL = 30_000;
 const PLUGIN_CONNECTED_TTL = 60;
 
-const prisma = new PrismaClient();
 const redisOptions = getRedisConnectionOptions();
 const subscriber = new Redis(redisOptions);
 const publisher = new Redis(redisOptions);
+let hasEstablishedWhitelistSubscription = false;
+let isWhitelistSubscribed = false;
 
 // Track liveness per socket
 const alive = new WeakMap<WebSocket, boolean>();
 
 // --- HTTP server with /health endpoint ---
+async function checkHealth(): Promise<void> {
+  if (!isWhitelistSubscribed) {
+    throw new Error("Redis subscriber is not subscribed");
+  }
+
+  await Promise.all([db.$queryRaw`SELECT 1`, publisher.ping(), subscriber.ping()]);
+}
+
 const httpServer = createServer((req, res) => {
   if (req.url === "/health") {
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ status: "ok" }));
+    void checkHealth()
+      .then(() => {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ status: "ok" }));
+      })
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : "unknown";
+        res.writeHead(503, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ status: "error", error: message }));
+      });
     return;
   }
   res.writeHead(404);
@@ -54,7 +71,7 @@ httpServer.on("upgrade", (req, socket, head) => {
 
   const isNumeric = /^\d+$/.test(serverId);
 
-  prisma.server
+  db.server
     .findUnique({
       where: isNumeric ? { psid: Number(serverId) } : { id: serverId },
       select: { id: true, apiKeyHash: true },
@@ -103,10 +120,32 @@ wss.on("connection", (ws: WebSocket, _req: unknown, serverId: string) => {
 // --- Redis subscriber ---
 subscriber.subscribe(WHITELIST_CHANNEL, (err) => {
   if (err) {
+    isWhitelistSubscribed = false;
     console.error("[ws] Failed to subscribe to Redis channel:", err);
     return;
   }
+
+  hasEstablishedWhitelistSubscription = true;
+  isWhitelistSubscribed = true;
   console.log(`[ws] Subscribed to Redis channel: ${WHITELIST_CHANNEL}`);
+});
+
+subscriber.on("ready", () => {
+  if (hasEstablishedWhitelistSubscription) {
+    isWhitelistSubscribed = true;
+  }
+});
+
+subscriber.on("error", () => {
+  isWhitelistSubscribed = false;
+});
+
+subscriber.on("close", () => {
+  isWhitelistSubscribed = false;
+});
+
+subscriber.on("end", () => {
+  isWhitelistSubscribed = false;
 });
 
 subscriber.on("message", (channel, message) => {
@@ -162,7 +201,7 @@ function shutdown() {
 
   wss.close(() => {
     httpServer.close(() => {
-      prisma
+      db
         .$disconnect()
         .then(() => {
           console.log("[ws] Shutdown complete");

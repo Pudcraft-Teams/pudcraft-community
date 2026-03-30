@@ -11,6 +11,44 @@ const sanitizeSchema = {
   tagNames: [...(defaultSchema.tagNames ?? []), "u"],
 };
 
+const TRUSTED_SITE_ORIGIN = (() => {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (!siteUrl) {
+    return null;
+  }
+
+  try {
+    return new URL(siteUrl).origin;
+  } catch {
+    return null;
+  }
+})();
+
+export function isAllowedMarkdownImageSrc(
+  src: string,
+  trustedOrigin: string | null = TRUSTED_SITE_ORIGIN,
+): boolean {
+  const value = src.trim();
+  if (!value) {
+    return false;
+  }
+
+  if (
+    value.startsWith("/") ||
+    value.startsWith("blob:") ||
+    value.startsWith("data:")
+  ) {
+    return true;
+  }
+
+  try {
+    const url = new URL(value);
+    return trustedOrigin !== null && url.origin === trustedOrigin;
+  } catch {
+    return false;
+  }
+}
+
 interface MarkdownRendererProps {
   content: string;
 }
@@ -79,14 +117,46 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
           ),
           td: ({ children }) => <td className="border border-warm-200 px-3 py-2">{children}</td>,
           img: ({ src, alt }) => (
-            // react-markdown 已配合 rehype-sanitize 过滤，src/alt 在此仅做展示。
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={src ?? ""}
-              alt={alt ?? "图片"}
-              className="my-4 h-auto max-w-full rounded-xl border border-warm-200"
-              loading="lazy"
-            />
+            (() => {
+              const resolvedSrc = typeof src === "string" ? src.trim() : "";
+
+              if (!resolvedSrc) {
+                return null;
+              }
+
+              if (!isAllowedMarkdownImageSrc(resolvedSrc)) {
+                return (
+                  <div className="my-4 rounded-xl border border-warm-200 bg-warm-50 px-3 py-2 text-sm text-warm-500">
+                    已屏蔽远程图片
+                    {resolvedSrc.startsWith("http") && (
+                      <>
+                        {" "}
+                        <a
+                          href={resolvedSrc}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-accent underline underline-offset-4"
+                        >
+                          查看原图
+                        </a>
+                      </>
+                    )}
+                  </div>
+                );
+              }
+
+              // react-markdown 已配合 rehype-sanitize 过滤，src/alt 在此仅做展示。
+              return (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={resolvedSrc}
+                  alt={alt ?? "图片"}
+                  className="my-4 h-auto max-w-full rounded-xl border border-warm-200"
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                />
+              );
+            })()
           ),
         }}
       >

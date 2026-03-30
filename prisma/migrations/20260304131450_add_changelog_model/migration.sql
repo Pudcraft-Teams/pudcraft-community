@@ -23,4 +23,17 @@ CREATE INDEX "changelogs_created_at_idx" ON "changelogs"("created_at" DESC);
 ALTER TABLE "changelogs" ADD CONSTRAINT "changelogs_author_id_fkey" FOREIGN KEY ("author_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- RenameIndex
-ALTER INDEX "unique_type_numeric_id" RENAME TO "reserved_numeric_ids_type_numeric_id_key";
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM pg_class
+        WHERE relkind = 'i' AND relname = 'unique_type_numeric_id'
+    ) AND NOT EXISTS (
+        SELECT 1
+        FROM pg_class
+        WHERE relkind = 'i' AND relname = 'reserved_numeric_ids_type_numeric_id_key'
+    ) THEN
+        ALTER INDEX "unique_type_numeric_id" RENAME TO "reserved_numeric_ids_type_numeric_id_key";
+    END IF;
+END $$;

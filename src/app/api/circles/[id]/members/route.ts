@@ -145,3 +145,70 @@ export async function POST(_request: Request, { params }: RouteContext) {
     return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
   }
 }
+
+/**
+ * DELETE /api/circles/:id/members
+ * Leave a circle as the current user.
+ */
+export async function DELETE(_request: Request, { params }: RouteContext) {
+  try {
+    const authResult = await requireActiveUser();
+    if (isActiveUserError(authResult)) {
+      return authResult.response;
+    }
+    const userId = authResult.user.id;
+
+    const { id } = await params;
+
+    const circleId = await resolveCircleId(id);
+    if (!circleId) {
+      return NextResponse.json({ error: "圈子未找到" }, { status: 404 });
+    }
+
+    const membership = await prisma.circleMembership.findUnique({
+      where: {
+        unique_circle_membership: { userId, circleId },
+      },
+      select: { id: true, role: true },
+    });
+
+    if (!membership) {
+      return NextResponse.json({ error: "你不是该圈子成员" }, { status: 404 });
+    }
+
+    if (membership.role === "OWNER") {
+      return NextResponse.json(
+        { error: "圈主不能退出圈子，请先转让圈主身份" },
+        { status: 403 },
+      );
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.circleMembership.delete({
+        where: { id: membership.id },
+      });
+
+      const updated = await tx.circle.update({
+        where: { id: circleId },
+        data: { memberCount: { decrement: 1 } },
+        select: { memberCount: true },
+      });
+
+      if (updated.memberCount < 0) {
+        await tx.circle.update({
+          where: { id: circleId },
+          data: { memberCount: 0 },
+        });
+      }
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return NextResponse.json({ error: "你不是该圈子成员" }, { status: 404 });
+    }
+
+    logger.error("[api/circles/[id]/members] Unexpected DELETE error", error);
+    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+  }
+}

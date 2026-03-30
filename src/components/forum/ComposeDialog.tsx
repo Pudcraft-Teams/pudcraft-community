@@ -42,6 +42,8 @@ export function ComposeProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [options, setOptions] = useState<ComposeOptions>({});
   const [defaults, setDefaultsState] = useState<ComposeOptions>({});
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
 
   const openCompose = useCallback((opts?: ComposeOptions) => {
     setOptions(opts ?? {});
@@ -63,7 +65,34 @@ export function ComposeProvider({ children }: { children: ReactNode }) {
   // Lock body scroll when open
   useEffect(() => {
     if (open) {
+      restoreFocusRef.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
       document.body.style.overflow = "hidden";
+      const frame = window.requestAnimationFrame(() => {
+        const container = dialogRef.current;
+        const focusableElements = container
+          ? Array.from(
+              container.querySelectorAll<HTMLElement>(
+                [
+                  "button:not([disabled])",
+                  "[href]",
+                  "input:not([disabled])",
+                  "select:not([disabled])",
+                  "textarea:not([disabled])",
+                  '[tabindex]:not([tabindex="-1"])',
+                ].join(","),
+              ),
+            ).filter((element) => !element.hasAttribute("disabled"))
+          : [];
+
+        (focusableElements[0] ?? container)?.focus();
+      });
+
+      return () => {
+        window.cancelAnimationFrame(frame);
+        document.body.style.overflow = "";
+        restoreFocusRef.current?.focus();
+      };
     } else {
       document.body.style.overflow = "";
     }
@@ -77,6 +106,47 @@ export function ComposeProvider({ children }: { children: ReactNode }) {
     if (!open) return;
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
+
+      if (e.key !== "Tab") {
+        return;
+      }
+
+      const container = dialogRef.current;
+      if (!container) {
+        return;
+      }
+
+      const focusableElements = Array.from(
+        container.querySelectorAll<HTMLElement>(
+          [
+            "button:not([disabled])",
+            "[href]",
+            "input:not([disabled])",
+            "select:not([disabled])",
+            "textarea:not([disabled])",
+            '[tabindex]:not([tabindex="-1"])',
+          ].join(","),
+        ),
+      ).filter((element) => !element.hasAttribute("disabled"));
+
+      if (focusableElements.length === 0) {
+        e.preventDefault();
+        container.focus();
+        return;
+      }
+
+      const currentIndex = focusableElements.indexOf(document.activeElement as HTMLElement);
+      const nextIndex =
+        e.shiftKey
+          ? currentIndex <= 0
+            ? focusableElements.length - 1
+            : currentIndex - 1
+          : currentIndex === -1 || currentIndex >= focusableElements.length - 1
+            ? 0
+            : currentIndex + 1;
+
+      e.preventDefault();
+      focusableElements[nextIndex]?.focus();
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -101,11 +171,19 @@ export function ComposeProvider({ children }: { children: ReactNode }) {
           <div
             className="absolute inset-0 animate-fade-in bg-warm-900/40 backdrop-blur-[2px]"
             onClick={closeCompose}
+            role="presentation"
           />
 
           {/* Dialog */}
           <div className="relative z-10 mx-4 mt-[8vh] w-full max-w-xl animate-dialog-in sm:mt-[12vh]">
-            <div className="rounded-2xl border border-warm-200 bg-surface shadow-xl">
+            <div
+              ref={dialogRef}
+              className="rounded-2xl border border-warm-200 bg-surface shadow-xl outline-none"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="compose-dialog-title"
+              tabIndex={-1}
+            >
               {/* Header */}
               <div className="flex items-center justify-between border-b border-warm-100 px-4 py-3">
                 <button
@@ -122,7 +200,9 @@ export function ComposeProvider({ children }: { children: ReactNode }) {
                     <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
                   </svg>
                 </button>
-                <span className="text-sm font-medium text-warm-600">发帖</span>
+                <span id="compose-dialog-title" className="text-sm font-medium text-warm-600">
+                  发帖
+                </span>
                 <div className="w-7" />
               </div>
 

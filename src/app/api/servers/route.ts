@@ -10,6 +10,7 @@ import { logger } from "@/lib/logger";
 import { generateAndReservePsid } from "@/lib/numeric-id";
 import { getClientIp } from "@/lib/request-ip";
 import { rateLimit } from "@/lib/rate-limit";
+import { getInitialServerSubmissionState } from "@/lib/server-access";
 import {
   getPublicUrl,
   ImageModerationError,
@@ -116,9 +117,11 @@ export async function GET(request: Request) {
 
     if (ownerId) {
       where.ownerId = ownerId;
-      // owner 查自己的服务器不限状态
       if (ownerId !== session?.user?.id) {
         where.status = "approved";
+        if (session?.user?.role !== "admin") {
+          where.visibility = "public";
+        }
       }
     } else {
       // 普通访问只显示已通过审核的服务器，排除未开启「首页发现」的私有服务器
@@ -330,6 +333,7 @@ export async function POST(request: Request) {
 
     let server;
     try {
+      const initialReviewState = getInitialServerSubmissionState();
       server = await prisma.$transaction(async (tx) => {
         const psid = await generateAndReservePsid(tx);
         return tx.server.create({
@@ -349,8 +353,7 @@ export async function POST(request: Request) {
             ownerId: userId,
             maxPlayers: typeof maxPlayers === "number" ? maxPlayers : 0,
             visibility: visibility ?? "public",
-            status: "approved",
-            reviewStatus: "unreviewed",
+            ...initialReviewState,
           },
         });
       });
@@ -411,7 +414,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         success: true,
-        message: "服务器已成功发布",
+        message: "服务器已提交，等待审核",
         warning: iconWarning,
         data: {
           id: server.id,
@@ -422,6 +425,7 @@ export async function POST(request: Request) {
           description: server.description,
           tags: server.tags,
           ownerId: server.ownerId,
+          reviewStatus: server.status,
           iconUrl: getPublicUrl(iconKey),
         },
       },

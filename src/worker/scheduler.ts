@@ -1,8 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+import { db } from "../lib/db";
 import { logger } from "../lib/logger";
 import { getPingJobId, pingQueue } from "../lib/queue";
 
-const prisma = new PrismaClient();
 const PING_INTERVAL_MS = 5 * 60 * 1000;
 const PLUGIN_REPORT_SKIP_MS = 2 * 60 * 1000;
 
@@ -21,7 +20,7 @@ export async function scheduleAllPings(): Promise<void> {
   try {
     const pluginSkipThreshold = new Date(Date.now() - PLUGIN_REPORT_SKIP_MS);
 
-    const servers = await prisma.server.findMany({
+    const servers = await db.server.findMany({
       where: {
         status: "approved",
         OR: [
