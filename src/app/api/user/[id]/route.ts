@@ -1,9 +1,12 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { resolveUserCuid } from "@/lib/lookup";
+import { toPublicUserLookupId } from "@/lib/server-access";
+import { buildServerStatusResponse } from "@/lib/serverStatus";
 import { getPublicUrl } from "@/lib/storage";
 import type { ServerListItem } from "@/lib/types";
 import { userLookupIdSchema } from "@/lib/validation";
@@ -29,6 +32,10 @@ export async function GET(_request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "用户不存在" }, { status: 404 });
     }
 
+    const session = await auth();
+    const canViewNonPublicServers =
+      session?.user?.id === resolvedId || session?.user?.role === "admin";
+
     const user = await prisma.user.findUnique({
       where: { id: resolvedId },
       select: {
@@ -41,6 +48,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
         servers: {
           where: {
             status: "approved",
+            ...(canViewNonPublicServers ? {} : { visibility: "public" }),
           },
           orderBy: { createdAt: "desc" },
         },
@@ -63,19 +71,12 @@ export async function GET(_request: Request, { params }: RouteContext) {
       favoriteCount: server.favoriteCount,
       isVerified: server.isVerified,
       verifiedAt: server.verifiedAt?.toISOString() ?? null,
-      status: {
-        online: server.isOnline,
-        playerCount: server.playerCount,
-        maxPlayers: server.maxPlayers,
-        motd: null,
-        favicon: null,
-        checkedAt: (server.lastPingedAt ?? server.updatedAt).toISOString(),
-      },
+      status: buildServerStatusResponse(server),
     }));
 
     return NextResponse.json({
       data: {
-        id: user.id,
+        id: toPublicUserLookupId(user.uid),
         uid: user.uid,
         name: user.name,
         image: getPublicUrl(user.image),

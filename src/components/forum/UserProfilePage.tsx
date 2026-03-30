@@ -30,11 +30,14 @@ interface CircleMembershipResponse {
   circles: CircleItem[];
 }
 
+const SHANGHAI_TIME_ZONE = "Asia/Shanghai";
+
 function formatJoinTime(dateStr: string): string {
   const date = new Date(dateStr);
   return new Intl.DateTimeFormat("zh-CN", {
     year: "numeric",
     month: "long",
+    timeZone: SHANGHAI_TIME_ZONE,
   }).format(date);
 }
 
@@ -203,7 +206,7 @@ export function UserProfilePage({ uid, user }: UserProfilePageProps) {
               {user.bio?.trim() || "这个用户还没有填写个人简介。"}
             </p>
             <p className="mt-2 text-xs text-warm-500">
-              加入时间: {formatJoinTime(user.createdAt)}
+              加入时间: <span suppressHydrationWarning>{formatJoinTime(user.createdAt)}</span>
             </p>
           </div>
         </div>

@@ -125,6 +125,8 @@ export async function POST(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "圈子未找到" }, { status: 404 });
     }
 
+    let currentCircleRole: "OWNER" | "ADMIN" | null = null;
+
     // Permission: site admin or circle OWNER/ADMIN
     const isAdmin = userRole === "admin";
     if (!isAdmin) {
@@ -138,6 +140,8 @@ export async function POST(request: Request, { params }: RouteContext) {
       if (!membership || (membership.role !== "OWNER" && membership.role !== "ADMIN")) {
         return NextResponse.json({ error: "没有权限执行此操作" }, { status: 403 });
       }
+
+      currentCircleRole = membership.role;
     }
 
     // Parse and validate body
@@ -171,6 +175,10 @@ export async function POST(request: Request, { params }: RouteContext) {
 
     if (targetMembership?.role === "OWNER") {
       return NextResponse.json({ error: "不能封禁圈主" }, { status: 403 });
+    }
+
+    if (!isAdmin && currentCircleRole === "ADMIN" && targetMembership?.role === "ADMIN") {
+      return NextResponse.json({ error: "管理员不能封禁其他管理员" }, { status: 403 });
     }
 
     // Transaction: create ban + remove membership + decrement memberCount

@@ -11,6 +11,71 @@ const sanitizeSchema = {
   tagNames: [...(defaultSchema.tagNames ?? []), "u"],
 };
 
+function toOrigin(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    return new URL(trimmed).origin;
+  } catch {
+    return null;
+  }
+}
+
+function getTrustedMarkdownImageOrigins(): string[] {
+  const origins = [
+    toOrigin(process.env.NEXT_PUBLIC_SITE_URL),
+    toOrigin(process.env.NEXT_PUBLIC_STORAGE_PUBLIC_BASE_URL),
+    toOrigin(process.env.S3_PUBLIC_BASE_URL),
+    toOrigin(process.env.OSS_PUBLIC_BASE_URL),
+  ].filter((value): value is string => value !== null);
+
+  return [...new Set(origins)];
+}
+
+const TRUSTED_MARKDOWN_IMAGE_ORIGINS = getTrustedMarkdownImageOrigins();
+
+function normalizeTrustedOrigins(
+  trustedOrigins: string | readonly string[] | null,
+): string[] {
+  if (trustedOrigins === null) {
+    return [];
+  }
+
+  if (typeof trustedOrigins === "string") {
+    return trustedOrigins ? [trustedOrigins] : [];
+  }
+
+  return trustedOrigins.filter((origin) => origin.length > 0);
+}
+
+export function isAllowedMarkdownImageSrc(
+  src: string,
+  trustedOrigins: string | readonly string[] | null = TRUSTED_MARKDOWN_IMAGE_ORIGINS,
+): boolean {
+  const value = src.trim();
+  if (!value) {
+    return false;
+  }
+
+  if (
+    value.startsWith("/") ||
+    value.startsWith("blob:") ||
+    value.startsWith("data:")
+  ) {
+    return true;
+  }
+
+  try {
+    const url = new URL(value);
+    return normalizeTrustedOrigins(trustedOrigins).includes(url.origin);
+  } catch {
+    return false;
+  }
+}
+
 interface MarkdownRendererProps {
   content: string;
 }
@@ -79,14 +144,46 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
           ),
           td: ({ children }) => <td className="border border-warm-200 px-3 py-2">{children}</td>,
           img: ({ src, alt }) => (
-            // react-markdown 已配合 rehype-sanitize 过滤，src/alt 在此仅做展示。
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={src ?? ""}
-              alt={alt ?? "图片"}
-              className="my-4 h-auto max-w-full rounded-xl border border-warm-200"
-              loading="lazy"
-            />
+            (() => {
+              const resolvedSrc = typeof src === "string" ? src.trim() : "";
+
+              if (!resolvedSrc) {
+                return null;
+              }
+
+              if (!isAllowedMarkdownImageSrc(resolvedSrc)) {
+                return (
+                  <div className="my-4 rounded-xl border border-warm-200 bg-warm-50 px-3 py-2 text-sm text-warm-500">
+                    已屏蔽远程图片
+                    {resolvedSrc.startsWith("http") && (
+                      <>
+                        {" "}
+                        <a
+                          href={resolvedSrc}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-accent underline underline-offset-4"
+                        >
+                          查看原图
+                        </a>
+                      </>
+                    )}
+                  </div>
+                );
+              }
+
+              // react-markdown 已配合 rehype-sanitize 过滤，src/alt 在此仅做展示。
+              return (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={resolvedSrc}
+                  alt={alt ?? "图片"}
+                  className="my-4 h-auto max-w-full rounded-xl border border-warm-200"
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                />
+              );
+            })()
           ),
         }}
       >

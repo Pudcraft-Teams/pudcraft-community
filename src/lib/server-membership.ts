@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { isPrivilegedServerViewer } from "@/lib/server-access";
 
 /** Check if a user is a member of a private/unlisted server. */
 export async function isServerMember(serverId: string, userId: string): Promise<boolean> {
@@ -15,11 +16,27 @@ export async function canSeeServerAddress(
   userId: string | undefined,
   userRole: string | undefined,
   serverId: string,
+  isMemberOverride?: boolean,
 ): Promise<boolean> {
   if (server.visibility === "public") return true;
   if (!userId) return false;
-  if (userRole === "admin") return true;
-  if (server.ownerId === userId) return true;
+
+  if (
+    isPrivilegedServerViewer({
+      status: "approved",
+      ownerId: server.ownerId,
+      currentUserId: userId,
+      currentUserRole: userRole,
+      isMember: isMemberOverride,
+    })
+  ) {
+    return true;
+  }
+
+  if (isMemberOverride !== undefined) {
+    return isMemberOverride;
+  }
+
   return isServerMember(serverId, userId);
 }
 
@@ -34,4 +51,21 @@ export async function requireServerOwner(
   });
   if (!server || server.ownerId !== userId) return null;
   return server;
+}
+
+export function canJoinServerViaInvite(joinMode: string): boolean {
+  return joinMode === "invite" || joinMode === "apply_and_invite";
+}
+
+export function shouldInvalidateInvitesWhenJoinModeChanges(
+  previousJoinMode: string,
+  nextJoinMode: string,
+): boolean {
+  return canJoinServerViaInvite(previousJoinMode) && !canJoinServerViaInvite(nextJoinMode);
+}
+
+export function shouldDeletePendingApplicationAfterInviteJoin(
+  applicationStatus: string | null | undefined,
+): boolean {
+  return applicationStatus === "pending";
 }

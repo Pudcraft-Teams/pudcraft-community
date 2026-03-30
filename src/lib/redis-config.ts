@@ -14,6 +14,19 @@ export interface RedisConfig {
   password: string | undefined;
 }
 
+function parseRedisDatabase(pathname: string): number | undefined {
+  if (pathname === "" || pathname === "/") {
+    return undefined;
+  }
+
+  const rawDatabase = pathname.startsWith("/") ? pathname.slice(1) : pathname;
+  if (!/^\d+$/.test(rawDatabase)) {
+    throw new Error("REDIS_URL 中的数据库编号必须是非负整数");
+  }
+
+  return Number(rawDatabase);
+}
+
 export function parseRedisConfig(source: NodeJS.ProcessEnv = process.env): RedisConfig {
   const parsed = redisEnvSchema.parse(source);
   const url = parsed.REDIS_URL ?? null;
@@ -39,6 +52,7 @@ export function getRedisConnectionOptions(config: RedisConfig = parseRedisConfig
       port: Number(parsed.port || 6379),
       username: parsed.username || undefined,
       password: parsed.password || undefined,
+      db: parseRedisDatabase(parsed.pathname),
       tls: parsed.protocol === "rediss:" ? {} : undefined,
     };
   }

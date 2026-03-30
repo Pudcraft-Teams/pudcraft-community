@@ -53,6 +53,32 @@ const LABEL_NAMES: Record<string, string> = {
   C_customized: "自定义库命中",
 };
 
+function toModerationSnippet(text: string | null | undefined, maxLength = 200): string {
+  return (text ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
+}
+
+export function buildPostModerationFields(input: {
+  title?: string | null;
+  content?: string | null;
+}): Record<string, string> {
+  const fields: Record<string, string> = {};
+
+  const title = toModerationSnippet(input.title, 100);
+  if (title) {
+    fields["标题"] = title;
+  }
+
+  const content = toModerationSnippet(input.content, 200);
+  if (content) {
+    fields["正文"] = content;
+  }
+
+  return fields;
+}
+
 /** 写入审查日志（失败不阻塞主流程） */
 function writeModerationLog(
   contentType: ModerationContext,

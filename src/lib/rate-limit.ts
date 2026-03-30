@@ -1,9 +1,74 @@
 import { logger } from "@/lib/logger";
 import { getRedisConnection } from "@/lib/redis";
 
-interface RateLimitResult {
+export interface RateLimitResult {
   allowed: boolean;
   remaining: number;
+  degraded?: true;
+}
+
+interface InMemoryRateLimitEntry {
+  count: number;
+  expiresAt: number;
+}
+
+const inMemoryRateLimitStore = new Map<string, InMemoryRateLimitEntry>();
+
+export function createRateLimitResult(
+  count: number,
+  limit: number,
+  degraded = false,
+): RateLimitResult {
+  const result: RateLimitResult = {
+    allowed: count <= limit,
+    remaining: Math.max(0, limit - count),
+  };
+
+  if (degraded) {
+    result.degraded = true;
+  }
+
+  return result;
+}
+
+function pruneExpiredInMemoryEntries(
+  store: Map<string, InMemoryRateLimitEntry>,
+  nowMs: number,
+): void {
+  for (const [key, entry] of store.entries()) {
+    if (entry.expiresAt <= nowMs) {
+      store.delete(key);
+    }
+  }
+}
+
+export function applyInMemoryRateLimit(
+  store: Map<string, InMemoryRateLimitEntry>,
+  redisKey: string,
+  limit: number,
+  windowSeconds: number,
+  nowMs = Date.now(),
+): RateLimitResult {
+  const windowMs = windowSeconds * 1000;
+  const expiresAt = (Math.floor(nowMs / windowMs) + 1) * windowMs;
+  const existing = store.get(redisKey);
+  const count = existing && existing.expiresAt > nowMs ? existing.count + 1 : 1;
+
+  store.set(redisKey, {
+    count,
+    expiresAt,
+  });
+  pruneExpiredInMemoryEntries(store, nowMs);
+
+  return createRateLimitResult(count, limit, true);
+}
+
+export function createRateLimitFailureResult(
+  redisKey: string,
+  limit: number,
+  windowSeconds: number,
+): RateLimitResult {
+  return applyInMemoryRateLimit(inMemoryRateLimitStore, redisKey, limit, windowSeconds);
 }
 
 /**
@@ -29,13 +94,9 @@ export async function rateLimit(
       await redis.expire(redisKey, windowSeconds);
     }
 
-    return {
-      allowed: count <= limit,
-      remaining: Math.max(0, limit - count),
-    };
+    return createRateLimitResult(count, limit);
   } catch (error) {
     logger.error("[rate-limit] redis operation failed", error);
-    // Redis 异常时降级放行，避免核心流程不可用。
-    return { allowed: true, remaining: limit };
+    return createRateLimitFailureResult(redisKey, limit, windowSeconds);
   }
 }

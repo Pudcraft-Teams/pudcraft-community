@@ -111,6 +111,23 @@ export async function PUT(request: Request, { params }: RouteContext) {
           },
         });
 
+        const existingMember = await tx.serverMember.findUnique({
+          where: {
+            unique_server_member: {
+              serverId: server.id,
+              userId: application.userId,
+            },
+          },
+          select: {
+            id: true,
+            mcUsername: true,
+          },
+        });
+
+        if (existingMember) {
+          return { updatedApp, member: existingMember, sync: null };
+        }
+
         const member = await tx.serverMember.create({
           data: {
             serverId: server.id,

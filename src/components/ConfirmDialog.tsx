@@ -33,9 +33,26 @@ interface DialogState extends ConfirmOptions {
   resolve: (value: boolean) => void;
 }
 
+const FOCUSABLE_SELECTOR = [
+  "button:not([disabled])",
+  "[href]",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  '[tabindex]:not([tabindex="-1"])',
+].join(",");
+
+function getFocusableElements(container: HTMLElement): HTMLElement[] {
+  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+    (element) => !element.hasAttribute("disabled") && !element.getAttribute("aria-hidden"),
+  );
+}
+
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const confirmBtnRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
 
   const confirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
     return new Promise<boolean>((resolve) => {
@@ -53,11 +70,30 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     setDialog(null);
   }, [dialog]);
 
-  // Focus confirm button on open
+  // Modal lifecycle: focus management + body scroll lock
   useEffect(() => {
     if (dialog) {
-      requestAnimationFrame(() => confirmBtnRef.current?.focus());
+      restoreFocusRef.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      document.body.style.overflow = "hidden";
+
+      const frame = window.requestAnimationFrame(() => {
+        const container = dialogRef.current;
+        const focusTarget =
+          container && getFocusableElements(container)[0]
+            ? getFocusableElements(container)[0]
+            : confirmBtnRef.current ?? container;
+        focusTarget?.focus();
+      });
+
+      return () => {
+        window.cancelAnimationFrame(frame);
+        document.body.style.overflow = "";
+        restoreFocusRef.current?.focus();
+      };
     }
+    document.body.style.overflow = "";
+    return undefined;
   }, [dialog]);
 
   // Close on Escape
@@ -68,6 +104,37 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
       if (e.key === "Escape") {
         handleCancel();
       }
+
+      if (e.key !== "Tab") {
+        return;
+      }
+
+      const container = dialogRef.current;
+      if (!container) {
+        return;
+      }
+
+      const focusableElements = getFocusableElements(container);
+      if (focusableElements.length === 0) {
+        e.preventDefault();
+        container.focus();
+        return;
+      }
+
+      const currentIndex = focusableElements.indexOf(
+        document.activeElement as HTMLElement,
+      );
+      const nextIndex =
+        e.shiftKey
+          ? currentIndex <= 0
+            ? focusableElements.length - 1
+            : currentIndex - 1
+          : currentIndex === -1 || currentIndex >= focusableElements.length - 1
+            ? 0
+            : currentIndex + 1;
+
+      e.preventDefault();
+      focusableElements[nextIndex]?.focus();
     }
 
     window.addEventListener("keydown", handleKeyDown);
@@ -84,17 +151,26 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
           <div
             className="absolute inset-0 animate-fade-in bg-warm-900/40 backdrop-blur-[2px]"
             onClick={handleCancel}
+            role="presentation"
           />
 
           {/* Dialog */}
-          <div className="relative z-10 w-full max-w-sm animate-dialog-in rounded-2xl border border-warm-200 bg-surface p-5 shadow-xl">
+          <div
+            ref={dialogRef}
+            className="relative z-10 w-full max-w-sm animate-dialog-in rounded-2xl border border-warm-200 bg-surface p-5 shadow-xl outline-none"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={dialog.title ? "confirm-dialog-title" : undefined}
+            aria-describedby="confirm-dialog-message"
+            tabIndex={-1}
+          >
             {dialog.title && (
-              <h3 className="mb-2 text-base font-semibold text-warm-800">
+              <h3 id="confirm-dialog-title" className="mb-2 text-base font-semibold text-warm-800">
                 {dialog.title}
               </h3>
             )}
 
-            <p className="text-sm leading-relaxed text-warm-600">
+            <p id="confirm-dialog-message" className="text-sm leading-relaxed text-warm-600">
               {dialog.message}
             </p>
 

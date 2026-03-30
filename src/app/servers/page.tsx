@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { HomePageClient } from "@/components/HomePageClient";
 import type { ServerSort } from "@/components/SortButtons";
 import { prisma } from "@/lib/db";
+import { buildServerStatusResponse } from "@/lib/serverStatus";
 import { getPublicUrl } from "@/lib/storage";
 import type { ServerListItem } from "@/lib/types";
 
@@ -136,14 +137,7 @@ async function getServerList(query: ServersQuery): Promise<{
       favoriteCount: server.favoriteCount,
       isVerified: server.isVerified,
       verifiedAt: server.verifiedAt?.toISOString() ?? null,
-      status: {
-        online: server.isOnline,
-        playerCount: server.playerCount,
-        maxPlayers: server.maxPlayers,
-        motd: null,
-        favicon: null,
-        checkedAt: (server.lastPingedAt ?? server.updatedAt).toISOString(),
-      },
+      status: buildServerStatusResponse(server),
     };
   });
 

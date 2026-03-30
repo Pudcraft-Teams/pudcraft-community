@@ -1,11 +1,10 @@
 import { Worker, type Job } from "bullmq";
-import { PrismaClient } from "@prisma/client";
+import { db } from "../lib/db";
 import { pingServer } from "../lib/mc-ping";
 import { logger } from "../lib/logger";
 import { getRedisConnection } from "../lib/redis";
 import { getQueueConnection, PING_QUEUE_NAME, type PingJobData } from "../lib/queue";
 
-const prisma = new PrismaClient();
 const ONLINE_NOTIFY_COOLDOWN_SECONDS = 60 * 60;
 
 async function notifyServerOnline(
@@ -28,7 +27,7 @@ async function notifyServerOnline(
       return;
     }
 
-    const favorites = await prisma.favorite.findMany({
+    const favorites = await db.favorite.findMany({
       where: { serverId },
       select: { userId: true },
     });
@@ -37,7 +36,7 @@ async function notifyServerOnline(
       return;
     }
 
-    await prisma.serverNotification.createMany({
+    await db.serverNotification.createMany({
       data: favorites.map((favorite) => ({
         userId: favorite.userId,
         type: "server_online",
@@ -63,7 +62,7 @@ export const pingWorker = new Worker<PingJobData>(
   async (job: Job<PingJobData>) => {
     const { serverId, address, port } = job.data;
     try {
-      const previousStatus = await prisma.server.findUnique({
+      const previousStatus = await db.server.findUnique({
         where: { id: serverId },
         select: {
           isOnline: true,
@@ -74,7 +73,7 @@ export const pingWorker = new Worker<PingJobData>(
 
       const result = await pingServer(address, port);
 
-      await prisma.serverStatus.create({
+      await db.serverStatus.create({
         data: {
           serverId,
           online: result.isOnline,
@@ -86,7 +85,7 @@ export const pingWorker = new Worker<PingJobData>(
         },
       });
 
-      await prisma.server.update({
+      await db.server.update({
         where: { id: serverId },
         data: {
           isOnline: result.isOnline,

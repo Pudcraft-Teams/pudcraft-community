@@ -48,9 +48,7 @@ export function PostCard({ post, onLikeChange, onBookmarkChange }: PostCardProps
   }
 
   /* ── like toggle ── */
-  async function handleLike(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
+  async function handleLike() {
     if (likePending) return;
     if (!requireAuth()) return;
 
@@ -83,9 +81,7 @@ export function PostCard({ post, onLikeChange, onBookmarkChange }: PostCardProps
   }
 
   /* ── bookmark toggle ── */
-  async function handleBookmark(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
+  async function handleBookmark() {
     if (bookmarkPending) return;
     if (!requireAuth()) return;
 
@@ -113,98 +109,98 @@ export function PostCard({ post, onLikeChange, onBookmarkChange }: PostCardProps
   }
 
   return (
-    <Link
-      href={postHref}
-      className="group block rounded-xl border border-warm-200 bg-surface p-4 transition-colors hover:border-warm-300 animate-card-in"
-    >
-      {/* ── Header: avatar + name + time + circle tag + pin ── */}
-      <div className="mb-2 flex items-center gap-1.5 overflow-hidden sm:gap-2">
-        <span className="relative inline-flex h-7 w-7 shrink-0 overflow-hidden rounded-full sm:h-8 sm:w-8">
-          <Image
-            src={normalizeImageSrc(post.author.image) || "/default-avatar.png"}
-            alt={post.author.name ?? "用户头像"}
-            width={32}
-            height={32}
-            className="h-full w-full object-cover"
-          />
-        </span>
-
-        <span className="min-w-0 max-w-[6rem] truncate text-sm font-medium text-warm-800 sm:max-w-none">
-          {post.author.name ?? `用户${post.author.uid}`}
-        </span>
-
-        <span className="shrink-0 text-xs text-warm-400">
-          {timeAgo(post.createdAt)}
-        </span>
-
-        {post.circle ? (
-          <span className="max-w-[5rem] truncate rounded-full bg-warm-100 px-2 py-0.5 text-xs text-warm-500 sm:max-w-none">
-            {post.circle.name}
+    <article className="group rounded-xl border border-warm-200 bg-surface p-4 transition-colors hover:border-warm-300 animate-card-in">
+      <Link href={postHref} className="block">
+        {/* ── Header: avatar + name + time + circle tag + pin ── */}
+        <div className="mb-2 flex items-center gap-1.5 overflow-hidden sm:gap-2">
+          <span className="relative inline-flex h-7 w-7 shrink-0 overflow-hidden rounded-full sm:h-8 sm:w-8">
+            <Image
+              src={normalizeImageSrc(post.author.image) || "/default-avatar.png"}
+              alt={post.author.name ?? "用户头像"}
+              width={32}
+              height={32}
+              className="h-full w-full object-cover"
+            />
           </span>
-        ) : (
-          <span className="shrink-0 rounded-full bg-warm-100 px-2 py-0.5 text-xs text-warm-500">
-            广场
+
+          <span className="min-w-0 max-w-[6rem] truncate text-sm font-medium text-warm-800 sm:max-w-none">
+            {post.author.name ?? `用户${post.author.uid}`}
           </span>
-        )}
 
-        {post.isPinned && pathname?.startsWith("/c/") && (
-          <span className="ml-auto flex shrink-0 items-center gap-0.5 text-xs text-accent">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 16 16"
-              fill="currentColor"
-              className="h-3.5 w-3.5"
-            >
-              <path d="M10.97 2.22a.75.75 0 0 1 1.06 0l1.75 1.75a.75.75 0 0 1-.177 1.206l-2.12 1.06-.757.757 1.024 1.024a.75.75 0 1 1-1.06 1.06L9.664 8.06l-2.476 2.476a.75.75 0 0 1-.53.22H5.25a.75.75 0 0 1-.53-.22l-.5-.5a.75.75 0 0 1 0-1.06l2.476-2.476L5.67 5.474a.75.75 0 0 1 1.06-1.06L7.756 5.44l.757-.757 1.06-2.12a.75.75 0 0 1 .177-.122l1.22-.22Z" />
-            </svg>
-            置顶
+          <span className="shrink-0 text-xs text-warm-400">
+            <span suppressHydrationWarning>{timeAgo(post.createdAt)}</span>
           </span>
-        )}
-      </div>
 
-      {/* ── Title ── */}
-      {post.title && (
-        <h3 className="mb-1 text-base font-semibold text-warm-800 transition-colors group-hover:text-accent">
-          {post.title}
-        </h3>
-      )}
+          {post.circle ? (
+            <span className="max-w-[5rem] truncate rounded-full bg-warm-100 px-2 py-0.5 text-xs text-warm-500 sm:max-w-none">
+              {post.circle.name}
+            </span>
+          ) : (
+            <span className="shrink-0 rounded-full bg-warm-100 px-2 py-0.5 text-xs text-warm-500">
+              广场
+            </span>
+          )}
 
-      {/* ── Content preview ── */}
-      {post.contentPreview && (
-        <p className={`line-clamp-2 text-sm leading-relaxed ${post.title ? "mb-3 text-warm-500" : "mb-3 text-warm-700"}`}>
-          {post.contentPreview}
-        </p>
-      )}
-
-      {/* ── Image preview ── */}
-      {post.images?.length > 0 && (
-        <div className="mb-3 flex gap-1.5 overflow-hidden rounded-lg">
-          {post.images.slice(0, 3).map((url, i) => (
-            <div key={i} className="relative aspect-square flex-1 overflow-hidden bg-warm-100">
-              <Image
-                src={normalizeImageSrc(url) || url}
-                alt=""
-                fill
-                className="object-cover"
-                loading="lazy"
-                unoptimized
-              />
-              {i === 2 && post.images.length > 3 && (
-                <div className="absolute inset-0 flex items-center justify-center bg-warm-900/40 text-sm font-medium text-white">
-                  +{post.images.length - 3}
-                </div>
-              )}
-            </div>
-          ))}
+          {post.isPinned && pathname?.startsWith("/c/") && (
+            <span className="ml-auto flex shrink-0 items-center gap-0.5 text-xs text-accent">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 16 16"
+                fill="currentColor"
+                className="h-3.5 w-3.5"
+              >
+                <path d="M10.97 2.22a.75.75 0 0 1 1.06 0l1.75 1.75a.75.75 0 0 1-.177 1.206l-2.12 1.06-.757.757 1.024 1.024a.75.75 0 1 1-1.06 1.06L9.664 8.06l-2.476 2.476a.75.75 0 0 1-.53.22H5.25a.75.75 0 0 1-.53-.22l-.5-.5a.75.75 0 0 1 0-1.06l2.476-2.476L5.67 5.474a.75.75 0 0 1 1.06-1.06L7.756 5.44l.757-.757 1.06-2.12a.75.75 0 0 1 .177-.122l1.22-.22Z" />
+              </svg>
+              置顶
+            </span>
+          )}
         </div>
-      )}
+
+        {/* ── Title ── */}
+        {post.title && (
+          <h3 className="mb-1 text-base font-semibold text-warm-800 transition-colors group-hover:text-accent">
+            {post.title}
+          </h3>
+        )}
+
+        {/* ── Content preview ── */}
+        {post.contentPreview && (
+          <p className={`line-clamp-2 text-sm leading-relaxed ${post.title ? "mb-3 text-warm-500" : "mb-3 text-warm-700"}`}>
+            {post.contentPreview}
+          </p>
+        )}
+
+        {/* ── Image preview ── */}
+        {post.images?.length > 0 && (
+          <div className="mb-3 flex gap-1.5 overflow-hidden rounded-lg">
+            {post.images.slice(0, 3).map((url, i) => (
+              <div key={i} className="relative aspect-square flex-1 overflow-hidden bg-warm-100">
+                <Image
+                  src={normalizeImageSrc(url) || url}
+                  alt=""
+                  fill
+                  className="object-cover"
+                  loading="lazy"
+                  unoptimized
+                />
+                {i === 2 && post.images.length > 3 && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-warm-900/40 text-sm font-medium text-white">
+                    +{post.images.length - 3}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </Link>
 
       {/* ── Action bar ── */}
-      <div className="flex items-center gap-4 text-sm text-warm-400">
-        {/* Like */}
+      <div className="mt-3 flex items-center gap-4 text-sm text-warm-400">
         <button
           type="button"
-          onClick={handleLike}
+          onClick={() => {
+            void handleLike();
+          }}
           disabled={likePending}
           className={`inline-flex items-center gap-1 transition-colors hover:text-accent disabled:cursor-not-allowed ${
             liked ? "text-accent" : ""
@@ -224,7 +220,6 @@ export function PostCard({ post, onLikeChange, onBookmarkChange }: PostCardProps
           <span className="tabular-nums">{likeCount}</span>
         </button>
 
-        {/* Comment count */}
         <span className="inline-flex items-center gap-1">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -243,7 +238,6 @@ export function PostCard({ post, onLikeChange, onBookmarkChange }: PostCardProps
           <span className="tabular-nums">{post.commentCount}</span>
         </span>
 
-        {/* View count */}
         <span className="inline-flex items-center gap-1">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -263,10 +257,11 @@ export function PostCard({ post, onLikeChange, onBookmarkChange }: PostCardProps
           <span className="tabular-nums">{post.viewCount}</span>
         </span>
 
-        {/* Bookmark */}
         <button
           type="button"
-          onClick={handleBookmark}
+          onClick={() => {
+            void handleBookmark();
+          }}
           disabled={bookmarkPending}
           className={`ml-auto inline-flex items-center gap-1 transition-colors hover:text-accent disabled:cursor-not-allowed ${
             bookmarked ? "text-accent" : ""
@@ -289,6 +284,6 @@ export function PostCard({ post, onLikeChange, onBookmarkChange }: PostCardProps
           </svg>
         </button>
       </div>
-    </Link>
+    </article>
   );
 }

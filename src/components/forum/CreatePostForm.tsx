@@ -36,6 +36,8 @@ interface PostCreateResponse {
   };
 }
 
+const TAG_PATTERN = /#([\p{L}\p{N}_]+)/gu;
+
 export function CreatePostForm({
   circleId: initialCircleId,
   circleName,
@@ -199,11 +201,10 @@ export function CreatePostForm({
     setSubmitting(true);
 
     try {
-      const tagPattern =
-        /#([\w\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\uff00-\uffef]+)/g;
+      TAG_PATTERN.lastIndex = 0;
       const tagSet = new Set<string>();
       let tagMatch: RegExpExecArray | null;
-      while ((tagMatch = tagPattern.exec(content.trim())) !== null) {
+      while ((tagMatch = TAG_PATTERN.exec(content.trim())) !== null) {
         tagSet.add(tagMatch[1]!);
         if (tagSet.size >= 5) break;
       }

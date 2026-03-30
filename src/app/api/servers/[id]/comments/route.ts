@@ -9,7 +9,7 @@ import { moderateContent } from "@/lib/moderation";
 import { createNotification } from "@/lib/notification";
 import { rateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
-import { canAccessServer } from "@/lib/server-access";
+import { canViewServerDetails, isPrivilegedServerViewer } from "@/lib/server-access";
 import { resolveServerCuid } from "@/lib/lookup";
 import { getPublicUrl } from "@/lib/storage";
 import type { ServerComment } from "@/lib/types";
@@ -178,6 +178,7 @@ export async function GET(request: Request, { params }: RouteContext) {
       select: {
         id: true,
         status: true,
+        visibility: true,
         ownerId: true,
       },
     });
@@ -185,18 +186,37 @@ export async function GET(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
     }
 
-    if (server.status !== "approved") {
-      const session = await auth();
-      const canAccessCurrentServer = canAccessServer({
+    const session = await auth();
+    let isMember = false;
+    if (
+      server.visibility !== "public" &&
+      session?.user?.id &&
+      !isPrivilegedServerViewer({
         status: server.status,
+        ownerId: server.ownerId,
+        currentUserId: session.user.id,
+        currentUserRole: session.user.role,
+      })
+    ) {
+      isMember = await prisma.serverMember
+        .findUnique({
+          where: { unique_server_member: { serverId, userId: session.user.id } },
+          select: { id: true },
+        })
+        .then((member) => member !== null);
+    }
+
+    if (
+      !canViewServerDetails({
+        status: server.status,
+        visibility: server.visibility,
         ownerId: server.ownerId,
         currentUserId: session?.user?.id,
         currentUserRole: session?.user?.role,
-      });
-
-      if (!canAccessCurrentServer) {
-        return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
-      }
+        isMember,
+      })
+    ) {
+      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
     }
 
     const { page, limit } = parsedQuery.data;
@@ -283,6 +303,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       select: {
         id: true,
         status: true,
+        visibility: true,
         ownerId: true,
       },
     });
@@ -290,11 +311,31 @@ export async function POST(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
     }
 
-    const canAccessCurrentServer = canAccessServer({
+    let isMember = false;
+    if (
+      server.visibility !== "public" &&
+      !isPrivilegedServerViewer({
+        status: server.status,
+        ownerId: server.ownerId,
+        currentUserId: userId,
+        currentUserRole: authResult.user.role,
+      })
+    ) {
+      isMember = await prisma.serverMember
+        .findUnique({
+          where: { unique_server_member: { serverId, userId } },
+          select: { id: true },
+        })
+        .then((member) => member !== null);
+    }
+
+    const canAccessCurrentServer = canViewServerDetails({
       status: server.status,
+      visibility: server.visibility,
       ownerId: server.ownerId,
       currentUserId: userId,
       currentUserRole: authResult.user.role,
+      isMember,
     });
     if (!canAccessCurrentServer) {
       return NextResponse.json({ error: "服务器未找到" }, { status: 404 });

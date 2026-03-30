@@ -26,6 +26,26 @@ const TABS: { key: SettingsTab; label: string; minRole: CircleRoleType }[] = [
   { key: "bans", label: "封禁管理", minRole: "ADMIN" },
 ];
 
+async function uploadEditorImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.set("image", file);
+
+  const response = await fetch("/api/uploads/editor-image", {
+    method: "POST",
+    body: formData,
+  });
+  const payload = await response.json().catch(() => ({})) as {
+    data?: { url?: string };
+    error?: string;
+  };
+
+  if (!response.ok || !payload.data?.url) {
+    throw new Error(payload.error ?? "图片上传失败");
+  }
+
+  return payload.data.url;
+}
+
 // ─── Helpers ─────────────────────────────────────
 
 function canAccessTab(userRole: CircleRoleType, minRole: CircleRoleType): boolean {
@@ -65,7 +85,7 @@ interface CircleSettingsProps {
  */
 export function CircleSettings({ circleSlug }: CircleSettingsProps) {
   const router = useRouter();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
 
   const [circle, setCircle] = useState<CircleDetail | null>(null);
   const [isLoadingCircle, setIsLoadingCircle] = useState(true);
@@ -83,6 +103,8 @@ export function CircleSettings({ circleSlug }: CircleSettingsProps) {
 
   const userRole = circle?.memberRole ?? null;
   const isOwner = userRole === "OWNER";
+  const isSiteAdmin = session?.user?.role === "admin";
+  const canEditInfo = isOwner || isSiteAdmin;
 
   // ─── Auth redirect ───
 
@@ -110,8 +132,8 @@ export function CircleSettings({ circleSlug }: CircleSettingsProps) {
 
       const data = payload.data;
 
-      // Check permission: must be OWNER or ADMIN
-      if (data.memberRole !== "OWNER" && data.memberRole !== "ADMIN") {
+      // Check permission: must be OWNER/ADMIN or site admin
+      if (!isSiteAdmin && data.memberRole !== "OWNER" && data.memberRole !== "ADMIN") {
         throw new Error("无权限访问该圈子设置");
       }
 
@@ -125,7 +147,7 @@ export function CircleSettings({ circleSlug }: CircleSettingsProps) {
     } finally {
       setIsLoadingCircle(false);
     }
-  }, [circleSlug]);
+  }, [circleSlug, isSiteAdmin]);
 
   useEffect(() => {
     if (status !== "authenticated") {
@@ -192,44 +214,12 @@ export function CircleSettings({ circleSlug }: CircleSettingsProps) {
 
       // Upload icon if changed
       if (iconFile) {
-        const iconFormData = new FormData();
-        iconFormData.set("file", iconFile);
-        iconFormData.set("type", "circle-icon");
-
-        const iconRes = await fetch("/api/uploads/editor-image", {
-          method: "POST",
-          body: iconFormData,
-        });
-        const iconPayload = await iconRes.json().catch(() => ({})) as Record<string, unknown>;
-
-        if (!iconRes.ok) {
-          throw new Error(typeof iconPayload.error === "string" ? iconPayload.error : "图标上传失败");
-        }
-
-        if (typeof iconPayload.url === "string") {
-          updateData.icon = iconPayload.url;
-        }
+        updateData.icon = await uploadEditorImage(iconFile);
       }
 
       // Upload banner if changed
       if (bannerFile) {
-        const bannerFormData = new FormData();
-        bannerFormData.set("file", bannerFile);
-        bannerFormData.set("type", "circle-banner");
-
-        const bannerRes = await fetch("/api/uploads/editor-image", {
-          method: "POST",
-          body: bannerFormData,
-        });
-        const bannerPayload = await bannerRes.json().catch(() => ({})) as Record<string, unknown>;
-
-        if (!bannerRes.ok) {
-          throw new Error(typeof bannerPayload.error === "string" ? bannerPayload.error : "横幅上传失败");
-        }
-
-        if (typeof bannerPayload.url === "string") {
-          updateData.banner = bannerPayload.url;
-        }
+        updateData.banner = await uploadEditorImage(bannerFile);
       }
 
       if (Object.keys(updateData).length === 0) {
@@ -266,11 +256,15 @@ export function CircleSettings({ circleSlug }: CircleSettingsProps) {
   // ─── Accessible tabs ───
 
   const accessibleTabs = useMemo(() => {
+    if (isSiteAdmin) {
+      return TABS.filter((tab) => tab.key !== "server" && tab.key !== "members");
+    }
+
     if (!userRole) {
       return [];
     }
     return TABS.filter((tab) => canAccessTab(userRole, tab.minRole));
-  }, [userRole]);
+  }, [isSiteAdmin, userRole]);
 
   // ─── Ensure the active tab is accessible ───
 
@@ -294,7 +288,7 @@ export function CircleSettings({ circleSlug }: CircleSettingsProps) {
     return <div className="m3-alert-error p-4">{loadError}</div>;
   }
 
-  if (!circle || !userRole) {
+  if (!circle || (!userRole && !isSiteAdmin)) {
     return <div className="m3-alert-error p-4">圈子不存在或你无权访问该设置页。</div>;
   }
 
@@ -352,7 +346,7 @@ export function CircleSettings({ circleSlug }: CircleSettingsProps) {
       </div>
 
       {/* Tab content */}
-      {activeTab === "info" && isOwner && (
+      {activeTab === "info" && canEditInfo && (
         <section className="m3-surface p-4 sm:p-5">
           <h2 className="text-lg font-semibold text-warm-800">基本信息</h2>
 
@@ -457,7 +451,7 @@ export function CircleSettings({ circleSlug }: CircleSettingsProps) {
 
       {activeTab === "members" && (
         <section className="m3-surface p-4 sm:p-5">
-          <CircleMemberManager circleId={circle.id} currentUserRole={userRole} />
+          <CircleMemberManager circleId={circle.id} currentUserRole={userRole!} />
         </section>
       )}
 

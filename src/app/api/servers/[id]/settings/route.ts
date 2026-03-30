@@ -6,6 +6,9 @@ import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { resolveServerCuid } from "@/lib/lookup";
 import { isPrivateServersEnabled } from "@/lib/features";
+import {
+  shouldInvalidateInvitesWhenJoinModeChanges,
+} from "@/lib/server-membership";
 import { serverLookupIdSchema, updateServerSettingsSchema } from "@/lib/validation";
 
 /**
@@ -37,6 +40,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         id: true,
         ownerId: true,
         visibility: true,
+        discoverable: true,
         joinMode: true,
         applicationForm: true,
       },
@@ -70,35 +74,44 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       }
     }
 
-    const updateData: Record<string, unknown> = {};
-    if (visibility !== undefined) {
-      updateData.visibility = visibility;
-      // 切换为公开时自动关闭 discoverable（公开服务器不需要此开关）
-      if (visibility === "public") {
-        updateData.discoverable = false;
-      }
-    }
-    if (discoverable !== undefined) {
-      updateData.discoverable = discoverable;
-    }
-    if (joinMode !== undefined) {
-      updateData.joinMode = joinMode;
-    }
+    const nextVisibility = visibility ?? existing.visibility;
+    const nextDiscoverable =
+      nextVisibility === "public" ? false : discoverable ?? existing.discoverable;
+    const nextJoinMode = nextVisibility === "public" ? "open" : joinMode ?? existing.joinMode;
+
+    const updateData: Record<string, unknown> = {
+      visibility: nextVisibility,
+      discoverable: nextDiscoverable,
+      joinMode: nextJoinMode,
+    };
     if (applicationForm !== undefined) {
       updateData.applicationForm = applicationForm;
     }
 
-    const updated = await prisma.server.update({
-      where: { id: existing.id },
-      data: updateData,
-      select: {
-        id: true,
-        visibility: true,
-        discoverable: true,
-        joinMode: true,
-        applicationForm: true,
-        updatedAt: true,
-      },
+    const shouldDeleteInvites = shouldInvalidateInvitesWhenJoinModeChanges(
+      existing.joinMode,
+      nextJoinMode,
+    );
+
+    const updated = await prisma.$transaction(async (tx) => {
+      if (shouldDeleteInvites) {
+        await tx.serverInvite.deleteMany({
+          where: { serverId: existing.id },
+        });
+      }
+
+      return tx.server.update({
+        where: { id: existing.id },
+        data: updateData,
+        select: {
+          id: true,
+          visibility: true,
+          discoverable: true,
+          joinMode: true,
+          applicationForm: true,
+          updatedAt: true,
+        },
+      });
     });
 
     return NextResponse.json({

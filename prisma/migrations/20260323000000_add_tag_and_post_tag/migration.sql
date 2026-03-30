@@ -36,7 +36,7 @@ CREATE INDEX "post_tags_tag_id_idx" ON "post_tags"("tag_id");
 CREATE UNIQUE INDEX "post_tags_post_id_tag_id_key" ON "post_tags"("post_id", "tag_id");
 
 -- CreateIndex
-CREATE INDEX "servers_status_visibility_discoverable_idx" ON "servers"("status", "visibility", "discoverable");
+CREATE INDEX IF NOT EXISTS "servers_status_visibility_discoverable_idx" ON "servers"("status", "visibility", "discoverable");
 
 -- AddForeignKey
 ALTER TABLE "post_tags" ADD CONSTRAINT "post_tags_post_id_fkey" FOREIGN KEY ("post_id") REFERENCES "posts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -58,4 +58,3 @@ ALTER INDEX "unique_comment_like" RENAME TO "comment_likes_user_id_comment_id_ke
 
 -- RenameIndex
 ALTER INDEX "unique_post_like" RENAME TO "post_likes_user_id_post_id_key";
-

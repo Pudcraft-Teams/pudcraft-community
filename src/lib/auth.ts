@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import NextAuth from "next-auth";
 import { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
@@ -8,6 +9,7 @@ import { getClientIp } from "@/lib/request-ip";
 import { rateLimit } from "@/lib/rate-limit";
 import { getPublicUrl } from "@/lib/storage";
 import { loginSchema } from "@/lib/validation";
+import type { NextAuthConfig } from "next-auth";
 
 const BCRYPT_ROUNDS = 12;
 
@@ -15,7 +17,37 @@ class BannedUserError extends CredentialsSignin {
   code = "banned";
 }
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+interface SessionTokenStateValidationInput {
+  tokenSessionVersion: string | undefined;
+  latestPasswordHash: string;
+  isBanned: boolean;
+}
+
+export function createPasswordSessionVersion(passwordHash: string): string {
+  return createHash("sha256").update(passwordHash).digest("hex");
+}
+
+export function isSessionTokenStateValid({
+  tokenSessionVersion,
+  latestPasswordHash,
+  isBanned,
+}: SessionTokenStateValidationInput): boolean {
+  if (isBanned) {
+    return false;
+  }
+
+  if (!tokenSessionVersion) {
+    return false;
+  }
+
+  return tokenSessionVersion === createPasswordSessionVersion(latestPasswordHash);
+}
+
+function invalidateToken() {
+  return null;
+}
+
+export const authConfig: NextAuthConfig = {
   adapter: PrismaAdapter(db),
   session: { strategy: "jwt" },
   providers: [
@@ -89,6 +121,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const shouldRefreshProfile =
           !!user || trigger === "update" || token.profileHydrated !== true || typeof token.uid !== "number";
 
+        if (!user && !shouldRefreshProfile) {
+          const latestSessionState = await db.user.findUnique({
+            where: { id: token.id },
+            select: {
+              passwordHash: true,
+              isBanned: true,
+            },
+          });
+
+          if (!latestSessionState) {
+            return invalidateToken();
+          }
+
+          const tokenStateValid = isSessionTokenStateValid({
+            tokenSessionVersion:
+              typeof token.sessionVersion === "string" ? token.sessionVersion : undefined,
+            latestPasswordHash: latestSessionState.passwordHash,
+            isBanned: latestSessionState.isBanned,
+          });
+
+          if (!tokenStateValid) {
+            return invalidateToken();
+          }
+        }
+
         if (shouldRefreshProfile) {
           const latestUser = await db.user.findUnique({
             where: { id: token.id },
@@ -98,17 +155,35 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               image: true,
               role: true,
               uid: true,
+              passwordHash: true,
+              isBanned: true,
             },
           });
 
-          if (latestUser) {
-            token.name = latestUser.name;
-            token.email = latestUser.email;
-            token.picture = getPublicUrl(latestUser.image);
-            token.role = latestUser.role;
-            token.uid = latestUser.uid;
+          if (!latestUser) {
+            return invalidateToken();
           }
 
+          const nextSessionVersion = createPasswordSessionVersion(latestUser.passwordHash);
+          const tokenStateValid =
+            !!user ||
+            isSessionTokenStateValid({
+              tokenSessionVersion:
+                typeof token.sessionVersion === "string" ? token.sessionVersion : undefined,
+              latestPasswordHash: latestUser.passwordHash,
+              isBanned: latestUser.isBanned,
+            });
+
+          if (!tokenStateValid) {
+            return invalidateToken();
+          }
+
+          token.name = latestUser.name;
+          token.email = latestUser.email;
+          token.picture = getPublicUrl(latestUser.image);
+          token.role = latestUser.role;
+          token.uid = latestUser.uid;
+          token.sessionVersion = nextSessionVersion;
           token.profileHydrated = true;
         }
       }
@@ -149,4 +224,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: {
     signIn: "/login",
   },
-});
+};
+
+export const { handlers, signIn, signOut, auth } = NextAuth(authConfig);

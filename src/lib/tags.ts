@@ -5,7 +5,7 @@ type TxClient = Omit<
   "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
 >;
 
-const TAG_PATTERN = /#([\w\u4e00-\u9fff\u3400-\u4dbf\uff00-\uffef]+)/g;
+const TAG_PATTERN = /#([\p{L}\p{N}_]+)/gu;
 const MAX_TAGS_PER_POST = 5;
 
 /** Extract unique hashtags from text content. Returns at most 5 tags, preserving original casing. */
@@ -22,6 +22,44 @@ export function extractTags(content: string): string[] {
     if (tags.length >= MAX_TAGS_PER_POST) break;
   }
   return tags;
+}
+
+function normalizeTagList(rawTags: string[]): string[] {
+  const seen = new Set<string>();
+  const tags: string[] = [];
+
+  for (const rawTag of rawTags) {
+    const trimmed = rawTag.trim();
+    const cleaned = trimmed.match(/^[\p{L}\p{N}_]+/u)?.[0] ?? "";
+    if (!cleaned) {
+      continue;
+    }
+
+    const normalized = cleaned.toLowerCase();
+    if (seen.has(normalized)) {
+      continue;
+    }
+
+    seen.add(normalized);
+    tags.push(cleaned);
+
+    if (tags.length >= MAX_TAGS_PER_POST) {
+      break;
+    }
+  }
+
+  return tags;
+}
+
+export function resolvePostTags(input: {
+  content?: string | null;
+  tags?: string[] | null;
+}): string[] {
+  if (Array.isArray(input.tags)) {
+    return normalizeTagList(input.tags);
+  }
+
+  return extractTags(input.content ?? "");
 }
 
 /** Create tags and link to post within a transaction, avoiding double-counting. */
@@ -51,6 +89,20 @@ export async function linkTagsToPost(
       });
     }
   }
+}
+
+export async function replaceTagsForPost(
+  tx: TxClient,
+  postId: string,
+  rawTags: string[],
+): Promise<void> {
+  await unlinkTagsFromPost(tx, postId);
+
+  if (rawTags.length === 0) {
+    return;
+  }
+
+  await linkTagsToPost(tx, postId, rawTags);
 }
 
 /** Remove all PostTag links for a post and decrement tag postCounts. */

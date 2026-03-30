@@ -63,6 +63,7 @@ function formatDateTime(dateString: string | null): string | null {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
+    timeZone: "Asia/Shanghai",
   }).format(date);
 }
 
@@ -82,6 +83,9 @@ export default function ServerVerifyPage() {
   const [serverName, setServerName] = useState("该服务器");
   const [activeTab, setActiveTab] = useState<ClaimMethod>("motd");
   const [tick, setTick] = useState(() => Date.now());
+  const [apiUrl, setApiUrl] = useState(
+    () => process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ?? "",
+  );
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const copyTimerRef = useRef<number | null>(null);
 
@@ -186,6 +190,12 @@ export default function ServerVerifyPage() {
       router.replace(`/login?callbackUrl=${encodeURIComponent(`/servers/${id}/verify`)}`);
     }
   }, [id, router, sessionStatus]);
+
+  useEffect(() => {
+    if (!apiUrl && typeof window !== "undefined") {
+      setApiUrl(window.location.origin);
+    }
+  }, [apiUrl]);
 
   // 初始化加载两个状态
   useEffect(() => {
@@ -428,7 +438,11 @@ export default function ServerVerifyPage() {
           <div className="mt-6 space-y-4">
             <div className="m3-alert-success">
               <p className="font-medium">该服务器已由你认领。</p>
-              {verifiedAtLabel && <p className="mt-1 text-xs">验证时间：{verifiedAtLabel}</p>}
+              {verifiedAtLabel && (
+                <p className="mt-1 text-xs">
+                  验证时间：<span suppressHydrationWarning>{verifiedAtLabel}</span>
+                </p>
+              )}
             </div>
             <div className="flex gap-2">
               <Link href={`/servers/${id}`} className="m3-btn m3-btn-primary inline-flex">
@@ -530,7 +544,7 @@ export default function ServerVerifyPage() {
                       <p className="text-sm text-accent-hover">验证码已过期，请重新获取。</p>
                     ) : (
                       <p className="text-sm text-warm-500">
-                        验证码有效期：还剩 {formatRemainingTime(motdRemainingMs)}
+                      验证码有效期：还剩 <span suppressHydrationWarning>{formatRemainingTime(motdRemainingMs)}</span>
                       </p>
                     )}
 
@@ -652,7 +666,7 @@ export default function ServerVerifyPage() {
                 {/* 倒计时 */}
                 {claimKey.hasClaimKey && !isPluginKeyExpired && (
                   <p className="text-sm text-warm-500">
-                    密钥有效期：还剩 {formatRemainingTime(pluginRemainingMs)}
+                    密钥有效期：还剩 <span suppressHydrationWarning>{formatRemainingTime(pluginRemainingMs)}</span>
                   </p>
                 )}
 
@@ -679,13 +693,13 @@ export default function ServerVerifyPage() {
                 {(generatedKey || (claimKey.hasClaimKey && !isPluginKeyExpired)) && (
                   <div className="rounded-xl border border-warm-200 bg-warm-50 px-4 py-3 text-sm text-warm-800">
                     <p className="font-medium">插件配置示例：</p>
-                    <pre className="mt-2 overflow-x-auto whitespace-pre rounded-lg bg-warm-100 p-3 font-mono text-xs text-warm-500">
+                <pre className="mt-2 overflow-x-auto whitespace-pre rounded-lg bg-warm-100 p-3 font-mono text-xs text-warm-500">
 {`# config.yml
 server-id: "${id}"
 api-key: "${generatedKey ?? "pdc_你的认领密钥"}"
-api-url: "${typeof window !== "undefined" ? window.location.origin : ""}"
+api-url: "${apiUrl || "https://your-domain.com"}"
 `}
-                    </pre>
+                </pre>
                   </div>
                 )}
 

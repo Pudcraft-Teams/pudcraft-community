@@ -13,6 +13,27 @@ interface FormErrors {
   icon?: string;
 }
 
+async function uploadCircleImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.set("image", file);
+
+  const response = await fetch("/api/uploads/editor-image", {
+    method: "POST",
+    body: formData,
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as {
+    data?: { url?: string };
+    error?: string;
+  };
+
+  if (!response.ok || !payload.data?.url) {
+    throw new Error(payload.error ?? "图片上传失败");
+  }
+
+  return payload.data.url;
+}
+
 /**
  * 从圈子名称生成 slug：小写化，空格/下划线替换为连字符，
  * 去除非法字符，合并连续连字符，去掉首尾连字符。
@@ -177,16 +198,20 @@ export function CreateCircleForm() {
 
       // Upload icon if present (after circle is created)
       if (iconFile && payload.data?.id) {
-        const formData = new FormData();
-        formData.set("icon", iconFile);
-
-        await fetch(`/api/circles/${payload.data.id}`, {
-          method: "PATCH",
-          body: formData,
-        }).catch(() => {
+        try {
+          const iconUrl = await uploadCircleImage(iconFile);
+          const updateResponse = await fetch(`/api/circles/${payload.data.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ icon: iconUrl }),
+          });
+          if (!updateResponse.ok) {
+            throw new Error("图标保存失败");
+          }
+        } catch {
           // Icon upload failure is non-blocking
           toast.error("图标上传失败，你可以稍后在圈子设置中重新上传");
-        });
+        }
       }
 
       toast.success("圈子创建成功");

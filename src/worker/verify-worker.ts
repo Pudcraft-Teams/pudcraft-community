@@ -1,5 +1,5 @@
-import { PrismaClient } from "@prisma/client";
 import { Worker, type Job } from "bullmq";
+import { db } from "../lib/db";
 import { logger } from "../lib/logger";
 import { pingServer } from "../lib/mc-ping";
 import {
@@ -8,8 +8,6 @@ import {
   type VerifyJobData,
   type VerifyJobResult,
 } from "../lib/queue";
-
-const prisma = new PrismaClient();
 
 function stripMinecraftFormatting(input: string): string {
   return input.replace(/§[0-9A-FK-ORa-fk-or]/g, "");
@@ -73,7 +71,7 @@ export const verifyWorker = new Worker<VerifyJobData, VerifyJobResult>(
   VERIFY_QUEUE_NAME,
   async (job: Job<VerifyJobData>) => {
     const { serverId, address, port, token } = job.data;
-    const server = await prisma.server.findUnique({
+    const server = await db.server.findUnique({
       where: { id: serverId },
       select: {
         id: true,
@@ -109,7 +107,7 @@ export const verifyWorker = new Worker<VerifyJobData, VerifyJobResult>(
     }
 
     const now = new Date();
-    const updateResult = await prisma.server.updateMany({
+    const updateResult = await db.server.updateMany({
       where: {
         id: serverId,
         verifyToken: token,
@@ -126,7 +124,7 @@ export const verifyWorker = new Worker<VerifyJobData, VerifyJobResult>(
     });
 
     if (updateResult.count === 0) {
-      const latest = await prisma.server.findUnique({
+      const latest = await db.server.findUnique({
         where: { id: serverId },
         select: {
           ownerId: true,

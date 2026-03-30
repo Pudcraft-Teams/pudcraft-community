@@ -70,57 +70,54 @@ export function CircleCard({ circle, isMember, onJoinChange }: CircleCardProps) 
   );
 
   return (
-    <Link
-      href={`/c/${circle.slug}`}
-      className="group flex items-center gap-2.5 rounded-xl border border-warm-200 bg-surface p-3 transition-all duration-150 hover:border-warm-300 hover:shadow-sm sm:gap-3 sm:p-4"
-    >
-      {/* Icon */}
-      {circle.icon ? (
-        <span className="relative inline-flex h-10 w-10 shrink-0 overflow-hidden rounded-lg sm:h-12 sm:w-12">
-          <Image
-            src={normalizeImageSrc(circle.icon)!}
-            alt={`${circle.name} 图标`}
-            width={48}
-            height={48}
-            className="h-full w-full object-cover"
-          />
-        </span>
-      ) : (
-        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent-hover text-base font-bold text-white sm:h-12 sm:w-12 sm:text-lg">
-          {circle.name.charAt(0)}
-        </span>
-      )}
-
-      {/* Info */}
-      <div className="min-w-0 flex-1">
-        <h3 className="truncate text-sm font-semibold text-warm-800 transition-colors group-hover:text-accent">
-          {circle.name}
-        </h3>
-        {circle.description && (
-          <p className="mt-0.5 truncate text-xs text-warm-400">
-            {circle.description}
-          </p>
+    <article className="group flex items-center gap-2.5 rounded-xl border border-warm-200 bg-surface p-3 transition-all duration-150 hover:border-warm-300 hover:shadow-sm sm:gap-3 sm:p-4">
+      <Link href={`/c/${circle.slug}`} className="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3">
+        {/* Icon */}
+        {circle.icon ? (
+          <span className="relative inline-flex h-10 w-10 shrink-0 overflow-hidden rounded-lg sm:h-12 sm:w-12">
+            <Image
+              src={normalizeImageSrc(circle.icon)!}
+              alt={`${circle.name} 图标`}
+              width={48}
+              height={48}
+              className="h-full w-full object-cover"
+            />
+          </span>
+        ) : (
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent-hover text-base font-bold text-white sm:h-12 sm:w-12 sm:text-lg">
+            {circle.name.charAt(0)}
+          </span>
         )}
-        <p className="mt-1 text-xs text-warm-400">
-          {circle.memberCount} 成员
-          <span className="mx-1.5">·</span>
-          {circle.postCount} 帖子
-        </p>
-      </div>
+
+        {/* Info */}
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-sm font-semibold text-warm-800 transition-colors group-hover:text-accent">
+            {circle.name}
+          </h3>
+          {circle.description && (
+            <p className="mt-0.5 truncate text-xs text-warm-400">
+              {circle.description}
+            </p>
+          )}
+          <p className="mt-1 text-xs text-warm-400">
+            {circle.memberCount} 成员
+            <span className="mx-1.5">·</span>
+            {circle.postCount} 帖子
+          </p>
+        </div>
+      </Link>
 
       {/* Join button */}
       <button
         type="button"
         disabled={loading}
         onClick={handleJoinToggle}
-        className={`m3-btn shrink-0 text-xs ${
-          joined
-            ? "m3-btn-tonal"
-            : "m3-btn-primary"
-        } ${loading ? "opacity-60" : ""}`}
+        className={`m3-btn shrink-0 text-xs ${joined ? "m3-btn-tonal" : "m3-btn-primary"} ${
+          loading ? "opacity-60" : ""
+        }`}
       >
         {joined ? "已加入" : "加入"}
       </button>
-    </Link>
+    </article>
   );
 }
