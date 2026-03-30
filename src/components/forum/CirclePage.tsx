@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { PageLoading } from "@/components/PageLoading";
 import { PostCard } from "@/components/forum/PostCard";
+import { buildCirclePageState } from "@/lib/forum-ui-state";
 import { normalizeImageSrc } from "@/lib/image-url";
 import { timeAgo } from "@/lib/time";
 
@@ -59,14 +60,20 @@ export function CirclePage({
   const { status: sessionStatus } = useSession();
   const openCompose = useCompose();
   const { setDefaults, clearDefaults } = useComposeDefaults();
+  const initialState = buildCirclePageState({
+    initialCircle,
+    initialSections,
+    initialPosts,
+    initialNextCursor,
+  });
 
   // ── State ──
-  const [circle, setCircle] = useState<CircleDetail | null>(initialCircle ?? null);
-  const [sections, setSections] = useState<SectionItem[]>(initialSections);
-  const [posts, setPosts] = useState<PostItem[]>(initialPosts);
-  const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
+  const [circle, setCircle] = useState<CircleDetail | null>(initialState.circle);
+  const [sections, setSections] = useState<SectionItem[]>(initialState.sections);
+  const [posts, setPosts] = useState<PostItem[]>(initialState.posts);
+  const [nextCursor, setNextCursor] = useState<string | null>(initialState.nextCursor);
 
-  const [isLoading, setIsLoading] = useState(!initialCircle);
+  const [isLoading, setIsLoading] = useState(initialState.isLoading);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -136,6 +143,20 @@ export function CirclePage({
   // ── Initial load ──
   useEffect(() => {
     if (initialCircle) {
+      const nextState = buildCirclePageState({
+        initialCircle,
+        initialSections,
+        initialPosts,
+        initialNextCursor,
+      });
+      setCircle(nextState.circle);
+      setSections(nextState.sections);
+      setPosts(nextState.posts);
+      setNextCursor(nextState.nextCursor);
+      setActiveSection(null);
+      setJoinPending(false);
+      setError(null);
+      setIsLoadingMore(false);
       setIsLoading(false);
       return;
     }
@@ -171,7 +192,15 @@ export function CirclePage({
     return () => {
       cancelled = true;
     };
-  }, [fetchCircle, fetchSections, fetchPosts, initialCircle]);
+  }, [
+    fetchCircle,
+    fetchSections,
+    fetchPosts,
+    initialCircle,
+    initialNextCursor,
+    initialPosts,
+    initialSections,
+  ]);
 
   // ── Section tab click ──
   const handleSectionChange = useCallback(

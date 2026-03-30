@@ -8,6 +8,7 @@ import { useSession } from "next-auth/react";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { ReportDialog } from "@/components/ReportDialog";
 import { PostContentRenderer } from "@/components/forum/PostContentRenderer";
+import { buildPostDetailState } from "@/lib/forum-ui-state";
 import { normalizeImageSrc } from "@/lib/image-url";
 import { ForumCommentSection } from "@/components/forum/ForumCommentSection";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
@@ -53,26 +54,29 @@ export function PostDetailPage({
   const { data: session, status: sessionStatus } = useSession();
   const { toast } = useToast();
   const confirm = useConfirm();
+  const initialState = buildPostDetailState({
+    initialPost,
+    initialComments,
+    initialNextCursor,
+  });
 
-  const [post, setPost] = useState<PostDetail | null>(initialPost ?? null);
-  const [isLoading, setIsLoading] = useState(!initialPost);
+  const [post, setPost] = useState<PostDetail | null>(initialState.post);
+  const [isLoading, setIsLoading] = useState(initialState.isLoading);
   const [error, setError] = useState<string | null>(null);
 
   // Like/bookmark/pin local state
-  const [liked, setLiked] = useState(initialPost?.isLiked ?? false);
-  const [likeCount, setLikeCount] = useState(initialPost?.likeCount ?? 0);
+  const [liked, setLiked] = useState(initialState.liked);
+  const [likeCount, setLikeCount] = useState(initialState.likeCount);
   const [likePending, setLikePending] = useState(false);
-  const [bookmarked, setBookmarked] = useState(initialPost?.isBookmarked ?? false);
+  const [bookmarked, setBookmarked] = useState(initialState.bookmarked);
   const [bookmarkPending, setBookmarkPending] = useState(false);
-  const [isPinned, setIsPinned] = useState(initialPost?.isPinned ?? false);
+  const [isPinned, setIsPinned] = useState(initialState.isPinned);
   const [pinPending, setPinPending] = useState(false);
   const [deletePending, setDeletePending] = useState(false);
 
   // Comments state
-  const [comments, setComments] = useState<ForumComment[]>(initialComments ?? []);
-  const [commentNextCursor, setCommentNextCursor] = useState<string | null>(
-    initialNextCursor,
-  );
+  const [comments, setComments] = useState<ForumComment[]>(initialState.comments);
+  const [commentNextCursor, setCommentNextCursor] = useState<string | null>(initialState.commentNextCursor);
 
   // Moderation state
   const [canModerate, setCanModerate] = useState(false);
@@ -88,11 +92,18 @@ export function PostDetailPage({
   // Fetch post detail
   useEffect(() => {
     if (initialPost) {
-      setLiked(initialPost.isLiked ?? false);
-      setLikeCount(initialPost.likeCount);
-      setBookmarked(initialPost.isBookmarked ?? false);
-      setIsPinned(initialPost.isPinned);
+      const nextState = buildPostDetailState({
+        initialPost,
+        initialComments,
+        initialNextCursor,
+      });
+      setPost(nextState.post);
+      setLiked(nextState.liked);
+      setLikeCount(nextState.likeCount);
+      setBookmarked(nextState.bookmarked);
+      setIsPinned(nextState.isPinned);
       setIsLoading(false);
+      setError(null);
       return;
     }
 
@@ -135,7 +146,7 @@ export function PostDetailPage({
     return () => {
       cancelled = true;
     };
-  }, [initialPost, postId]);
+  }, [initialComments, initialNextCursor, initialPost, postId]);
 
   // Fetch initial comments
   useEffect(() => {
