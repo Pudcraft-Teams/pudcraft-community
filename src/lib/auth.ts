@@ -9,6 +9,7 @@ import { getClientIp } from "@/lib/request-ip";
 import { rateLimit } from "@/lib/rate-limit";
 import { getPublicUrl } from "@/lib/storage";
 import { loginSchema } from "@/lib/validation";
+import type { NextAuthConfig } from "next-auth";
 
 const BCRYPT_ROUNDS = 12;
 
@@ -42,22 +43,11 @@ export function isSessionTokenStateValid({
   return tokenSessionVersion === createPasswordSessionVersion(latestPasswordHash);
 }
 
-function invalidateToken<T extends Record<string, unknown>>(token: T): T {
-  return {
-    ...token,
-    id: undefined,
-    name: undefined,
-    email: undefined,
-    picture: undefined,
-    role: undefined,
-    uid: undefined,
-    profileHydrated: false,
-    sessionVersion: undefined,
-    invalidated: true,
-  };
+function invalidateToken() {
+  return null;
 }
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+export const authConfig: NextAuthConfig = {
   adapter: PrismaAdapter(db),
   session: { strategy: "jwt" },
   providers: [
@@ -141,7 +131,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           });
 
           if (!latestSessionState) {
-            return invalidateToken(token);
+            return invalidateToken();
           }
 
           const tokenStateValid = isSessionTokenStateValid({
@@ -152,7 +142,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           });
 
           if (!tokenStateValid) {
-            return invalidateToken(token);
+            return invalidateToken();
           }
         }
 
@@ -171,7 +161,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           });
 
           if (!latestUser) {
-            return invalidateToken(token);
+            return invalidateToken();
           }
 
           const nextSessionVersion = createPasswordSessionVersion(latestUser.passwordHash);
@@ -185,7 +175,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             });
 
           if (!tokenStateValid) {
-            return invalidateToken(token);
+            return invalidateToken();
           }
 
           token.name = latestUser.name;
@@ -194,7 +184,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           token.role = latestUser.role;
           token.uid = latestUser.uid;
           token.sessionVersion = nextSessionVersion;
-          token.invalidated = false;
           token.profileHydrated = true;
         }
       }
@@ -211,13 +200,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return token;
     },
     session({ session, token }) {
-      if (token.invalidated === true) {
-        return {
-          ...session,
-          user: undefined,
-        };
-      }
-
       if (session.user && typeof token.id === "string") {
         session.user.id = token.id;
       }
@@ -242,4 +224,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: {
     signIn: "/login",
   },
-});
+};
+
+export const { handlers, signIn, signOut, auth } = NextAuth(authConfig);

@@ -62,3 +62,47 @@ test("isSessionTokenStateValid accepts active users when the password version ma
     true,
   );
 });
+
+test("jwt callback returns null for stale password session tokens so Auth.js can clear the session", async () => {
+  applyAuthTestEnv();
+  const { authConfig, createPasswordSessionVersion } = await import("@/lib/auth");
+  const { db } = await import("@/lib/db");
+
+  const jwtCallback = authConfig.callbacks?.jwt;
+  if (!jwtCallback) {
+    throw new Error("expected auth jwt callback");
+  }
+
+  const dbUser = db.user as unknown as {
+    findUnique: () => Promise<{ passwordHash: string; isBanned: boolean } | null>;
+  };
+  const originalFindUnique = dbUser.findUnique;
+  dbUser.findUnique = async () => ({
+    passwordHash: "hash-b",
+    isBanned: false,
+  });
+
+  try {
+    type JwtCallbackParams = Parameters<typeof jwtCallback>[0];
+
+    const result = await jwtCallback({
+      token: {
+        id: "user-1",
+        name: "User",
+        email: "user@example.com",
+        picture: null,
+        role: "user",
+        uid: 100000001,
+        profileHydrated: true,
+        sessionVersion: createPasswordSessionVersion("hash-a"),
+      },
+      user: undefined as unknown as JwtCallbackParams["user"],
+      trigger: undefined,
+      session: undefined,
+    } as unknown as JwtCallbackParams);
+
+    assert.equal(result, null);
+  } finally {
+    dbUser.findUnique = originalFindUnique;
+  }
+});
