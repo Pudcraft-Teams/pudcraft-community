@@ -47,6 +47,25 @@ function getRemoteImagePatterns(): AllowedRemotePattern[] {
   return patterns;
 }
 
+function getRegionalS3BucketPattern(
+  bucketValue: string | undefined,
+  regionValue: string | undefined,
+): AllowedRemotePattern[] {
+  const bucket = bucketValue?.trim();
+  const region = regionValue?.trim();
+  if (!bucket || !region) {
+    return [];
+  }
+
+  return [
+    {
+      protocol: "https",
+      hostname: `${bucket}.s3.${region}.amazonaws.com`,
+      pathname: "/**",
+    },
+  ];
+}
+
 function getEndpointBucketPatterns(
   endpointValue: string | undefined,
   bucketValue: string | undefined,
@@ -93,6 +112,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       ...getRemoteImagePatterns(),
+      ...getRegionalS3BucketPattern(process.env.S3_BUCKET, process.env.S3_REGION),
       ...getEndpointBucketPatterns(process.env.S3_ENDPOINT, process.env.S3_BUCKET),
       ...getEndpointBucketPatterns(process.env.OSS_ENDPOINT, process.env.OSS_BUCKET),
     ],
