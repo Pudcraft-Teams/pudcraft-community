@@ -510,6 +510,25 @@ function getVirtualHostStyleOrigin(
   }
 }
 
+function getRegionalS3Origin(
+  endpointValue: string | undefined,
+  publicBaseUrlValue: string | undefined,
+  bucketValue: string | undefined,
+  regionValue: string | undefined,
+): string | null {
+  if (endpointValue?.trim() || publicBaseUrlValue?.trim()) {
+    return null;
+  }
+
+  const bucket = bucketValue?.trim();
+  const region = regionValue?.trim();
+  if (!bucket || !region) {
+    return null;
+  }
+
+  return `https://${bucket}.s3.${region}.amazonaws.com`;
+}
+
 const TRUSTED_CIRCLE_IMAGE_ORIGINS = new Set(
   [
     toOrigin(process.env.NEXT_PUBLIC_SITE_URL),
@@ -527,6 +546,12 @@ const TRUSTED_CIRCLE_IMAGE_ORIGINS = new Set(
       process.env.OSS_ENDPOINT,
       process.env.OSS_BUCKET,
       process.env.OSS_FORCE_PATH_STYLE,
+    ),
+    getRegionalS3Origin(
+      process.env.S3_ENDPOINT,
+      process.env.S3_PUBLIC_BASE_URL,
+      process.env.S3_BUCKET,
+      process.env.S3_REGION,
     ),
   ].filter((value): value is string => value !== null),
 );

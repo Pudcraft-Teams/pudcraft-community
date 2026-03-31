@@ -7,6 +7,11 @@ type AllowedRemotePattern = {
   pathname: string;
 };
 
+function normalizeEndpointUrl(url: string): string {
+  const trimmed = url.trim();
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
 function getRemoteImagePatterns(): AllowedRemotePattern[] {
   const baseUrls = [
     process.env.S3_PUBLIC_BASE_URL,
@@ -21,7 +26,7 @@ function getRemoteImagePatterns(): AllowedRemotePattern[] {
 
   for (const rawUrl of baseUrls) {
     try {
-      const parsedUrl = new URL(rawUrl);
+      const parsedUrl = new URL(normalizeEndpointUrl(rawUrl));
       if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
         continue;
       }
@@ -70,7 +75,7 @@ function getEndpointBucketPatterns(
   }
 
   try {
-    const parsedUrl = new URL(endpoint);
+    const parsedUrl = new URL(normalizeEndpointUrl(endpoint));
     if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
       return [];
     }
