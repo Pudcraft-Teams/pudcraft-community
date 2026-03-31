@@ -49,8 +49,8 @@ function getRemoteImagePatterns(): AllowedRemotePattern[] {
   }
 
   // Fallback for Docker/CI builds where public storage envs may be unavailable.
-  // Keep the allowlist non-empty for common object storage providers to avoid
-  // baking `[]` into standalone artifacts.
+  // Keep the allowlist non-empty to avoid baking an overly restrictive config
+  // into standalone artifacts when runtime storage endpoints are injected later.
   return [
     {
       protocol: "https",
@@ -60,6 +60,16 @@ function getRemoteImagePatterns(): AllowedRemotePattern[] {
     {
       protocol: "https",
       hostname: "**.aliyuncs.com",
+      pathname: "/**",
+    },
+    {
+      protocol: "https",
+      hostname: "**",
+      pathname: "/**",
+    },
+    {
+      protocol: "http",
+      hostname: "**",
       pathname: "/**",
     },
   ];
