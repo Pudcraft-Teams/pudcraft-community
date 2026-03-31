@@ -55,6 +55,9 @@ export async function POST(request: Request) {
         userIp: getClientIp(request),
       });
     } catch (error) {
+      if (error instanceof ImageValidationError) {
+        return NextResponse.json({ error: error.message }, { status: error.status });
+      }
       if (error instanceof ImageModerationError) {
         return NextResponse.json(
           { error: "图片包含违规内容，请更换图片", detail: error.message },

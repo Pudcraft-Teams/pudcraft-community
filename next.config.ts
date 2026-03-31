@@ -8,7 +8,12 @@ type AllowedRemotePattern = {
 };
 
 function getRemoteImagePatterns(): AllowedRemotePattern[] {
-  const baseUrls = [process.env.S3_PUBLIC_BASE_URL, process.env.OSS_PUBLIC_BASE_URL].filter(
+  const baseUrls = [
+    process.env.S3_PUBLIC_BASE_URL,
+    process.env.OSS_PUBLIC_BASE_URL,
+    process.env.S3_ENDPOINT,
+    process.env.OSS_ENDPOINT,
+  ].filter(
     (value): value is string => Boolean(value),
   );
 
@@ -34,7 +39,25 @@ function getRemoteImagePatterns(): AllowedRemotePattern[] {
     }
   }
 
-  return patterns;
+  if (patterns.length > 0) {
+    return patterns;
+  }
+
+  // Fallback for Docker/CI builds where public storage envs may be unavailable.
+  // Keep the allowlist non-empty for common object storage providers to avoid
+  // baking `[]` into standalone artifacts.
+  return [
+    {
+      protocol: "https",
+      hostname: "**.amazonaws.com",
+      pathname: "/**",
+    },
+    {
+      protocol: "https",
+      hostname: "**.aliyuncs.com",
+      pathname: "/**",
+    },
+  ];
 }
 
 const nextConfig: NextConfig = {

@@ -390,6 +390,13 @@ export async function POST(request: Request) {
           data: { iconUrl: iconKey },
         });
       } catch (error) {
+        if (error instanceof ImageValidationError) {
+          iconWarning = error.message;
+          logger.info("[api/servers] Server icon failed validation", {
+            serverId: server.id,
+            reason: error.message,
+          });
+        } else
         if (error instanceof ImageModerationError) {
           iconWarning = "图标包含违规内容，已跳过上传";
           logger.info("[api/servers] Server icon rejected by moderation", {
