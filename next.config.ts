@@ -67,11 +67,6 @@ function getRemoteImagePatterns(): AllowedRemotePattern[] {
       hostname: "**",
       pathname: "/**",
     },
-    {
-      protocol: "http",
-      hostname: "**",
-      pathname: "/**",
-    },
   ];
 }
 
