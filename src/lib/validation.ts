@@ -468,12 +468,66 @@ function toOrigin(value: string | undefined): string | null {
   }
 }
 
+function parseBooleanEnv(value: string | undefined): boolean {
+  if (!value) {
+    return false;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  return ["1", "true", "yes", "on"].includes(normalized);
+}
+
+function getEndpointOrigin(endpointValue: string | undefined): string | null {
+  const endpoint = endpointValue?.trim();
+  if (!endpoint) {
+    return null;
+  }
+
+  const normalizedEndpoint = /^https?:\/\//i.test(endpoint) ? endpoint : `https://${endpoint}`;
+  return toOrigin(normalizedEndpoint);
+}
+
+function getVirtualHostStyleOrigin(
+  endpointValue: string | undefined,
+  bucketValue: string | undefined,
+  forcePathStyleValue: string | undefined,
+): string | null {
+  if (parseBooleanEnv(forcePathStyleValue)) {
+    return null;
+  }
+
+  const endpoint = endpointValue?.trim();
+  const bucket = bucketValue?.trim();
+  if (!endpoint || !bucket) {
+    return null;
+  }
+
+  try {
+    const parsedUrl = new URL(/^https?:\/\//i.test(endpoint) ? endpoint : `https://${endpoint}`);
+    return `${parsedUrl.protocol}//${bucket}.${parsedUrl.host}`;
+  } catch {
+    return null;
+  }
+}
+
 const TRUSTED_CIRCLE_IMAGE_ORIGINS = new Set(
   [
     toOrigin(process.env.NEXT_PUBLIC_SITE_URL),
     toOrigin(process.env.NEXT_PUBLIC_STORAGE_PUBLIC_BASE_URL),
     toOrigin(process.env.S3_PUBLIC_BASE_URL),
     toOrigin(process.env.OSS_PUBLIC_BASE_URL),
+    getEndpointOrigin(process.env.S3_ENDPOINT),
+    getEndpointOrigin(process.env.OSS_ENDPOINT),
+    getVirtualHostStyleOrigin(
+      process.env.S3_ENDPOINT,
+      process.env.S3_BUCKET,
+      process.env.S3_FORCE_PATH_STYLE,
+    ),
+    getVirtualHostStyleOrigin(
+      process.env.OSS_ENDPOINT,
+      process.env.OSS_BUCKET,
+      process.env.OSS_FORCE_PATH_STYLE,
+    ),
   ].filter((value): value is string => value !== null),
 );
 

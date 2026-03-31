@@ -60,10 +60,55 @@ function getRemoteImagePatterns(): AllowedRemotePattern[] {
   ];
 }
 
+function getEndpointBucketPatterns(
+  endpointValue: string | undefined,
+  bucketValue: string | undefined,
+): AllowedRemotePattern[] {
+  const endpoint = endpointValue?.trim();
+  if (!endpoint) {
+    return [];
+  }
+
+  try {
+    const parsedUrl = new URL(endpoint);
+    if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+      return [];
+    }
+
+    const normalizedPathname = parsedUrl.pathname === "/" ? "/**" : `${parsedUrl.pathname.replace(/\/$/, "")}/**`;
+    const patterns: AllowedRemotePattern[] = [
+      {
+        protocol: parsedUrl.protocol.slice(0, -1) as "http" | "https",
+        hostname: parsedUrl.hostname,
+        port: parsedUrl.port || undefined,
+        pathname: normalizedPathname,
+      },
+    ];
+
+    const bucket = bucketValue?.trim();
+    if (bucket) {
+      patterns.push({
+        protocol: parsedUrl.protocol.slice(0, -1) as "http" | "https",
+        hostname: `${bucket}.${parsedUrl.hostname}`,
+        port: parsedUrl.port || undefined,
+        pathname: normalizedPathname,
+      });
+    }
+
+    return patterns;
+  } catch {
+    return [];
+  }
+}
+
 const nextConfig: NextConfig = {
   output: "standalone",
   images: {
-    remotePatterns: getRemoteImagePatterns(),
+    remotePatterns: [
+      ...getRemoteImagePatterns(),
+      ...getEndpointBucketPatterns(process.env.S3_ENDPOINT, process.env.S3_BUCKET),
+      ...getEndpointBucketPatterns(process.env.OSS_ENDPOINT, process.env.OSS_BUCKET),
+    ],
   },
   async headers() {
     return [
