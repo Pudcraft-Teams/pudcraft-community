@@ -71,7 +71,9 @@ httpServer.on("upgrade", (req, socket, head) => {
   }
 
   const serverId = url.searchParams.get("serverId");
-  const token = getBearerToken(req.headers.authorization);
+  // Prefer Authorization header to avoid leaking API keys in URLs/logs.
+  // Keep `token` query param for backward compatibility with existing plugins.
+  const token = getBearerToken(req.headers.authorization) ?? url.searchParams.get("token");
 
   if (!serverId || !token) {
     socket.destroy();
