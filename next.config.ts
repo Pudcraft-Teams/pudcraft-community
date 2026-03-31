@@ -44,30 +44,7 @@ function getRemoteImagePatterns(): AllowedRemotePattern[] {
     }
   }
 
-  if (patterns.length > 0) {
-    return patterns;
-  }
-
-  // Fallback for Docker/CI builds where public storage envs may be unavailable.
-  // Keep the allowlist non-empty to avoid baking an overly restrictive config
-  // into standalone artifacts when runtime storage endpoints are injected later.
-  return [
-    {
-      protocol: "https",
-      hostname: "**.amazonaws.com",
-      pathname: "/**",
-    },
-    {
-      protocol: "https",
-      hostname: "**.aliyuncs.com",
-      pathname: "/**",
-    },
-    {
-      protocol: "https",
-      hostname: "**",
-      pathname: "/**",
-    },
-  ];
+  return patterns;
 }
 
 function getEndpointBucketPatterns(

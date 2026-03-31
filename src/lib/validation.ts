@@ -557,7 +557,7 @@ const TRUSTED_CIRCLE_IMAGE_ORIGINS = new Set(
 );
 
 function isAllowedCircleImageUrl(url: string): boolean {
-  if (url.startsWith("/")) {
+  if (url.startsWith("/") && !url.startsWith("//")) {
     return true;
   }
 
