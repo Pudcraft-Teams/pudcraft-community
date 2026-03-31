@@ -8,6 +8,7 @@ import {
   getPublicUrl,
   ImageModerationError,
   ImageValidationError,
+  imageUploadConstraints,
   uploadEditorImage,
   validateImageFile,
 } from "@/lib/storage";
@@ -28,6 +29,10 @@ export async function POST(request: Request) {
 
     if (!(imageField instanceof File) || imageField.size <= 0) {
       return NextResponse.json({ error: "请选择图片文件" }, { status: 400 });
+    }
+
+    if (imageField.size > imageUploadConstraints.maxFileSizeBytes) {
+      return NextResponse.json({ error: "图片大小不能超过 5MB" }, { status: 413 });
     }
 
     const imageBuffer = Buffer.from(await imageField.arrayBuffer());

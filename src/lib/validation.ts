@@ -455,18 +455,53 @@ export const createCircleSchema = z.object({
   description: z.string().trim().max(500, "最多 500 个字符").optional(),
 });
 
+function toOrigin(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    return new URL(trimmed).origin;
+  } catch {
+    return null;
+  }
+}
+
+const TRUSTED_CIRCLE_IMAGE_ORIGINS = new Set(
+  [
+    toOrigin(process.env.NEXT_PUBLIC_SITE_URL),
+    toOrigin(process.env.NEXT_PUBLIC_STORAGE_PUBLIC_BASE_URL),
+    toOrigin(process.env.S3_PUBLIC_BASE_URL),
+    toOrigin(process.env.OSS_PUBLIC_BASE_URL),
+  ].filter((value): value is string => value !== null),
+);
+
+function isAllowedCircleImageUrl(url: string): boolean {
+  if (url.startsWith("/")) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(url);
+    return TRUSTED_CIRCLE_IMAGE_ORIGINS.has(parsed.origin);
+  } catch {
+    return false;
+  }
+}
+
 /** 更新圈子请求体 */
 export const updateCircleSchema = z.object({
   name: z.string().trim().min(1).max(50).optional(),
   description: z.string().trim().max(500).optional(),
   icon: z
     .string()
-    .refine((url) => /^https?:\/\//.test(url) || url.startsWith("/"), "仅允许 http/https 链接或相对路径")
+    .refine((url) => isAllowedCircleImageUrl(url), "仅允许站内路径或受信任对象存储域名")
     .optional()
     .nullable(),
   banner: z
     .string()
-    .refine((url) => /^https?:\/\//.test(url) || url.startsWith("/"), "仅允许 http/https 链接或相对路径")
+    .refine((url) => isAllowedCircleImageUrl(url), "仅允许站内路径或受信任对象存储域名")
     .optional()
     .nullable(),
 });

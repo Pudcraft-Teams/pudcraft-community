@@ -21,6 +21,17 @@ let isWhitelistSubscribed = false;
 // Track liveness per socket
 const alive = new WeakMap<WebSocket, boolean>();
 
+function getBearerToken(authorizationHeader: string | undefined): string | null {
+  if (!authorizationHeader) return null;
+
+  const [scheme, token] = authorizationHeader.trim().split(/\s+/, 2);
+  if (scheme?.toLowerCase() !== "bearer" || !token) {
+    return null;
+  }
+
+  return token;
+}
+
 // --- HTTP server with /health endpoint ---
 async function checkHealth(): Promise<void> {
   if (!isWhitelistSubscribed) {
@@ -60,7 +71,7 @@ httpServer.on("upgrade", (req, socket, head) => {
   }
 
   const serverId = url.searchParams.get("serverId");
-  const token = url.searchParams.get("token");
+  const token = getBearerToken(req.headers.authorization);
 
   if (!serverId || !token) {
     socket.destroy();

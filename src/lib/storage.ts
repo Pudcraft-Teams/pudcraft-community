@@ -34,6 +34,9 @@ const MIME_EXTENSION_MAP: Record<AllowedImageMimeType, string> = {
 };
 
 const WEBP_QUALITY = 80;
+const MAX_IMAGE_WIDTH_PX = 8_192;
+const MAX_IMAGE_HEIGHT_PX = 8_192;
+const MAX_IMAGE_PIXELS = 40_000_000;
 
 const MIME_FROM_EXTENSION: Record<string, string> = {
   png: "image/png",
@@ -347,10 +350,16 @@ const OSS_KEY_PREFIX = "pudcraft";
 
 export class ImageValidationError extends Error {
   readonly status: number;
-  readonly code: "FILE_TOO_LARGE" | "INVALID_IMAGE_TYPE";
+  readonly code: "FILE_TOO_LARGE" | "INVALID_IMAGE_TYPE" | "INVALID_IMAGE_DIMENSIONS";
 
-  constructor(code: "FILE_TOO_LARGE" | "INVALID_IMAGE_TYPE") {
-    super(code === "FILE_TOO_LARGE" ? "图片大小不能超过 5MB" : "图片格式不受支持");
+  constructor(code: "FILE_TOO_LARGE" | "INVALID_IMAGE_TYPE" | "INVALID_IMAGE_DIMENSIONS") {
+    super(
+      code === "FILE_TOO_LARGE"
+        ? "图片大小不能超过 5MB"
+        : code === "INVALID_IMAGE_TYPE"
+          ? "图片格式不受支持"
+          : `图片尺寸过大（最大 ${MAX_IMAGE_WIDTH_PX}x${MAX_IMAGE_HEIGHT_PX}，像素上限 ${MAX_IMAGE_PIXELS.toLocaleString()}）`,
+    );
     this.name = "ImageValidationError";
     this.code = code;
     this.status = code === "FILE_TOO_LARGE" ? 413 : 400;
@@ -804,7 +813,22 @@ function getFullPublicUrl(key: string): string | null {
  * 将图片统一转换为 WebP 格式（strip 元数据 + 统一质量）。
  */
 async function convertToWebP(file: Buffer): Promise<Buffer> {
-  return sharp(file).webp({ quality: WEBP_QUALITY }).toBuffer();
+  const image = sharp(file, { limitInputPixels: MAX_IMAGE_PIXELS });
+  const metadata = await image.metadata();
+
+  if (!metadata.width || !metadata.height) {
+    throw new ImageValidationError("INVALID_IMAGE_TYPE");
+  }
+
+  if (
+    metadata.width > MAX_IMAGE_WIDTH_PX ||
+    metadata.height > MAX_IMAGE_HEIGHT_PX ||
+    metadata.width * metadata.height > MAX_IMAGE_PIXELS
+  ) {
+    throw new ImageValidationError("INVALID_IMAGE_DIMENSIONS");
+  }
+
+  return image.webp({ quality: WEBP_QUALITY }).toBuffer();
 }
 
 /**

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { isPrivateServersEnabled } from "@/lib/features";
 import { logger } from "@/lib/logger";
 import { resolveServerCuid } from "@/lib/lookup";
+import { canAccessServer } from "@/lib/server-access";
 import { getPublicUrl } from "@/lib/storage";
 import {
   serverLookupIdSchema,
@@ -47,10 +48,20 @@ export async function POST(request: Request, { params }: RouteContext) {
 
     const server = await prisma.server.findUnique({
       where: { id: cuid },
-      select: { id: true, joinMode: true, status: true },
+      select: { id: true, ownerId: true, joinMode: true, status: true },
     });
 
     if (!server) {
+      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+    }
+
+    const canAccessCurrentServer = canAccessServer({
+      status: server.status,
+      ownerId: server.ownerId,
+      currentUserId: authResult.user.id,
+      currentUserRole: authResult.user.role,
+    });
+    if (!canAccessCurrentServer) {
       return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
     }
 

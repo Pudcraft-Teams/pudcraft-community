@@ -1,12 +1,46 @@
 import type { NextConfig } from "next";
 
+type AllowedRemotePattern = {
+  protocol: "http" | "https";
+  hostname: string;
+  port?: string;
+  pathname: string;
+};
+
+function getRemoteImagePatterns(): AllowedRemotePattern[] {
+  const baseUrls = [process.env.S3_PUBLIC_BASE_URL, process.env.OSS_PUBLIC_BASE_URL].filter(
+    (value): value is string => Boolean(value),
+  );
+
+  const patterns: AllowedRemotePattern[] = [];
+
+  for (const rawUrl of baseUrls) {
+    try {
+      const parsedUrl = new URL(rawUrl);
+      if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+        continue;
+      }
+
+      const normalizedPathname = parsedUrl.pathname === "/" ? "/**" : `${parsedUrl.pathname.replace(/\/$/, "")}/**`;
+
+      patterns.push({
+        protocol: parsedUrl.protocol.slice(0, -1) as "http" | "https",
+        hostname: parsedUrl.hostname,
+        port: parsedUrl.port || undefined,
+        pathname: normalizedPathname,
+      });
+    } catch {
+      continue;
+    }
+  }
+
+  return patterns;
+}
+
 const nextConfig: NextConfig = {
   output: "standalone",
   images: {
-    remotePatterns: [
-      // S3 兼容对象存储（生产环境使用），按需添加域名或通配
-      { protocol: "https", hostname: "**" },
-    ],
+    remotePatterns: getRemoteImagePatterns(),
   },
   async headers() {
     return [

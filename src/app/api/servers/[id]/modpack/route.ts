@@ -16,6 +16,7 @@ import {
 import { moderateFields } from "@/lib/moderation";
 import { getClientIp } from "@/lib/request-ip";
 import { canAccessServer } from "@/lib/server-access";
+import { canSeeServerAddress } from "@/lib/server-membership";
 import { resolveServerCuid } from "@/lib/lookup";
 import { deleteObject, uploadModpack } from "@/lib/storage";
 import { serverLookupIdSchema, uploadModpackSchema } from "@/lib/validation";
@@ -60,6 +61,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         id: true,
         ownerId: true,
         status: true,
+        visibility: true,
       },
     });
 
@@ -77,6 +79,19 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     if (!canAccessCurrentServer) {
       return NextResponse.json(
         { error: "服务器未通过审核，整合包暂不可公开访问" },
+        { status: 403 },
+      );
+    }
+
+    const canView = await canSeeServerAddress(
+      { visibility: server.visibility, ownerId: server.ownerId },
+      session?.user?.id,
+      session?.user?.role,
+      server.id,
+    );
+    if (!canView) {
+      return NextResponse.json(
+        { error: "你不是该服务器成员，无法查看整合包信息" },
         { status: 403 },
       );
     }
