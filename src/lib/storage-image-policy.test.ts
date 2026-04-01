@@ -70,3 +70,26 @@ test("isAllowedStorageImageUrl rejects scheme-less remote urls from user input",
   assert.equal(isAllowedStorageImageUrl("cdn.example.com/storage/icon.webp", env), false);
   assert.equal(isAllowedStorageImageUrl("https://cdn.example.com/storage/icon.webp", env), true);
 });
+
+test("storage image policy supports legacy OSS regional env names", () => {
+  const env = {
+    ossBucket: "legacy-bucket",
+    ossRegion: "cn-hangzhou",
+  };
+
+  assert.deepEqual(buildStorageImageRemotePatterns(env), [
+    {
+      protocol: "https",
+      hostname: "legacy-bucket.s3.cn-hangzhou.amazonaws.com",
+      pathname: "/**",
+    },
+  ]);
+
+  assert.equal(
+    isAllowedStorageImageUrl(
+      "https://legacy-bucket.s3.cn-hangzhou.amazonaws.com/forum/icon.webp",
+      env,
+    ),
+    true,
+  );
+});

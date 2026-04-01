@@ -15,6 +15,7 @@ export interface StorageImagePolicyEnv {
   s3Bucket?: string;
   ossBucket?: string;
   s3Region?: string;
+  ossRegion?: string;
   s3ForcePathStyle?: string;
   ossForcePathStyle?: string;
 }
@@ -205,6 +206,8 @@ function buildRegionalS3TrustedUrlRule(
 export function buildStorageImageRemotePatterns(
   env: StorageImagePolicyEnv,
 ): StorageImageRemotePattern[] {
+  const regionalBucket = env.s3Bucket ?? env.ossBucket;
+  const regionalRegion = env.s3Region ?? env.ossRegion;
   const directUrlPatterns = [
     env.nextPublicStoragePublicBaseUrl,
     env.s3PublicBaseUrl,
@@ -218,7 +221,7 @@ export function buildStorageImageRemotePatterns(
     ...directUrlPatterns,
     ...buildEndpointRemotePatterns(env.s3Endpoint, env.s3Bucket),
     ...buildEndpointRemotePatterns(env.ossEndpoint, env.ossBucket),
-    ...buildRegionalS3RemotePattern(env.s3Bucket, env.s3Region),
+    ...buildRegionalS3RemotePattern(regionalBucket, regionalRegion),
   ]);
 }
 
@@ -226,6 +229,8 @@ export function buildTrustedStorageUrlRules(env: StorageImagePolicyEnv): Array<{
   origin: string;
   pathnamePrefix: string;
 }> {
+  const regionalBucket = env.s3Bucket ?? env.ossBucket;
+  const regionalRegion = env.s3Region ?? env.ossRegion;
   const directRules = [
     env.nextPublicSiteUrl,
     env.nextPublicStoragePublicBaseUrl,
@@ -240,7 +245,7 @@ export function buildTrustedStorageUrlRules(env: StorageImagePolicyEnv): Array<{
     ...directRules,
     ...buildEndpointTrustedUrlRules(env.s3Endpoint, env.s3Bucket, env.s3ForcePathStyle),
     ...buildEndpointTrustedUrlRules(env.ossEndpoint, env.ossBucket, env.ossForcePathStyle),
-    ...buildRegionalS3TrustedUrlRule(env.s3Bucket, env.s3Region),
+    ...buildRegionalS3TrustedUrlRule(regionalBucket, regionalRegion),
   ]);
 }
 
