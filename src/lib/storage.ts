@@ -377,6 +377,21 @@ export class ImageModerationError extends Error {
   }
 }
 
+export function normalizeImageProcessingError(error: unknown): unknown {
+  if (error instanceof ImageValidationError) {
+    return error;
+  }
+
+  if (
+    error instanceof Error &&
+    /pixel limit/i.test(error.message)
+  ) {
+    return new ImageValidationError("INVALID_IMAGE_DIMENSIONS");
+  }
+
+  return error;
+}
+
 // ─── MIME 检测 ────────────────────────────────────────
 
 function detectImageMimeType(file: Buffer): AllowedImageMimeType | null {
@@ -813,22 +828,26 @@ function getFullPublicUrl(key: string): string | null {
  * 将图片统一转换为 WebP 格式（strip 元数据 + 统一质量）。
  */
 async function convertToWebP(file: Buffer): Promise<Buffer> {
-  const image = sharp(file, { limitInputPixels: MAX_IMAGE_PIXELS });
-  const metadata = await image.metadata();
+  try {
+    const image = sharp(file, { limitInputPixels: MAX_IMAGE_PIXELS });
+    const metadata = await image.metadata();
 
-  if (!metadata.width || !metadata.height) {
-    throw new ImageValidationError("INVALID_IMAGE_TYPE");
+    if (!metadata.width || !metadata.height) {
+      throw new ImageValidationError("INVALID_IMAGE_TYPE");
+    }
+
+    if (
+      metadata.width > MAX_IMAGE_WIDTH_PX ||
+      metadata.height > MAX_IMAGE_HEIGHT_PX ||
+      metadata.width * metadata.height > MAX_IMAGE_PIXELS
+    ) {
+      throw new ImageValidationError("INVALID_IMAGE_DIMENSIONS");
+    }
+
+    return await image.webp({ quality: WEBP_QUALITY }).toBuffer();
+  } catch (error) {
+    throw normalizeImageProcessingError(error);
   }
-
-  if (
-    metadata.width > MAX_IMAGE_WIDTH_PX ||
-    metadata.height > MAX_IMAGE_HEIGHT_PX ||
-    metadata.width * metadata.height > MAX_IMAGE_PIXELS
-  ) {
-    throw new ImageValidationError("INVALID_IMAGE_DIMENSIONS");
-  }
-
-  return image.webp({ quality: WEBP_QUALITY }).toBuffer();
 }
 
 /**

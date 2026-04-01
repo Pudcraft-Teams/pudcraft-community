@@ -25,6 +25,17 @@ type TrustedStorageUrlRule = {
   pathnamePrefix: string;
 };
 
+function firstNonEmpty(...values: Array<string | undefined>): string | undefined {
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (trimmed) {
+      return trimmed;
+    }
+  }
+
+  return undefined;
+}
+
 function normalizeConfiguredUrl(value: string): string {
   const trimmed = value.trim();
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
@@ -206,8 +217,8 @@ function buildRegionalS3TrustedUrlRule(
 export function buildStorageImageRemotePatterns(
   env: StorageImagePolicyEnv,
 ): StorageImageRemotePattern[] {
-  const regionalBucket = env.s3Bucket ?? env.ossBucket;
-  const regionalRegion = env.s3Region ?? env.ossRegion;
+  const regionalBucket = firstNonEmpty(env.s3Bucket, env.ossBucket);
+  const regionalRegion = firstNonEmpty(env.s3Region, env.ossRegion);
   const directUrlPatterns = [
     env.nextPublicStoragePublicBaseUrl,
     env.s3PublicBaseUrl,
@@ -229,8 +240,8 @@ export function buildTrustedStorageUrlRules(env: StorageImagePolicyEnv): Array<{
   origin: string;
   pathnamePrefix: string;
 }> {
-  const regionalBucket = env.s3Bucket ?? env.ossBucket;
-  const regionalRegion = env.s3Region ?? env.ossRegion;
+  const regionalBucket = firstNonEmpty(env.s3Bucket, env.ossBucket);
+  const regionalRegion = firstNonEmpty(env.s3Region, env.ossRegion);
   const directRules = [
     env.nextPublicSiteUrl,
     env.nextPublicStoragePublicBaseUrl,

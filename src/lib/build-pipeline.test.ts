@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -42,4 +43,37 @@ test("GitHub build workflow passes storage build args into docker/build-push-act
   assert.match(workflow, /^\s+OSS_ENDPOINT=/m);
   assert.match(workflow, /^\s+OSS_PUBLIC_BASE_URL=/m);
   assert.match(workflow, /^\s+OSS_FORCE_PATH_STYLE=/m);
+});
+
+test("next.config forwards OSS regional envs into remote image patterns", () => {
+  const script = `
+    import config from "./next.config.ts";
+    const resolvedConfig = config.default ?? config;
+    console.log(JSON.stringify(resolvedConfig.images?.remotePatterns ?? []));
+  `;
+  const result = spawnSync(
+    process.execPath,
+    ["--import", "tsx", "-e", script],
+    {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        OSS_BUCKET: "legacy-bucket",
+        OSS_REGION: "cn-hangzhou",
+        S3_BUCKET: "",
+        S3_REGION: "",
+        S3_ENDPOINT: "",
+        OSS_ENDPOINT: "",
+        S3_PUBLIC_BASE_URL: "",
+        OSS_PUBLIC_BASE_URL: "",
+      },
+      encoding: "utf8",
+    },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(
+    result.stdout,
+    /legacy-bucket\.s3\.cn-hangzhou\.amazonaws\.com/,
+  );
 });

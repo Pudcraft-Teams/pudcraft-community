@@ -467,6 +467,7 @@ function isAllowedCircleImageUrl(url: string): boolean {
     s3Bucket: process.env.S3_BUCKET,
     ossBucket: process.env.OSS_BUCKET,
     s3Region: process.env.S3_REGION,
+    ossRegion: process.env.OSS_REGION,
     s3ForcePathStyle: process.env.S3_FORCE_PATH_STYLE,
     ossForcePathStyle: process.env.OSS_FORCE_PATH_STYLE,
   });

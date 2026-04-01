@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
       s3Bucket: process.env.S3_BUCKET,
       ossBucket: process.env.OSS_BUCKET,
       s3Region: process.env.S3_REGION,
+      ossRegion: process.env.OSS_REGION,
     }),
   },
   async headers() {
