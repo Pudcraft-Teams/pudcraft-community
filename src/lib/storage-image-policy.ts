@@ -200,10 +200,12 @@ function buildEndpointTrustedUrlRules(
 function buildRegionalS3RemotePattern(
   bucketValue: string | undefined,
   regionValue: string | undefined,
+  endpointValue: string | undefined,
+  publicBaseUrlValue: string | undefined,
 ): StorageImageRemotePattern[] {
   const bucket = bucketValue?.trim();
   const region = regionValue?.trim();
-  if (!bucket || !region) {
+  if (!bucket || !region || endpointValue?.trim() || publicBaseUrlValue?.trim()) {
     return [];
   }
 
@@ -219,10 +221,12 @@ function buildRegionalS3RemotePattern(
 function buildRegionalS3TrustedUrlRule(
   bucketValue: string | undefined,
   regionValue: string | undefined,
+  endpointValue: string | undefined,
+  publicBaseUrlValue: string | undefined,
 ): TrustedStorageUrlRule[] {
   const bucket = bucketValue?.trim();
   const region = regionValue?.trim();
-  if (!bucket || !region) {
+  if (!bucket || !region || endpointValue?.trim() || publicBaseUrlValue?.trim()) {
     return [];
   }
 
@@ -249,7 +253,12 @@ export function buildStorageImageRemotePatterns(
   return dedupePatterns([
     ...directUrlPatterns,
     ...buildEndpointRemotePatterns(effectiveConfig.endpoint, effectiveConfig.bucket),
-    ...buildRegionalS3RemotePattern(effectiveConfig.bucket, effectiveConfig.region),
+    ...buildRegionalS3RemotePattern(
+      effectiveConfig.bucket,
+      effectiveConfig.region,
+      effectiveConfig.endpoint,
+      effectiveConfig.publicBaseUrl,
+    ),
   ]);
 }
 
@@ -274,7 +283,12 @@ export function buildTrustedStorageUrlRules(env: StorageImagePolicyEnv): Array<{
       effectiveConfig.bucket,
       effectiveConfig.forcePathStyle,
     ),
-    ...buildRegionalS3TrustedUrlRule(effectiveConfig.bucket, effectiveConfig.region),
+    ...buildRegionalS3TrustedUrlRule(
+      effectiveConfig.bucket,
+      effectiveConfig.region,
+      effectiveConfig.endpoint,
+      effectiveConfig.publicBaseUrl,
+    ),
   ]);
 }
 

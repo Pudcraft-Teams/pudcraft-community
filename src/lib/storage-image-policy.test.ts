@@ -5,7 +5,7 @@ import {
   isAllowedStorageImageUrl,
 } from "./storage-image-policy";
 
-test("buildStorageImageRemotePatterns includes regional and endpoint-derived storage hosts", () => {
+test("buildStorageImageRemotePatterns follows endpoint-derived storage hosts when endpoint is configured", () => {
   const patterns = buildStorageImageRemotePatterns({
     s3Bucket: "pudcraft",
     s3Region: "ap-southeast-1",
@@ -25,13 +25,23 @@ test("buildStorageImageRemotePatterns includes regional and endpoint-derived sto
         hostname: "pudcraft.objects.example.com",
         pathname: "/media/**",
       },
-      {
-        protocol: "https",
-        hostname: "pudcraft.s3.ap-southeast-1.amazonaws.com",
-        pathname: "/**",
-      },
     ],
   );
+});
+
+test("buildStorageImageRemotePatterns includes regional AWS host only for region-only config", () => {
+  const patterns = buildStorageImageRemotePatterns({
+    s3Bucket: "pudcraft",
+    s3Region: "ap-southeast-1",
+  });
+
+  assert.deepEqual(patterns, [
+    {
+      protocol: "https",
+      hostname: "pudcraft.s3.ap-southeast-1.amazonaws.com",
+      pathname: "/**",
+    },
+  ]);
 });
 
 test("isAllowedStorageImageUrl rejects protocol-relative urls and enforces trusted path prefixes", () => {
@@ -58,6 +68,26 @@ test("isAllowedStorageImageUrl rejects protocol-relative urls and enforces trust
   );
   assert.equal(
     isAllowedStorageImageUrl("https://objects.example.com/private/circle.webp", env),
+    false,
+  );
+});
+
+test("isAllowedStorageImageUrl skips regional AWS fallback when endpoint config exists", () => {
+  const env = {
+    s3Endpoint: "https://objects.example.com/media",
+    s3Bucket: "pudcraft",
+    s3Region: "ap-southeast-1",
+  };
+
+  assert.equal(
+    isAllowedStorageImageUrl("https://pudcraft.objects.example.com/media/forum/icon.webp", env),
+    true,
+  );
+  assert.equal(
+    isAllowedStorageImageUrl(
+      "https://pudcraft.s3.ap-southeast-1.amazonaws.com/forum/icon.webp",
+      env,
+    ),
     false,
   );
 });
