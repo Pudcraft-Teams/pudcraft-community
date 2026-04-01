@@ -50,6 +50,7 @@ jobs:
             S3_PUBLIC_BASE_URL=${{ secrets.S3_PUBLIC_BASE_URL || vars.S3_PUBLIC_BASE_URL }}
             S3_FORCE_PATH_STYLE=${{ secrets.S3_FORCE_PATH_STYLE || vars.S3_FORCE_PATH_STYLE }}
             OSS_BUCKET=${{ secrets.OSS_BUCKET || vars.OSS_BUCKET }}
+            OSS_REGION=${{ secrets.OSS_REGION || vars.OSS_REGION }}
             OSS_ENDPOINT=${{ secrets.OSS_ENDPOINT || vars.OSS_ENDPOINT }}
             OSS_PUBLIC_BASE_URL=${{ secrets.OSS_PUBLIC_BASE_URL || vars.OSS_PUBLIC_BASE_URL }}
             OSS_FORCE_PATH_STYLE=${{ secrets.OSS_FORCE_PATH_STYLE || vars.OSS_FORCE_PATH_STYLE }}

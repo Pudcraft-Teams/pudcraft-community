@@ -16,6 +16,7 @@ test("Dockerfile forwards storage configuration into the Next.js build environme
   assert.match(dockerfile, /^ARG S3_PUBLIC_BASE_URL=.*$/m);
   assert.match(dockerfile, /^ARG S3_FORCE_PATH_STYLE=.*$/m);
   assert.match(dockerfile, /^ARG OSS_BUCKET=.*$/m);
+  assert.match(dockerfile, /^ARG OSS_REGION=.*$/m);
   assert.match(dockerfile, /^ARG OSS_ENDPOINT=.*$/m);
   assert.match(dockerfile, /^ARG OSS_PUBLIC_BASE_URL=.*$/m);
   assert.match(dockerfile, /^ARG OSS_FORCE_PATH_STYLE=.*$/m);
@@ -25,6 +26,7 @@ test("Dockerfile forwards storage configuration into the Next.js build environme
   assert.match(dockerfile, /^ENV S3_PUBLIC_BASE_URL="\$\{S3_PUBLIC_BASE_URL\}"$/m);
   assert.match(dockerfile, /^ENV S3_FORCE_PATH_STYLE="\$\{S3_FORCE_PATH_STYLE\}"$/m);
   assert.match(dockerfile, /^ENV OSS_BUCKET="\$\{OSS_BUCKET\}"$/m);
+  assert.match(dockerfile, /^ENV OSS_REGION="\$\{OSS_REGION\}"$/m);
   assert.match(dockerfile, /^ENV OSS_ENDPOINT="\$\{OSS_ENDPOINT\}"$/m);
   assert.match(dockerfile, /^ENV OSS_PUBLIC_BASE_URL="\$\{OSS_PUBLIC_BASE_URL\}"$/m);
   assert.match(dockerfile, /^ENV OSS_FORCE_PATH_STYLE="\$\{OSS_FORCE_PATH_STYLE\}"$/m);
@@ -40,6 +42,7 @@ test("GitHub build workflow passes storage build args into docker/build-push-act
   assert.match(workflow, /^\s+S3_PUBLIC_BASE_URL=/m);
   assert.match(workflow, /^\s+S3_FORCE_PATH_STYLE=/m);
   assert.match(workflow, /^\s+OSS_BUCKET=/m);
+  assert.match(workflow, /^\s+OSS_REGION=/m);
   assert.match(workflow, /^\s+OSS_ENDPOINT=/m);
   assert.match(workflow, /^\s+OSS_PUBLIC_BASE_URL=/m);
   assert.match(workflow, /^\s+OSS_FORCE_PATH_STYLE=/m);
