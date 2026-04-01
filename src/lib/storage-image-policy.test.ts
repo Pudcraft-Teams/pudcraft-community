@@ -93,3 +93,31 @@ test("storage image policy supports legacy OSS regional env names", () => {
     true,
   );
 });
+
+test("storage image policy mirrors mixed S3 and OSS env fallback semantics", () => {
+  const env = {
+    s3Endpoint: "https://objects.example.com/media",
+    ossBucket: "legacy-bucket",
+  };
+
+  assert.deepEqual(buildStorageImageRemotePatterns(env), [
+    {
+      protocol: "https",
+      hostname: "objects.example.com",
+      pathname: "/media/**",
+    },
+    {
+      protocol: "https",
+      hostname: "legacy-bucket.objects.example.com",
+      pathname: "/media/**",
+    },
+  ]);
+
+  assert.equal(
+    isAllowedStorageImageUrl(
+      "https://legacy-bucket.objects.example.com/media/forum/icon.webp",
+      env,
+    ),
+    true,
+  );
+});

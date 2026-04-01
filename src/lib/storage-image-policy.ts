@@ -25,6 +25,14 @@ type TrustedStorageUrlRule = {
   pathnamePrefix: string;
 };
 
+interface EffectiveStorageImageConfig {
+  publicBaseUrl?: string;
+  endpoint?: string;
+  bucket?: string;
+  region?: string;
+  forcePathStyle?: string;
+}
+
 function firstNonEmpty(...values: Array<string | undefined>): string | undefined {
   for (const value of values) {
     const trimmed = value?.trim();
@@ -34,6 +42,18 @@ function firstNonEmpty(...values: Array<string | undefined>): string | undefined
   }
 
   return undefined;
+}
+
+function resolveEffectiveStorageImageConfig(
+  env: StorageImagePolicyEnv,
+): EffectiveStorageImageConfig {
+  return {
+    publicBaseUrl: firstNonEmpty(env.s3PublicBaseUrl, env.ossPublicBaseUrl),
+    endpoint: firstNonEmpty(env.s3Endpoint, env.ossEndpoint),
+    bucket: firstNonEmpty(env.s3Bucket, env.ossBucket),
+    region: firstNonEmpty(env.s3Region, env.ossRegion),
+    forcePathStyle: firstNonEmpty(env.s3ForcePathStyle, env.ossForcePathStyle),
+  };
 }
 
 function normalizeConfiguredUrl(value: string): string {
@@ -217,12 +237,10 @@ function buildRegionalS3TrustedUrlRule(
 export function buildStorageImageRemotePatterns(
   env: StorageImagePolicyEnv,
 ): StorageImageRemotePattern[] {
-  const regionalBucket = firstNonEmpty(env.s3Bucket, env.ossBucket);
-  const regionalRegion = firstNonEmpty(env.s3Region, env.ossRegion);
+  const effectiveConfig = resolveEffectiveStorageImageConfig(env);
   const directUrlPatterns = [
     env.nextPublicStoragePublicBaseUrl,
-    env.s3PublicBaseUrl,
-    env.ossPublicBaseUrl,
+    effectiveConfig.publicBaseUrl,
   ]
     .map((value) => parseConfiguredHttpUrl(value))
     .filter((value): value is URL => value !== null)
@@ -230,9 +248,8 @@ export function buildStorageImageRemotePatterns(
 
   return dedupePatterns([
     ...directUrlPatterns,
-    ...buildEndpointRemotePatterns(env.s3Endpoint, env.s3Bucket),
-    ...buildEndpointRemotePatterns(env.ossEndpoint, env.ossBucket),
-    ...buildRegionalS3RemotePattern(regionalBucket, regionalRegion),
+    ...buildEndpointRemotePatterns(effectiveConfig.endpoint, effectiveConfig.bucket),
+    ...buildRegionalS3RemotePattern(effectiveConfig.bucket, effectiveConfig.region),
   ]);
 }
 
@@ -240,13 +257,11 @@ export function buildTrustedStorageUrlRules(env: StorageImagePolicyEnv): Array<{
   origin: string;
   pathnamePrefix: string;
 }> {
-  const regionalBucket = firstNonEmpty(env.s3Bucket, env.ossBucket);
-  const regionalRegion = firstNonEmpty(env.s3Region, env.ossRegion);
+  const effectiveConfig = resolveEffectiveStorageImageConfig(env);
   const directRules = [
     env.nextPublicSiteUrl,
     env.nextPublicStoragePublicBaseUrl,
-    env.s3PublicBaseUrl,
-    env.ossPublicBaseUrl,
+    effectiveConfig.publicBaseUrl,
   ]
     .map((value) => parseConfiguredHttpUrl(value))
     .filter((value): value is URL => value !== null)
@@ -254,9 +269,12 @@ export function buildTrustedStorageUrlRules(env: StorageImagePolicyEnv): Array<{
 
   return dedupeRules([
     ...directRules,
-    ...buildEndpointTrustedUrlRules(env.s3Endpoint, env.s3Bucket, env.s3ForcePathStyle),
-    ...buildEndpointTrustedUrlRules(env.ossEndpoint, env.ossBucket, env.ossForcePathStyle),
-    ...buildRegionalS3TrustedUrlRule(regionalBucket, regionalRegion),
+    ...buildEndpointTrustedUrlRules(
+      effectiveConfig.endpoint,
+      effectiveConfig.bucket,
+      effectiveConfig.forcePathStyle,
+    ),
+    ...buildRegionalS3TrustedUrlRule(effectiveConfig.bucket, effectiveConfig.region),
   ]);
 }
 
