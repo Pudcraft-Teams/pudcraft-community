@@ -8,6 +8,7 @@ import {
   getPublicUrl,
   ImageModerationError,
   ImageValidationError,
+  imageUploadConstraints,
   uploadEditorImage,
   validateImageFile,
 } from "@/lib/storage";
@@ -30,6 +31,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "请选择图片文件" }, { status: 400 });
     }
 
+    if (imageField.size > imageUploadConstraints.maxFileSizeBytes) {
+      return NextResponse.json({ error: "图片大小不能超过 5MB" }, { status: 413 });
+    }
+
     const imageBuffer = Buffer.from(await imageField.arrayBuffer());
     const imageMimeType = imageField.type;
 
@@ -50,6 +55,9 @@ export async function POST(request: Request) {
         userIp: getClientIp(request),
       });
     } catch (error) {
+      if (error instanceof ImageValidationError) {
+        return NextResponse.json({ error: error.message }, { status: error.status });
+      }
       if (error instanceof ImageModerationError) {
         return NextResponse.json(
           { error: "图片包含违规内容，请更换图片", detail: error.message },

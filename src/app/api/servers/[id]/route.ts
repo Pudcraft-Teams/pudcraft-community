@@ -356,6 +356,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         });
         nextIconKey = uploadedKey;
       } catch (error) {
+        if (error instanceof ImageValidationError) {
+          return NextResponse.json({ error: error.message }, { status: error.status });
+        }
         if (error instanceof ImageModerationError) {
           return NextResponse.json(
             { error: "图标包含违规内容，请更换图片", detail: error.message },
