@@ -43,6 +43,16 @@ jobs:
         with:
           context: .
           push: true
+          build-args: |
+            S3_BUCKET=${{ secrets.S3_BUCKET || vars.S3_BUCKET }}
+            S3_REGION=${{ secrets.S3_REGION || vars.S3_REGION }}
+            S3_ENDPOINT=${{ secrets.S3_ENDPOINT || vars.S3_ENDPOINT }}
+            S3_PUBLIC_BASE_URL=${{ secrets.S3_PUBLIC_BASE_URL || vars.S3_PUBLIC_BASE_URL }}
+            S3_FORCE_PATH_STYLE=${{ secrets.S3_FORCE_PATH_STYLE || vars.S3_FORCE_PATH_STYLE }}
+            OSS_BUCKET=${{ secrets.OSS_BUCKET || vars.OSS_BUCKET }}
+            OSS_ENDPOINT=${{ secrets.OSS_ENDPOINT || vars.OSS_ENDPOINT }}
+            OSS_PUBLIC_BASE_URL=${{ secrets.OSS_PUBLIC_BASE_URL || vars.OSS_PUBLIC_BASE_URL }}
+            OSS_FORCE_PATH_STYLE=${{ secrets.OSS_FORCE_PATH_STYLE || vars.OSS_FORCE_PATH_STYLE }}
           tags: |
             ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:${{ github.sha }}

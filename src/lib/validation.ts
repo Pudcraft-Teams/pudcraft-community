@@ -4,6 +4,7 @@
  */
 
 import { z } from "zod";
+import { isAllowedStorageImageUrl } from "./storage-image-policy";
 
 // ─── 基础字段 Schema ─────────────────────────
 
@@ -455,118 +456,20 @@ export const createCircleSchema = z.object({
   description: z.string().trim().max(500, "最多 500 个字符").optional(),
 });
 
-function toOrigin(value: string | undefined): string | null {
-  const trimmed = value?.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  try {
-    return new URL(trimmed).origin;
-  } catch {
-    return null;
-  }
-}
-
-function parseBooleanEnv(value: string | undefined): boolean {
-  if (!value) {
-    return false;
-  }
-
-  const normalized = value.trim().toLowerCase();
-  return ["1", "true", "yes", "on"].includes(normalized);
-}
-
-function getEndpointOrigin(endpointValue: string | undefined): string | null {
-  const endpoint = endpointValue?.trim();
-  if (!endpoint) {
-    return null;
-  }
-
-  const normalizedEndpoint = /^https?:\/\//i.test(endpoint) ? endpoint : `https://${endpoint}`;
-  return toOrigin(normalizedEndpoint);
-}
-
-function getVirtualHostStyleOrigin(
-  endpointValue: string | undefined,
-  bucketValue: string | undefined,
-  forcePathStyleValue: string | undefined,
-): string | null {
-  if (parseBooleanEnv(forcePathStyleValue)) {
-    return null;
-  }
-
-  const endpoint = endpointValue?.trim();
-  const bucket = bucketValue?.trim();
-  if (!endpoint || !bucket) {
-    return null;
-  }
-
-  try {
-    const parsedUrl = new URL(/^https?:\/\//i.test(endpoint) ? endpoint : `https://${endpoint}`);
-    return `${parsedUrl.protocol}//${bucket}.${parsedUrl.host}`;
-  } catch {
-    return null;
-  }
-}
-
-function getRegionalS3Origin(
-  endpointValue: string | undefined,
-  publicBaseUrlValue: string | undefined,
-  bucketValue: string | undefined,
-  regionValue: string | undefined,
-): string | null {
-  if (endpointValue?.trim() || publicBaseUrlValue?.trim()) {
-    return null;
-  }
-
-  const bucket = bucketValue?.trim();
-  const region = regionValue?.trim();
-  if (!bucket || !region) {
-    return null;
-  }
-
-  return `https://${bucket}.s3.${region}.amazonaws.com`;
-}
-
-const TRUSTED_CIRCLE_IMAGE_ORIGINS = new Set(
-  [
-    toOrigin(process.env.NEXT_PUBLIC_SITE_URL),
-    toOrigin(process.env.NEXT_PUBLIC_STORAGE_PUBLIC_BASE_URL),
-    toOrigin(process.env.S3_PUBLIC_BASE_URL),
-    toOrigin(process.env.OSS_PUBLIC_BASE_URL),
-    getEndpointOrigin(process.env.S3_ENDPOINT),
-    getEndpointOrigin(process.env.OSS_ENDPOINT),
-    getVirtualHostStyleOrigin(
-      process.env.S3_ENDPOINT,
-      process.env.S3_BUCKET,
-      process.env.S3_FORCE_PATH_STYLE,
-    ),
-    getVirtualHostStyleOrigin(
-      process.env.OSS_ENDPOINT,
-      process.env.OSS_BUCKET,
-      process.env.OSS_FORCE_PATH_STYLE,
-    ),
-    getRegionalS3Origin(
-      process.env.S3_ENDPOINT,
-      process.env.S3_PUBLIC_BASE_URL,
-      process.env.S3_BUCKET,
-      process.env.S3_REGION,
-    ),
-  ].filter((value): value is string => value !== null),
-);
-
 function isAllowedCircleImageUrl(url: string): boolean {
-  if (url.startsWith("/") && !url.startsWith("//")) {
-    return true;
-  }
-
-  try {
-    const parsed = new URL(url);
-    return TRUSTED_CIRCLE_IMAGE_ORIGINS.has(parsed.origin);
-  } catch {
-    return false;
-  }
+  return isAllowedStorageImageUrl(url, {
+    nextPublicSiteUrl: process.env.NEXT_PUBLIC_SITE_URL,
+    nextPublicStoragePublicBaseUrl: process.env.NEXT_PUBLIC_STORAGE_PUBLIC_BASE_URL,
+    s3PublicBaseUrl: process.env.S3_PUBLIC_BASE_URL,
+    ossPublicBaseUrl: process.env.OSS_PUBLIC_BASE_URL,
+    s3Endpoint: process.env.S3_ENDPOINT,
+    ossEndpoint: process.env.OSS_ENDPOINT,
+    s3Bucket: process.env.S3_BUCKET,
+    ossBucket: process.env.OSS_BUCKET,
+    s3Region: process.env.S3_REGION,
+    s3ForcePathStyle: process.env.S3_FORCE_PATH_STYLE,
+    ossForcePathStyle: process.env.OSS_FORCE_PATH_STYLE,
+  });
 }
 
 /** 更新圈子请求体 */

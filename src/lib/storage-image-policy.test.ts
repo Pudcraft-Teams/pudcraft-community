@@ -1,0 +1,63 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {
+  buildStorageImageRemotePatterns,
+  isAllowedStorageImageUrl,
+} from "./storage-image-policy";
+
+test("buildStorageImageRemotePatterns includes regional and endpoint-derived storage hosts", () => {
+  const patterns = buildStorageImageRemotePatterns({
+    s3Bucket: "pudcraft",
+    s3Region: "ap-southeast-1",
+    s3Endpoint: "https://objects.example.com/media",
+  });
+
+  assert.deepEqual(
+    patterns,
+    [
+      {
+        protocol: "https",
+        hostname: "objects.example.com",
+        pathname: "/media/**",
+      },
+      {
+        protocol: "https",
+        hostname: "pudcraft.objects.example.com",
+        pathname: "/media/**",
+      },
+      {
+        protocol: "https",
+        hostname: "pudcraft.s3.ap-southeast-1.amazonaws.com",
+        pathname: "/**",
+      },
+    ],
+  );
+});
+
+test("isAllowedStorageImageUrl rejects protocol-relative urls and enforces trusted path prefixes", () => {
+  const env = {
+    nextPublicSiteUrl: "https://community.example.com",
+    nextPublicStoragePublicBaseUrl: "https://cdn.example.com/storage",
+    s3Endpoint: "https://objects.example.com/media",
+    s3Bucket: "pudcraft",
+  };
+
+  assert.equal(isAllowedStorageImageUrl("/uploads/circle.webp", env), true);
+  assert.equal(isAllowedStorageImageUrl("//evil.example/circle.webp", env), false);
+  assert.equal(
+    isAllowedStorageImageUrl("https://cdn.example.com/storage/circle.webp", env),
+    true,
+  );
+  assert.equal(
+    isAllowedStorageImageUrl("https://cdn.example.com/other/circle.webp", env),
+    false,
+  );
+  assert.equal(
+    isAllowedStorageImageUrl("https://objects.example.com/media/pudcraft/circle.webp", env),
+    true,
+  );
+  assert.equal(
+    isAllowedStorageImageUrl("https://objects.example.com/private/circle.webp", env),
+    false,
+  );
+});
