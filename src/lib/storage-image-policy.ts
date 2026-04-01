@@ -24,18 +24,35 @@ type TrustedStorageUrlRule = {
   pathnamePrefix: string;
 };
 
-function normalizeUrl(value: string): string {
+function normalizeConfiguredUrl(value: string): string {
   const trimmed = value.trim();
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
-function parseHttpUrl(value: string | undefined): URL | null {
+function parseConfiguredHttpUrl(value: string | undefined): URL | null {
   if (!value?.trim()) {
     return null;
   }
 
   try {
-    const parsedUrl = new URL(normalizeUrl(value));
+    const parsedUrl = new URL(normalizeConfiguredUrl(value));
+    if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+      return null;
+    }
+    return parsedUrl;
+  } catch {
+    return null;
+  }
+}
+
+function parseExplicitHttpUrl(value: string | undefined): URL | null {
+  const trimmed = value?.trim();
+  if (!trimmed || !/^https?:\/\//i.test(trimmed)) {
+    return null;
+  }
+
+  try {
+    const parsedUrl = new URL(trimmed);
     if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
       return null;
     }
@@ -108,7 +125,7 @@ function buildEndpointRemotePatterns(
   endpointValue: string | undefined,
   bucketValue: string | undefined,
 ): StorageImageRemotePattern[] {
-  const parsedUrl = parseHttpUrl(endpointValue);
+  const parsedUrl = parseConfiguredHttpUrl(endpointValue);
   if (!parsedUrl) {
     return [];
   }
@@ -131,7 +148,7 @@ function buildEndpointTrustedUrlRules(
   bucketValue: string | undefined,
   forcePathStyleValue: string | undefined,
 ): TrustedStorageUrlRule[] {
-  const parsedUrl = parseHttpUrl(endpointValue);
+  const parsedUrl = parseConfiguredHttpUrl(endpointValue);
   if (!parsedUrl) {
     return [];
   }
@@ -193,7 +210,7 @@ export function buildStorageImageRemotePatterns(
     env.s3PublicBaseUrl,
     env.ossPublicBaseUrl,
   ]
-    .map((value) => parseHttpUrl(value))
+    .map((value) => parseConfiguredHttpUrl(value))
     .filter((value): value is URL => value !== null)
     .map((parsedUrl) => createRemotePattern(parsedUrl));
 
@@ -215,7 +232,7 @@ export function buildTrustedStorageUrlRules(env: StorageImagePolicyEnv): Array<{
     env.s3PublicBaseUrl,
     env.ossPublicBaseUrl,
   ]
-    .map((value) => parseHttpUrl(value))
+    .map((value) => parseConfiguredHttpUrl(value))
     .filter((value): value is URL => value !== null)
     .map((parsedUrl) => createTrustedUrlRule(parsedUrl));
 
@@ -240,7 +257,7 @@ export function isAllowedStorageImageUrl(url: string, env: StorageImagePolicyEnv
     return true;
   }
 
-  const parsedUrl = parseHttpUrl(url);
+  const parsedUrl = parseExplicitHttpUrl(url);
   if (!parsedUrl) {
     return false;
   }

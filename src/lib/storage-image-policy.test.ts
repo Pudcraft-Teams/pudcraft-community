@@ -61,3 +61,12 @@ test("isAllowedStorageImageUrl rejects protocol-relative urls and enforces trust
     false,
   );
 });
+
+test("isAllowedStorageImageUrl rejects scheme-less remote urls from user input", () => {
+  const env = {
+    nextPublicStoragePublicBaseUrl: "https://cdn.example.com/storage",
+  };
+
+  assert.equal(isAllowedStorageImageUrl("cdn.example.com/storage/icon.webp", env), false);
+  assert.equal(isAllowedStorageImageUrl("https://cdn.example.com/storage/icon.webp", env), true);
+});
