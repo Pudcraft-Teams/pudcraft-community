@@ -395,14 +395,24 @@ export function CirclePage({
       </div>
 
       <div className="mt-4 space-y-3 lg:hidden">
-        <div className="m3-mobile-rail">
+        <div
+          className={`grid gap-2 ${
+            circle.isMember
+              ? isOwnerOrAdmin
+                ? "grid-cols-2"
+                : "grid-cols-2"
+              : "grid-cols-1"
+          }`}
+        >
           <button
             type="button"
             onClick={handleJoinToggle}
             disabled={joinPending}
             aria-pressed={circle.isMember}
-            className={`m3-mobile-rail-card inline-flex items-center gap-1.5 ${
-              circle.isMember ? "m3-mobile-rail-card-active" : ""
+            className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${
+              circle.isMember
+                ? "border-coral/20 bg-accent-muted text-accent"
+                : "border-warm-200 bg-surface text-warm-700"
             } ${joinPending ? "opacity-60" : ""}`}
           >
             <span>{circle.isMember ? "已加入圈子" : "加入圈子"}</span>
@@ -413,7 +423,7 @@ export function CirclePage({
               onClick={() =>
                 openCompose({ circleId: circle.id, circleName: circle.name, circleSlug: slug })
               }
-              className="m3-mobile-rail-card inline-flex items-center gap-1.5"
+              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-warm-200 bg-surface px-3 py-2 text-sm font-medium text-warm-700 transition-colors"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -429,7 +439,7 @@ export function CirclePage({
           {isOwnerOrAdmin && (
             <Link
               href={`/c/${slug}/settings`}
-              className="m3-mobile-rail-card inline-flex items-center gap-1.5"
+              className="col-span-full inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-warm-200 bg-surface px-3 py-2 text-sm font-medium text-warm-700 transition-colors"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
