@@ -379,7 +379,7 @@ export function CirclePage({
             </p>
           </div>
 
-          <div className="hidden items-center gap-2 sm:flex">
+          <div className="hidden items-center gap-2 lg:flex">
             <button
               type="button"
               onClick={handleJoinToggle}
