@@ -1,4 +1,5 @@
 import type {
+  CircleItem,
   CircleDetail,
   ForumComment,
   PostDetail,
@@ -18,6 +19,9 @@ interface PostDetailStateInput {
   initialComments?: ForumComment[];
   initialNextCursor?: string | null;
 }
+
+type FeedCircleListName = "popular" | "joined";
+type FeedCircleListViewport = "desktop" | "mobile";
 
 export function buildCirclePageState({
   initialCircle,
@@ -49,4 +53,12 @@ export function buildPostDetailState({
     commentNextCursor: initialNextCursor,
     isLoading: !initialPost,
   };
+}
+
+export function buildFeedCircleCardKey(
+  listName: FeedCircleListName,
+  viewport: FeedCircleListViewport,
+  circle: Pick<CircleItem, "id">,
+) {
+  return `${listName}-${viewport}-${circle.id}`;
 }

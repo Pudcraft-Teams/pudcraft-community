@@ -8,6 +8,7 @@ import { PostCard } from "@/components/forum/PostCard";
 import { EmptyState } from "@/components/EmptyState";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { PageLoading } from "@/components/PageLoading";
+import { buildFeedCircleCardKey } from "@/lib/forum-ui-state";
 import type { CircleItem, PostItem, PostFeedResponse, CircleListResponse } from "@/lib/types";
 
 /**
@@ -234,7 +235,7 @@ export function FeedPage() {
             <div className="flex flex-col gap-2">
               {popularCircles.map((circle) => (
                 <CircleCard
-                  key={`popular-desktop-${circle.id}-${circle.isMember ? "1" : "0"}-${circle.memberCount}`}
+                  key={buildFeedCircleCardKey("popular", "desktop", circle)}
                   circle={circle}
                   isMember={circle.isMember}
                   onJoinChange={(_circleId, joined) => handleCircleJoinChange(circle, joined)}
@@ -253,7 +254,7 @@ export function FeedPage() {
             <div className="flex flex-col gap-2">
               {myCircles.map((circle) => (
                 <CircleCard
-                  key={`joined-desktop-${circle.id}-${circle.isMember ? "1" : "0"}-${circle.memberCount}`}
+                  key={buildFeedCircleCardKey("joined", "desktop", circle)}
                   circle={circle}
                   isMember
                   onJoinChange={(_circleId, joined) => handleCircleJoinChange(circle, joined)}
@@ -343,7 +344,7 @@ export function FeedPage() {
             <div className="scrollbar-hide -mx-4 flex gap-3 overflow-x-auto px-4 pb-2">
               {myCircles.map((circle) => (
                 <div
-                  key={`joined-mobile-${circle.id}-${circle.isMember ? "1" : "0"}-${circle.memberCount}`}
+                  key={buildFeedCircleCardKey("joined", "mobile", circle)}
                   className="w-56 shrink-0 sm:w-64"
                 >
                   <CircleCard
@@ -374,7 +375,7 @@ export function FeedPage() {
             <div className="scrollbar-hide -mx-4 flex gap-3 overflow-x-auto px-4 pb-2">
               {popularCircles.map((circle) => (
                 <div
-                  key={`popular-mobile-${circle.id}-${circle.isMember ? "1" : "0"}-${circle.memberCount}`}
+                  key={buildFeedCircleCardKey("popular", "mobile", circle)}
                   className="w-56 shrink-0 sm:w-64"
                 >
                   <CircleCard

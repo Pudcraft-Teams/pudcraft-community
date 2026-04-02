@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  buildFeedCircleCardKey,
   buildCirclePageState,
   buildPostDetailState,
 } from "@/lib/forum-ui-state";
@@ -116,5 +117,27 @@ test("buildPostDetailState keeps post and derived flags synchronized with initia
       commentNextCursor: "next-comment",
       isLoading: false,
     },
+  );
+});
+
+test("buildFeedCircleCardKey stays stable across optimistic membership updates", () => {
+  const beforeJoin = {
+    id: "circle-a",
+    isMember: false,
+    memberCount: 10,
+  };
+  const afterJoin = {
+    id: "circle-a",
+    isMember: true,
+    memberCount: 11,
+  };
+
+  assert.equal(
+    buildFeedCircleCardKey("popular", "desktop", beforeJoin),
+    buildFeedCircleCardKey("popular", "desktop", afterJoin),
+  );
+  assert.equal(
+    buildFeedCircleCardKey("joined", "mobile", beforeJoin),
+    "joined-mobile-circle-a",
   );
 });
