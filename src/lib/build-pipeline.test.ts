@@ -48,6 +48,17 @@ test("GitHub build workflow passes storage build args into docker/build-push-act
   assert.match(workflow, /^\s+OSS_FORCE_PATH_STYLE=/m);
 });
 
+test("Deploy workflow refreshes GHCR auth before pulling the image on VPS", () => {
+  const workflow = readFileSync(path.join(repoRoot, ".github/workflows/deploy.yml"), "utf8");
+
+  assert.match(workflow, /^\s+packages:\s+read$/m);
+  assert.match(workflow, /^\s+envs:\s+GHCR_TOKEN,GHCR_USERNAME$/m);
+  assert.match(
+    workflow,
+    /echo "\$GHCR_TOKEN" \| docker login ghcr\.io -u "\$GHCR_USERNAME" --password-stdin/,
+  );
+});
+
 test("next.config forwards OSS regional envs into remote image patterns", () => {
   const script = `
     import config from "./next.config.ts";
