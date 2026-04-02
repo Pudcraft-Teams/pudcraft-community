@@ -166,7 +166,7 @@ export function ComposeProvider({ children }: { children: ReactNode }) {
       <ComposeFAB defaults={defaults} openCompose={openCompose} />
 
       {open && (
-        <div className="fixed inset-0 z-[150] flex items-start justify-center">
+        <div className="fixed inset-0 z-[150] overflow-y-auto">
           {/* Backdrop */}
           <div
             className="absolute inset-0 animate-fade-in bg-warm-900/40 backdrop-blur-[2px]"
@@ -175,10 +175,10 @@ export function ComposeProvider({ children }: { children: ReactNode }) {
           />
 
           {/* Dialog */}
-          <div className="relative z-10 mx-4 mt-[8vh] w-full max-w-xl animate-dialog-in sm:mt-[12vh]">
+          <div className="relative z-10 flex min-h-full items-start justify-center px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-[6vh] sm:pt-[12vh]">
             <div
               ref={dialogRef}
-              className="rounded-2xl border border-warm-200 bg-surface shadow-xl outline-none"
+              className="max-h-[calc(100vh-5rem)] w-full max-w-xl animate-dialog-in overflow-y-auto rounded-2xl border border-warm-200 bg-surface shadow-xl outline-none"
               role="dialog"
               aria-modal="true"
               aria-labelledby="compose-dialog-title"
@@ -244,7 +244,7 @@ function ComposeFAB({ defaults, openCompose }: ComposeFABProps) {
         const d = defaultsRef.current;
         openCompose(d.circleId ? d : undefined);
       }}
-      className="fixed bottom-6 right-6 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white shadow-lg transition-transform hover:scale-105 active:scale-95"
+      className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white shadow-lg transition-transform hover:scale-105 active:scale-95 md:bottom-6 md:right-6"
       aria-label="发帖"
     >
       <svg

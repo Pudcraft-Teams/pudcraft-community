@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useCompose, useComposeDefaults } from "@/components/forum/ComposeDialog";
@@ -79,6 +79,7 @@ export function CirclePage({
 
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [joinPending, setJoinPending] = useState(false);
+  const sectionRequestSeq = useRef(0);
 
   // ── Set compose defaults to this circle ──
   useEffect(() => {
@@ -155,6 +156,7 @@ export function CirclePage({
       setNextCursor(nextState.nextCursor);
       setActiveSection(null);
       setJoinPending(false);
+      sectionRequestSeq.current += 1;
       setError(null);
       setIsLoadingMore(false);
       setIsLoading(false);
@@ -211,8 +213,12 @@ export function CirclePage({
       setIsLoadingMore(true);
       setPosts([]);
       setNextCursor(null);
+      const requestSeq = ++sectionRequestSeq.current;
 
       const data = await fetchPosts(circle.id, sectionId);
+      if (requestSeq !== sectionRequestSeq.current) {
+        return;
+      }
       setPosts(data.posts);
       setNextCursor(data.nextCursor);
       setIsLoadingMore(false);
@@ -225,7 +231,11 @@ export function CirclePage({
     if (!circle || !nextCursor || isLoadingMore) return;
 
     setIsLoadingMore(true);
+    const requestSeq = sectionRequestSeq.current;
     const data = await fetchPosts(circle.id, activeSection, nextCursor);
+    if (requestSeq !== sectionRequestSeq.current) {
+      return;
+    }
     setPosts((prev) => [...prev, ...data.posts]);
     setNextCursor(data.nextCursor);
     setIsLoadingMore(false);
@@ -369,7 +379,7 @@ export function CirclePage({
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="hidden items-center gap-2 sm:flex">
             <button
               type="button"
               onClick={handleJoinToggle}
@@ -384,13 +394,124 @@ export function CirclePage({
         </div>
       </div>
 
+      <div className="mt-4 space-y-3 lg:hidden">
+        <div className="m3-mobile-rail">
+          <button
+            type="button"
+            onClick={handleJoinToggle}
+            disabled={joinPending}
+            aria-pressed={circle.isMember}
+            className={`m3-mobile-rail-card inline-flex items-center gap-1.5 ${
+              circle.isMember ? "m3-mobile-rail-card-active" : ""
+            } ${joinPending ? "opacity-60" : ""}`}
+          >
+            <span>{circle.isMember ? "已加入圈子" : "加入圈子"}</span>
+          </button>
+          {circle.isMember && (
+            <button
+              type="button"
+              onClick={() =>
+                openCompose({ circleId: circle.id, circleName: circle.name, circleSlug: slug })
+              }
+              className="m3-mobile-rail-card inline-flex items-center gap-1.5"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                className="h-4 w-4"
+              >
+                <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+              </svg>
+              <span>发帖</span>
+            </button>
+          )}
+          {isOwnerOrAdmin && (
+            <Link
+              href={`/c/${slug}/settings`}
+              className="m3-mobile-rail-card inline-flex items-center gap-1.5"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                className="h-4 w-4"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M7.84 1.804A1 1 0 0 1 8.82 1h2.36a1 1 0 0 1 .98.804l.331 1.652a6.993 6.993 0 0 1 1.929 1.115l1.598-.54a1 1 0 0 1 1.186.447l1.18 2.044a1 1 0 0 1-.205 1.251l-1.267 1.113a7.047 7.047 0 0 1 0 2.228l1.267 1.113a1 1 0 0 1 .206 1.25l-1.18 2.045a1 1 0 0 1-1.187.447l-1.598-.54a6.993 6.993 0 0 1-1.929 1.115l-.33 1.652a1 1 0 0 1-.98.804H8.82a1 1 0 0 1-.98-.804l-.331-1.652a6.993 6.993 0 0 1-1.929-1.115l-1.598.54a1 1 0 0 1-1.186-.447l-1.18-2.044a1 1 0 0 1 .205-1.251l1.267-1.114a7.05 7.05 0 0 1 0-2.227L1.821 7.773a1 1 0 0 1-.206-1.25l1.18-2.045a1 1 0 0 1 1.187-.447l1.598.54A6.992 6.992 0 0 1 7.51 3.456l.33-1.652ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <span>管理圈子</span>
+            </Link>
+          )}
+        </div>
+
+        <div className="m3-surface px-4 py-3">
+          <h2 className="text-sm font-semibold text-warm-800">圈子信息</h2>
+          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+            <div>
+              <dt className="text-xs text-warm-400">成员</dt>
+              <dd className="mt-1 font-medium text-warm-800">{circle.memberCount}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-warm-400">帖子</dt>
+              <dd className="mt-1 font-medium text-warm-800">{circle.postCount}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-warm-400">创建时间</dt>
+              <dd className="mt-1 text-warm-500">{formatCalendarDate(circle.createdAt)}</dd>
+            </div>
+            {circle.creator && (
+              <div>
+                <dt className="text-xs text-warm-400">创建者</dt>
+                <dd className="mt-1 text-warm-500">
+                  {circle.creator.name ?? `用户${circle.creator.uid}`}
+                </dd>
+              </div>
+            )}
+          </dl>
+        </div>
+      </div>
+
       {/* ── Main content area ── */}
       <div className="mt-6 flex flex-col gap-6 lg:flex-row">
         {/* ── Left: Section tabs + Post feed ── */}
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           {/* Section tabs */}
           {sections.length > 0 && (
-            <div className="mb-4 flex gap-1 overflow-x-auto rounded-xl bg-warm-100 p-1 scrollbar-hide">
+            <div className="m3-mobile-rail mb-4 sm:hidden">
+              <button
+                type="button"
+                onClick={() => handleSectionChange(null)}
+                aria-pressed={activeSection === null}
+                aria-current={activeSection === null ? "true" : undefined}
+                className={`m3-mobile-rail-card ${
+                  activeSection === null ? "m3-mobile-rail-card-active" : ""
+                }`}
+              >
+                全部
+              </button>
+              {sections.map((section) => (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => handleSectionChange(section.id)}
+                  aria-pressed={activeSection === section.id}
+                  aria-current={activeSection === section.id ? "true" : undefined}
+                  className={`m3-mobile-rail-card ${
+                    activeSection === section.id ? "m3-mobile-rail-card-active" : ""
+                  }`}
+                >
+                  {section.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {sections.length > 0 && (
+            <div className="mb-4 hidden gap-1 overflow-x-auto rounded-xl bg-warm-100 p-1 scrollbar-hide sm:flex">
               <button
                 type="button"
                 onClick={() => handleSectionChange(null)}

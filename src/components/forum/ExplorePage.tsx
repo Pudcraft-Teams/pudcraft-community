@@ -136,7 +136,7 @@ export function ExplorePage() {
           {status === "authenticated" && (
             <Link
               href="/circles/create"
-              className="m3-btn m3-btn-primary inline-flex shrink-0 items-center gap-1.5 self-start"
+              className="m3-btn m3-btn-primary hidden shrink-0 items-center gap-1.5 self-start sm:inline-flex"
             >
               <span className="text-base leading-none">+</span>
               创建圈子
@@ -146,7 +146,7 @@ export function ExplorePage() {
 
         {/* Search + Sort */}
         <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-          <div className="relative max-w-lg flex-1">
+          <div className="relative max-w-lg sm:flex-1">
             <input
               type="text"
               value={search}
@@ -166,7 +166,33 @@ export function ExplorePage() {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="sm:hidden">
+            <div className="m3-mobile-rail">
+              {SORT_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => handleSortChange(option.value)}
+                  className={`m3-mobile-rail-card ${
+                    sort === option.value ? "m3-mobile-rail-card-active" : ""
+                  }`}
+                  aria-pressed={sort === option.value}
+                >
+                  {option.label}
+                </button>
+              ))}
+              {status === "authenticated" && (
+                <Link
+                  href="/circles/create"
+                  className="m3-mobile-rail-card inline-flex items-center gap-1.5"
+                >
+                  <span>创建圈子</span>
+                </Link>
+              )}
+            </div>
+          </div>
+
+          <div className="hidden items-center gap-2 sm:flex">
             <span className="text-sm text-warm-600">排序：</span>
             {SORT_OPTIONS.map((option) => (
               <button

@@ -50,40 +50,76 @@ export function Sidebar({ servers }: SidebarProps) {
     activeServerId && servers.some((server) => server.id === activeServerId)
       ? activeServerId
       : (servers[0]?.id ?? "");
+  const selectedServer =
+    servers.find((server) => server.id === selectedServerId) ?? null;
+  const selectedServerAddress = selectedServer ? resolveServerAddress(selectedServer) : null;
 
   return (
     <>
-      <div className="m3-surface mb-4 p-3 md:hidden">
-        <p className="text-xs font-semibold uppercase tracking-wide text-warm-500">我的服务器</p>
+      <div className="m3-surface mb-4 space-y-3 p-3 md:hidden">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-warm-500">
+              我的服务器
+            </p>
+            <p className="text-xs text-warm-400">
+              {hasServers ? "切换服务器后查看对应控制台数据" : "你还没有可管理的服务器"}
+            </p>
+          </div>
+          <Link
+            href="/submit"
+            className="m3-btn m3-btn-primary inline-flex w-full items-center justify-center px-3 py-2 text-xs sm:w-auto"
+          >
+            {hasServers ? "提交新服务器" : "去提交"}
+          </Link>
+        </div>
+
         {hasServers ? (
-          <div className="mt-2 flex items-center gap-2">
-            <select
-              className="m3-input min-w-0 flex-1"
-              value={selectedServerId}
-              onChange={(event) => {
-                const targetServerId = event.target.value;
-                if (targetServerId) {
-                  router.push(`/console/${targetServerId}`);
-                }
-              }}
-            >
-              {servers.map((server) => (
-                <option key={server.id} value={server.id}>
-                  {server.isOnline ? "● " : "○ "}
-                  {server.name}
-                </option>
-              ))}
-            </select>
-            <Link href="/submit" className="m3-btn m3-btn-primary px-3 py-2 text-xs">
-              提交新服务器
-            </Link>
+          <div className="space-y-3">
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-medium text-warm-600">当前服务器</span>
+              <select
+                className="m3-input w-full"
+                value={selectedServerId}
+                onChange={(event) => {
+                  const targetServerId = event.target.value;
+                  if (targetServerId) {
+                    router.push(`/console/${targetServerId}`);
+                  }
+                }}
+              >
+                {servers.map((server) => (
+                  <option key={server.id} value={server.id}>
+                    {server.isOnline ? "● " : "○ "}
+                    {server.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            {selectedServer ? (
+              <div className="rounded-xl border border-warm-200 bg-warm-50 px-3 py-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-warm-800">
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      selectedServer.isOnline ? "bg-forest" : "bg-warm-400"
+                    }`}
+                  />
+                  <span className="truncate">{selectedServer.name}</span>
+                  {selectedServer.isVerified ? (
+                    <span className="text-xs font-semibold text-coral">已认证</span>
+                  ) : null}
+                </div>
+                <p className="mt-1 truncate text-xs text-warm-500">{selectedServerAddress}</p>
+                <p className="mt-1 text-xs text-warm-500">
+                  在线 {selectedServer.playerCount}/{selectedServer.maxPlayers}
+                </p>
+              </div>
+            ) : null}
           </div>
         ) : (
-          <div className="mt-2 flex items-center justify-between gap-2">
-            <p className="text-sm text-warm-500">你还没有服务器，去提交一个</p>
-            <Link href="/submit" className="m3-btn m3-btn-primary px-3 py-2 text-xs">
-              去提交
-            </Link>
+          <div className="rounded-xl border border-dashed border-warm-200 px-3 py-4 text-sm text-warm-500">
+            你还没有服务器，去提交一个。
           </div>
         )}
       </div>
