@@ -183,6 +183,10 @@ export function PostDetailPage({
 
   // Determine moderation & comment permissions
   useEffect(() => {
+    setCanModerate(false);
+    setCanPin(false);
+    setCanComment(false);
+
     if (!post) return;
 
     // 网站 admin 可以删除任何帖子，但不能置顶圈子帖子
@@ -374,10 +378,19 @@ export function PostDetailPage({
 
   // Copy share link
   function handleShare() {
+    if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+      toast.error("当前环境不支持自动复制，请手动复制地址");
+      return;
+    }
+
     const url = window.location.href;
-    void navigator.clipboard.writeText(url).then(() => {
-      toast.success("链接已复制到剪贴板");
-    });
+    void navigator.clipboard.writeText(url)
+      .then(() => {
+        toast.success("链接已复制到剪贴板");
+      })
+      .catch(() => {
+        toast.error("复制链接失败，请手动复制地址");
+      });
   }
 
   // ── Loading state ──
@@ -440,9 +453,9 @@ export function PostDetailPage({
       {/* ── Post card ── */}
       <article className="m3-surface p-4 sm:p-6">
         {/* ── Author info ── */}
-        <div className="mb-4 flex items-center gap-3">
-          <Link href={`/u/${post.author.uid}`}>
-            <span className="relative inline-flex h-10 w-10 shrink-0 overflow-hidden rounded-full">
+        <div className="mb-4 flex flex-wrap items-start gap-3">
+          <Link href={`/u/${post.author.uid}`} className="shrink-0">
+            <span className="relative inline-flex h-10 w-10 overflow-hidden rounded-full">
               <Image
                 src={normalizeImageSrc(post.author.image) || "/default-avatar.png"}
                 alt={post.author.name ?? "用户头像"}
@@ -453,25 +466,25 @@ export function PostDetailPage({
             </span>
           </Link>
 
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <Link
               href={`/u/${post.author.uid}`}
               className="text-sm font-medium text-warm-800 transition-colors hover:text-accent"
             >
               {post.author.name ?? `用户${post.author.uid}`}
             </Link>
-            <p className="text-xs text-warm-400">
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-warm-400">
               <span suppressHydrationWarning>{timeAgo(post.createdAt)}</span>
               {post.section && (
-                <span className="ml-2 rounded-full bg-warm-100 px-2 py-0.5 text-xs text-warm-500">
+                <span className="rounded-full bg-warm-100 px-2 py-0.5 text-xs text-warm-500">
                   {post.section.name}
                 </span>
               )}
-            </p>
+            </div>
           </div>
 
           {isPinned && (
-            <span className="ml-auto flex shrink-0 items-center gap-0.5 text-xs text-accent">
+            <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-accent-muted px-2.5 py-1 text-xs text-accent sm:ml-auto">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 16 16"
@@ -523,7 +536,7 @@ export function PostDetailPage({
         )}
 
         {/* ── Stats ── */}
-        <div className="mb-4 flex items-center gap-4 border-t border-warm-200 pt-4 text-sm text-warm-400">
+        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-warm-200 pt-4 text-sm text-warm-400">
           <span className="inline-flex items-center gap-1">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -563,7 +576,163 @@ export function PostDetailPage({
         </div>
 
         {/* ── Action bar ── */}
-        <div className="flex flex-wrap items-center gap-1 border-t border-warm-200 pt-3 sm:gap-3 sm:pt-4">
+        <div className="border-t border-warm-200 pt-3 sm:hidden">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                void handleLike();
+              }}
+              disabled={likePending}
+              className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm transition-colors disabled:cursor-not-allowed ${
+                liked
+                  ? "bg-accent-muted text-accent"
+                  : "bg-warm-50 text-warm-600 active:bg-warm-100"
+              }`}
+              aria-label={liked ? "取消点赞" : "点赞"}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill={liked ? "currentColor" : "none"}
+                stroke="currentColor"
+                strokeWidth={liked ? 0 : 1.5}
+                className="h-[18px] w-[18px]"
+              >
+                <path d="M2 10.5a1.5 1.5 0 1 1 3 0v6a1.5 1.5 0 0 1-3 0v-6ZM6 10.333v5.43a2 2 0 0 0 1.106 1.79l.05.025A4 4 0 0 0 8.943 18h5.416a2 2 0 0 0 1.962-1.608l1.2-6A2 2 0 0 0 15.56 8H12V4a2 2 0 0 0-2-2 1 1 0 0 0-1 1v.667a4 4 0 0 1-.8 2.4L6.8 7.933a4 4 0 0 0-.8 2.4Z" />
+              </svg>
+              <span className="tabular-nums">{likeCount}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                void handleBookmark();
+              }}
+              disabled={bookmarkPending}
+              className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm transition-colors disabled:cursor-not-allowed ${
+                bookmarked
+                  ? "bg-accent-muted text-accent"
+                  : "bg-warm-50 text-warm-600 active:bg-warm-100"
+              }`}
+              aria-label={bookmarked ? "取消收藏" : "收藏"}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill={bookmarked ? "currentColor" : "none"}
+                stroke="currentColor"
+                strokeWidth={bookmarked ? 0 : 1.5}
+                className="h-[18px] w-[18px]"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M5 3a2 2 0 0 0-2 2v12l7-4 7 4V5a2 2 0 0 0-2-2H5Z"
+                />
+              </svg>
+              <span>{bookmarked ? "已收藏" : "收藏"}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleShare}
+              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-warm-50 px-3 py-2 text-sm text-warm-600 active:bg-warm-100"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.5}
+                className="h-[18px] w-[18px]"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M13.5 6.5l3-3m0 0l-3-3m3 3H10a5 5 0 0 0-5 5v1m3 7.5l-3 3m0 0l3 3m-3-3H10a5 5 0 0 0 5-5v-1"
+                />
+              </svg>
+              <span>分享</span>
+            </button>
+
+            {!isAuthor && sessionStatus === "authenticated" ? (
+              <button
+                type="button"
+                onClick={() => setReportOpen(true)}
+                className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-warm-50 px-3 py-2 text-sm text-warm-600 active:bg-warm-100"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                  className="h-[18px] w-[18px]"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3 3v14m0-14l9 2v8l-9 2M12 5l5-1v8l-5 1"
+                  />
+                </svg>
+                <span>举报</span>
+              </button>
+            ) : (
+              <div />
+            )}
+          </div>
+
+          {(canModerate || canPin || (isAuthor && !canModerate)) && (
+            <div className="mt-3 grid gap-2">
+              {(canModerate || canPin) && (
+                <div className="grid grid-cols-2 gap-2">
+                  {canPin ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void handlePin();
+                      }}
+                      disabled={pinPending}
+                      className="m3-btn m3-btn-tonal min-h-11 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isPinned ? "取消置顶" : "置顶"}
+                    </button>
+                  ) : (
+                    <div />
+                  )}
+                  {canModerate && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void handleDelete();
+                      }}
+                      disabled={deletePending}
+                      className="m3-btn min-h-11 text-sm text-accent-hover transition-colors hover:bg-accent-hover/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {deletePending ? "删除中..." : "删除"}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {isAuthor && !canModerate && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleDelete();
+                  }}
+                  disabled={deletePending}
+                  className="m3-btn min-h-11 w-full text-sm text-accent-hover transition-colors hover:bg-accent-hover/10 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {deletePending ? "删除中..." : "删除"}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="hidden flex-wrap items-center gap-3 border-t border-warm-200 pt-4 sm:flex">
           {/* Like */}
           <button
             type="button"
@@ -672,7 +841,7 @@ export function PostDetailPage({
 
           {/* ── Admin / Moderator actions ── */}
           {(canModerate || canPin) && (
-            <div className="ml-auto flex items-center gap-1 sm:gap-2">
+            <div className="ml-auto flex items-center gap-2">
               {/* Pin / Unpin (圈子帖子仅圈子管理可操作) */}
               {canPin && (
                 <button

@@ -84,14 +84,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 </div>
               </nav>
               <div className="flex items-center gap-2 md:hidden">
-                <HeaderSearch />
+                <HeaderSearch variant="mobile" />
                 <MobileNavMenu />
               </div>
             </div>
           </header>
 
           {/* ─── Main ─── */}
-          <main id="main-content" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">{children}</main>
+          <main
+            id="main-content"
+            className="m3-safe-bottom-pad mx-auto max-w-6xl px-4 pt-6 sm:px-6 sm:pt-8 md:pb-8"
+          >
+            {children}
+          </main>
 
           {/* ─── Footer ─── */}
           <footer className="mt-16 border-t border-warm-200 py-8 text-center text-xs text-warm-400">

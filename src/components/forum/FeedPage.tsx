@@ -15,7 +15,7 @@ import type { CircleItem, PostItem, PostFeedResponse, CircleListResponse } from 
  * and a sidebar with popular / user circles.
  */
 export function FeedPage() {
-  const { status: sessionStatus } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
 
   // ── Post feed state ──
   const [posts, setPosts] = useState<PostItem[]>([]);
@@ -86,23 +86,41 @@ export function FeedPage() {
     async function fetchCircles() {
       setCirclesLoading(true);
       try {
-        const res = await fetch("/api/circles?sort=popular&limit=5");
-        if (!res.ok) throw new Error("Failed to fetch circles");
-        const data = (await res.json()) as CircleListResponse;
+        const popularResponse = await fetch("/api/circles?sort=popular&limit=5");
+        if (!popularResponse.ok) throw new Error("Failed to fetch circles");
+        const data = (await popularResponse.json()) as CircleListResponse;
         if (cancelled) return;
 
         setPopularCircles(data.circles);
 
-        // Extract user's circles from the same response (isMember == true)
-        if (sessionStatus === "authenticated") {
-          const joined = data.circles.filter(
-            (c) => c.isMember,
-          );
-          setMyCircles(joined);
+        if (sessionStatus === "authenticated" && session?.user?.id) {
+          try {
+            const joinedResponse = await fetch(
+              `/api/users/${encodeURIComponent(session.user.id)}/circles`,
+            );
+            if (!joinedResponse.ok) {
+              throw new Error("Failed to fetch joined circles");
+            }
+            const joinedData = (await joinedResponse.json()) as { circles: CircleItem[] };
+            if (cancelled) return;
+            setMyCircles(
+              joinedData.circles.map((item) => ({
+                ...item,
+                isMember: true,
+              })),
+            );
+          } catch {
+            if (!cancelled) {
+              setMyCircles([]);
+            }
+          }
+        } else {
+          setMyCircles([]);
         }
       } catch {
         if (!cancelled) {
           setPopularCircles([]);
+          setMyCircles([]);
         }
       } finally {
         if (!cancelled) {
@@ -116,7 +134,7 @@ export function FeedPage() {
     return () => {
       cancelled = true;
     };
-  }, [sessionStatus]);
+  }, [session?.user?.id, sessionStatus]);
 
   // ── Update handlers for optimistic UI ──
   const handleLikeChange = useCallback(
@@ -140,6 +158,57 @@ export function FeedPage() {
     },
     [],
   );
+
+  function applyCircleMembershipState(item: CircleItem, joined: boolean): CircleItem {
+    if (item.isMember === joined) {
+      return item;
+    }
+
+    return {
+      ...item,
+      isMember: joined,
+      memberCount: Math.max(0, item.memberCount + (joined ? 1 : -1)),
+    };
+  }
+
+  const handleCircleJoinChange = useCallback((circle: CircleItem, joined: boolean) => {
+    setPopularCircles((prev) =>
+      prev.map((item) =>
+        item.id === circle.id
+          ? applyCircleMembershipState(item, joined)
+          : item,
+      ),
+    );
+
+    setMyCircles((prev) => {
+      if (joined) {
+        const existingIndex = prev.findIndex((item) => item.id === circle.id);
+        if (existingIndex >= 0) {
+          return prev.map((item) =>
+            item.id === circle.id
+              ? applyCircleMembershipState(item, true)
+              : item,
+          );
+        }
+        const currentCircle =
+          prev.find((item) => item.id === circle.id)
+          ?? popularCircles.find((item) => item.id === circle.id)
+          ?? circle;
+        return [
+          applyCircleMembershipState(
+            {
+              ...currentCircle,
+              isMember: currentCircle.isMember ?? true,
+            },
+            true,
+          ),
+          ...prev,
+        ];
+      }
+
+      return prev.filter((item) => item.id !== circle.id);
+    });
+  }, [popularCircles]);
 
   // ── Sidebar content (reused in both mobile and desktop) ──
   function renderSidebarContent() {
@@ -165,11 +234,10 @@ export function FeedPage() {
             <div className="flex flex-col gap-2">
               {popularCircles.map((circle) => (
                 <CircleCard
-                  key={circle.id}
+                  key={`popular-desktop-${circle.id}-${circle.isMember ? "1" : "0"}-${circle.memberCount}`}
                   circle={circle}
-                  isMember={
-                    circle.isMember
-                  }
+                  isMember={circle.isMember}
+                  onJoinChange={(_circleId, joined) => handleCircleJoinChange(circle, joined)}
                 />
               ))}
             </div>
@@ -185,9 +253,10 @@ export function FeedPage() {
             <div className="flex flex-col gap-2">
               {myCircles.map((circle) => (
                 <CircleCard
-                  key={circle.id}
+                  key={`joined-desktop-${circle.id}-${circle.isMember ? "1" : "0"}-${circle.memberCount}`}
                   circle={circle}
                   isMember
+                  onJoinChange={(_circleId, joined) => handleCircleJoinChange(circle, joined)}
                 />
               ))}
             </div>
@@ -215,6 +284,8 @@ export function FeedPage() {
     );
   }
 
+  const hasMyCircles = sessionStatus === "authenticated" && myCircles.length > 0;
+
   return (
     <div>
       {/* ── Hero ── */}
@@ -227,29 +298,95 @@ export function FeedPage() {
         </p>
       </section>
 
-      {/* ── Mobile: sidebar as horizontal scroll ── */}
-      <div className="mb-6 lg:hidden">
-        <h2 className="mb-2 text-sm font-semibold text-warm-800">热门圈子</h2>
-        {circlesLoading ? (
-          <div className="flex justify-center py-4">
-            <LoadingSpinner size="sm" />
-          </div>
-        ) : popularCircles.length === 0 ? (
-          <p className="py-2 text-xs text-warm-400">暂无圈子</p>
-        ) : (
-          <div className="scrollbar-hide -mx-4 flex gap-3 overflow-x-auto px-4 pb-2">
-            {popularCircles.map((circle) => (
-              <div key={circle.id} className="w-56 shrink-0 sm:w-64">
-                <CircleCard
-                  circle={circle}
-                  isMember={
-                    circle.isMember
-                  }
-                />
-              </div>
-            ))}
+      {/* ── Mobile: community actions + circle entry points ── */}
+      <div className="mb-6 space-y-5 lg:hidden">
+        <div className="m3-mobile-rail">
+          <Link
+            href="/explore"
+            className="m3-mobile-rail-card m3-mobile-rail-card-active inline-flex items-center gap-1.5"
+          >
+            <span>发现圈子</span>
+          </Link>
+          {hasMyCircles && (
+            <Link
+              href={`/c/${myCircles[0].slug}`}
+              className="m3-mobile-rail-card inline-flex items-center gap-1.5"
+            >
+              <span>我的圈子</span>
+              <span className="tabular-nums text-xs text-warm-400">{myCircles.length}</span>
+            </Link>
+          )}
+          <Link
+            href="/circles/create"
+            className="m3-mobile-rail-card inline-flex items-center gap-1.5"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="h-4 w-4"
+            >
+              <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+            </svg>
+            <span>创建圈子</span>
+          </Link>
+        </div>
+
+        {hasMyCircles && (
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-warm-800">我的圈子</h2>
+              <Link href="/explore" className="text-xs m3-link">
+                查看更多
+              </Link>
+            </div>
+            <div className="scrollbar-hide -mx-4 flex gap-3 overflow-x-auto px-4 pb-2">
+              {myCircles.map((circle) => (
+                <div
+                  key={`joined-mobile-${circle.id}-${circle.isMember ? "1" : "0"}-${circle.memberCount}`}
+                  className="w-56 shrink-0 sm:w-64"
+                >
+                  <CircleCard
+                    circle={circle}
+                    isMember
+                    onJoinChange={(_circleId, joined) => handleCircleJoinChange(circle, joined)}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         )}
+
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-warm-800">热门圈子</h2>
+            <Link href="/explore" className="text-xs m3-link">
+              查看全部
+            </Link>
+          </div>
+          {circlesLoading ? (
+            <div className="flex justify-center py-4">
+              <LoadingSpinner size="sm" />
+            </div>
+          ) : popularCircles.length === 0 ? (
+            <p className="py-2 text-xs text-warm-400">暂无圈子</p>
+          ) : (
+            <div className="scrollbar-hide -mx-4 flex gap-3 overflow-x-auto px-4 pb-2">
+              {popularCircles.map((circle) => (
+                <div
+                  key={`popular-mobile-${circle.id}-${circle.isMember ? "1" : "0"}-${circle.memberCount}`}
+                  className="w-56 shrink-0 sm:w-64"
+                >
+                  <CircleCard
+                    circle={circle}
+                    isMember={circle.isMember}
+                    onJoinChange={(_circleId, joined) => handleCircleJoinChange(circle, joined)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── Two-column layout ── */}

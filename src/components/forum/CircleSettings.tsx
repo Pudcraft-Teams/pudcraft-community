@@ -296,8 +296,8 @@ export function CircleSettings({ circleSlug }: CircleSettingsProps) {
     <div className="space-y-4 pb-4">
       {/* Header */}
       <section className="m3-surface p-4 sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
             {circle.icon ? (
               <span className="relative inline-flex h-12 w-12 shrink-0 overflow-hidden rounded-lg">
                 <Image
@@ -313,14 +313,14 @@ export function CircleSettings({ circleSlug }: CircleSettingsProps) {
                 {circle.name.charAt(0)}
               </span>
             )}
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-warm-700">{circle.name}</h1>
+            <div className="min-w-0">
+              <h1 className="truncate text-xl font-bold tracking-tight text-warm-700">{circle.name}</h1>
               <p className="text-sm text-warm-500">圈子设置</p>
             </div>
           </div>
           <Link
             href={`/c/${circleSlug}`}
-            className="m3-btn m3-btn-tonal px-3 py-1.5 text-sm"
+            className="m3-btn m3-btn-tonal inline-flex w-full items-center justify-center px-3 py-2 text-sm sm:w-auto"
           >
             返回圈子
           </Link>
@@ -328,7 +328,26 @@ export function CircleSettings({ circleSlug }: CircleSettingsProps) {
       </section>
 
       {/* Tabs */}
-      <div className="flex gap-1 overflow-x-auto rounded-xl border border-warm-200 bg-surface p-1">
+      <div className="m3-mobile-rail sm:hidden">
+        {accessibleTabs.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setActiveTab(tab.key)}
+            aria-pressed={activeTab === tab.key}
+            aria-current={activeTab === tab.key ? "true" : undefined}
+            className={`m3-mobile-rail-card ${
+              activeTab === tab.key
+                ? "m3-mobile-rail-card-active"
+                : ""
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="hidden gap-1 overflow-x-auto rounded-xl border border-warm-200 bg-surface p-1 sm:flex">
         {accessibleTabs.map((tab) => (
           <button
             key={tab.key}

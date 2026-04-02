@@ -59,19 +59,22 @@ export default async function ConsoleLayout({ children }: ConsoleLayoutProps) {
 
   return (
     <div className="min-h-[calc(100vh-10rem)]">
-      <div className="m3-surface mb-4 flex flex-wrap items-center justify-between gap-3 p-4">
+      <div className="m3-surface mb-4 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-semibold text-warm-700">PudCraft Community</p>
           <p className="text-xs text-warm-500">服主控制台</p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Link href="/" className="m3-btn m3-btn-tonal px-3 py-1.5 text-xs">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+          <Link
+            href="/"
+            className="m3-btn m3-btn-tonal inline-flex w-full items-center justify-center px-3 py-2 text-xs sm:w-auto"
+          >
             返回首页
           </Link>
           <Link
-            href={`/user/${session?.user?.uid}`}
-            className="m3-btn m3-btn-tonal flex items-center gap-2 px-2 py-1.5"
+            href={`/u/${session?.user?.uid}`}
+            className="m3-btn m3-btn-tonal inline-flex w-full items-center justify-center gap-2 px-3 py-2 sm:w-auto"
           >
             <UserAvatar
               src={session?.user?.image}
@@ -80,7 +83,7 @@ export default async function ConsoleLayout({ children }: ConsoleLayoutProps) {
               className="h-6 w-6"
               fallbackClassName="bg-gradient-to-br from-coral to-coral-amber text-white"
             />
-            <span className="max-w-24 truncate text-xs">{displayName}</span>
+            <span className="max-w-32 truncate text-xs">{displayName}</span>
           </Link>
         </div>
       </div>
