@@ -2,6 +2,7 @@ name: Claude Code Review
 
 env:
   ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+  ANTHROPIC_MODEL: kimi-for-coding
   
 on:
   pull_request:
