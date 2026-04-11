@@ -33,8 +33,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           fetch-depth: 1
-
       - name: Run Claude Code Review
         id: claude-review
         uses: anthropics/claude-code-action@v1
