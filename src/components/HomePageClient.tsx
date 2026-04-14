@@ -10,7 +10,7 @@ import { SearchBar } from "@/components/SearchBar";
 import { ServerCard } from "@/components/ServerCard";
 import { SortButtons } from "@/components/SortButtons";
 import { useToast } from "@/hooks/useToast";
-import type { ServerSort } from "@/lib/serverListPage";
+import { buildServerListPath, type ServerSort } from "@/lib/serverListQuery";
 import type { ServerListItem } from "@/lib/types";
 
 const TAG_FILTERS = ["全部", "生存", "创造", "RPG", "PVP", "科技", "模组", "空岛"];
@@ -40,29 +40,6 @@ interface ServersResponse {
   pagination?: {
     totalPages?: number;
   };
-}
-
-function buildServerListPath(query: QueryState): string {
-  const params = new URLSearchParams();
-
-  if (query.tag) {
-    params.set("tag", query.tag);
-  }
-
-  if (query.search) {
-    params.set("search", query.search);
-  }
-
-  if (query.sort !== "newest") {
-    params.set("sort", query.sort);
-  }
-
-  if (query.page > 1) {
-    params.set("page", String(query.page));
-  }
-
-  const search = params.toString();
-  return search ? `?${search}` : "";
 }
 
 /**

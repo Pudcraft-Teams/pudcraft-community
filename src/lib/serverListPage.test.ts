@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildServerListPath, parseServerListQuery } from "@/lib/serverListPage";
+import { buildServerListPath, parseServerListQuery } from "@/lib/serverListQuery";
 
 test("parseServerListQuery normalizes invalid values to defaults", () => {
   const query = parseServerListQuery({
