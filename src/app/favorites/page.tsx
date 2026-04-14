@@ -1,11 +1,10 @@
 export const dynamic = "force-dynamic";
 
+import { redirect } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { ServerCard } from "@/components/ServerCard";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
-import { redirect } from "next/navigation";
-
-import type { ServerListItem } from "@/lib/types";
+import { loadUserFavoriteServers } from "@/lib/userFavorites";
 
 export default async function FavoritesPage() {
   const authResult = await requireActiveUser();
@@ -13,13 +12,16 @@ export default async function FavoritesPage() {
     redirect("/login?callbackUrl=%2Ffavorites");
   }
 
-  const res = await fetch("/api/user/favorites", {
-    cache: "no-store",
-  });
+  if (isActiveUserError(authResult)) {
+    return (
+      <EmptyState
+        title="账号已被封禁"
+        description="你的账号当前无法查看收藏的服务器"
+      />
+    );
+  }
 
-  const servers = res.ok
-    ? ((await res.json()) as { data?: ServerListItem[] }).data ?? []
-    : [];
+  const servers = await loadUserFavoriteServers(authResult.user.id, authResult.user.role);
 
   return (
     <div>
