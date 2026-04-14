@@ -1,9 +1,18 @@
+export const dynamic = "force-dynamic";
+
 import { EmptyState } from "@/components/EmptyState";
 import { ServerCard } from "@/components/ServerCard";
+import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
+import { redirect } from "next/navigation";
 
 import type { ServerListItem } from "@/lib/types";
 
 export default async function FavoritesPage() {
+  const authResult = await requireActiveUser();
+  if (isActiveUserError(authResult)) {
+    redirect("/login?callbackUrl=%2Ffavorites");
+  }
+
   const res = await fetch("/api/user/favorites", {
     cache: "no-store",
   });
