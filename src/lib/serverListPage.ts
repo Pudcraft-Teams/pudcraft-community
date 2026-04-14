@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 
-import type { ServerSort } from "@/lib/serverListQuery";
+import type { ServerListPageQuery, ServerSort } from "@/lib/serverListQuery";
 import type { ServerListItem } from "@/lib/types";
 
 export type { ServerListPageQuery, ServerSort } from "@/lib/serverListQuery";

@@ -437,44 +437,6 @@ export type QueryMembersInput = z.infer<typeof queryMembersSchema>;
 
 // ─── 管理后台话题 Schema ─────────────────────────
 
-/** 管理后台话题列表查询参数 */
-export const adminQueryTagsSchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(50).default(20),
-  search: z.string().max(100).optional(),
-});
-
-/** 管理后台更新话题请求体 */
-export const adminUpdateTagSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, "名称不能为空")
-    .max(50, "最多 50 个字符")
-    .transform((v) => v.toLowerCase())
-    .optional(),
-  displayName: z.string().trim().min(1, "显示名称不能为空").max(50, "最多 50 个字符").optional(),
-  aliases: z.array(z.string().trim().min(1).max(50)).max(20).optional(),
-});
-
-/** 管理后台合并话题请求体 */
-export const adminMergeTagsSchema = z.object({
-  sourceId: z.string().cuid(),
-  targetId: z.string().cuid(),
-});
-
-/** 搜索查询参数 */
-export const searchQuerySchema = z.object({
-  q: z.string().trim().min(1, "搜索关键词不能为空").max(100),
-  cursor: z.string().cuid().optional(),
-  limit: z.coerce.number().int().min(1).max(50).default(20),
-});
-
-export type SearchQueryInput = z.infer<typeof searchQuerySchema>;
-export type AdminQueryTagsInput = z.infer<typeof adminQueryTagsSchema>;
-export type AdminUpdateTagInput = z.infer<typeof adminUpdateTagSchema>;
-export type AdminMergeTagsInput = z.infer<typeof adminMergeTagsSchema>;
-
 // ─── 举报 ───
 
 export const reportCategoryEnum = z.enum([
@@ -486,7 +448,7 @@ export const reportCategoryEnum = z.enum([
 ]);
 
 export const createReportSchema = z.object({
-  targetType: z.enum(["server", "comment", "user", "post", "forum_comment"]),
+  targetType: z.enum(["server", "comment", "user"]),
   targetId: z.string().min(1),
   category: reportCategoryEnum,
   description: z.string().max(500).optional(),
@@ -496,7 +458,7 @@ export const adminQueryReportsSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
   status: z.enum(["all", "pending", "resolved", "dismissed"]).default("pending"),
-  targetType: z.enum(["all", "server", "comment", "user", "post", "forum_comment"]).default("all"),
+  targetType: z.enum(["all", "server", "comment", "user"]).default("all"),
 });
 
 export const adminReportActionSchema = z.object({

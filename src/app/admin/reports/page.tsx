@@ -17,8 +17,6 @@ const TYPE_TABS = [
   { key: "server", label: "服务器" },
   { key: "comment", label: "评论" },
   { key: "user", label: "用户" },
-  { key: "post", label: "帖子" },
-  { key: "forum_comment", label: "论坛评论" },
 ] as const;
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -33,8 +31,6 @@ const TARGET_TYPE_LABELS: Record<string, string> = {
   server: "服务器",
   comment: "评论",
   user: "用户",
-  post: "帖子",
-  forum_comment: "论坛评论",
 };
 
 const ACTION_OPTIONS = [
