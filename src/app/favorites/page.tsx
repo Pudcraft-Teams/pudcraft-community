@@ -9,7 +9,7 @@ import type { ServerListItem } from "@/lib/types";
 
 export default async function FavoritesPage() {
   const authResult = await requireActiveUser();
-  if (isActiveUserError(authResult)) {
+  if (isActiveUserError(authResult) && authResult.response.status === 401) {
     redirect("/login?callbackUrl=%2Ffavorites");
   }
 
