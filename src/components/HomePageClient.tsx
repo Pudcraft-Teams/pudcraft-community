@@ -8,12 +8,15 @@ import { PageLoading } from "@/components/PageLoading";
 import { Pagination } from "@/components/Pagination";
 import { SearchBar } from "@/components/SearchBar";
 import { ServerCard } from "@/components/ServerCard";
-import { SortButtons, type ServerSort } from "@/components/SortButtons";
 import { useToast } from "@/hooks/useToast";
+import {
+  buildServerListPath,
+  type ServerSort,
+} from "@/lib/serverListPage";
 import type { ServerListItem } from "@/lib/types";
+import { SortButtons } from "@/components/SortButtons";
 
 const TAG_FILTERS = ["全部", "生存", "创造", "RPG", "PVP", "科技", "模组", "空岛"];
-const DEFAULT_SORT: ServerSort = "newest";
 const DEFAULT_LIMIT = 12;
 
 interface HomePageClientProps {
@@ -23,6 +26,7 @@ interface HomePageClientProps {
   initialTag: string;
   initialSearch: string;
   initialTotalPages: number;
+  basePath?: "/" | "/servers";
 }
 
 interface QueryState {
@@ -41,25 +45,6 @@ interface ServersResponse {
   };
 }
 
-function buildUrl(query: QueryState): string {
-  const params = new URLSearchParams();
-  if (query.tag) {
-    params.set("tag", query.tag);
-  }
-  if (query.search) {
-    params.set("search", query.search);
-  }
-  if (query.sort !== DEFAULT_SORT) {
-    params.set("sort", query.sort);
-  }
-  if (query.page > 1) {
-    params.set("page", String(query.page));
-  }
-
-  const search = params.toString();
-  return search ? `/servers?${search}` : "/servers";
-}
-
 /**
  * 首页交互层（Client Component）。
  * 首屏数据由服务端注入，筛选/排序/分页在客户端请求更新。
@@ -71,6 +56,7 @@ export function HomePageClient({
   initialTag,
   initialSearch,
   initialTotalPages,
+  basePath = "/servers",
 }: HomePageClientProps) {
   const router = useRouter();
   const { status } = useSession();
@@ -89,6 +75,10 @@ export function HomePageClient({
   const skipFirstFetchRef = useRef(true);
 
   const activeTag = query.tag || "全部";
+  const buildUrl = useCallback(
+    (nextQuery: QueryState) => `${basePath}${buildServerListPath(nextQuery)}`,
+    [basePath],
+  );
 
   const updateQuery = useCallback(
     (
@@ -128,7 +118,7 @@ export function HomePageClient({
 
   useEffect(() => {
     window.history.replaceState(null, "", buildUrl(query));
-  }, [query]);
+  }, [buildUrl, query]);
 
   useEffect(() => {
     if (skipFirstFetchRef.current) {
