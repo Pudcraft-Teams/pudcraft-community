@@ -26,13 +26,10 @@ test("handleMobileInboxGet caps totalPages to the supported merged fetch window"
         id: "user-1",
       },
     }),
-    loadInboxData: async () => ({
+    loadServerInboxData: async () => ({
       serverTotal: 360,
-      forumTotal: 0,
       serverUnread: 7,
-      forumUnread: 0,
       serverNotifications: [],
-      forumNotifications: [],
     }),
   });
 
@@ -55,11 +52,9 @@ test("handleMobileInboxGet returns only server notifications with a stable unrea
         id: "user-1",
       },
     }),
-    loadInboxData: async () => ({
+    loadServerInboxData: async () => ({
       serverTotal: 2,
-      forumTotal: 0,
       serverUnread: 1,
-      forumUnread: 0,
       serverNotifications: [
         {
           id: "server-2",
@@ -78,7 +73,6 @@ test("handleMobileInboxGet returns only server notifications with a stable unrea
           createdAt: new Date("2026-03-27T12:00:00.000Z"),
         },
       ],
-      forumNotifications: [],
     }),
   });
 
@@ -122,15 +116,12 @@ test("handleMobileInboxGet rejects pages beyond the supported merged fetch windo
         id: "user-1",
       },
     }),
-    loadInboxData: async () => {
+    loadServerInboxData: async () => {
       loadInboxDataCalled = true;
       return {
         serverTotal: 0,
-        forumTotal: 0,
         serverUnread: 0,
-        forumUnread: 0,
         serverNotifications: [],
-        forumNotifications: [],
       };
     },
   });

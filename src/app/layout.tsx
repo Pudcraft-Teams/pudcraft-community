@@ -64,12 +64,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <span className="text-xs font-medium text-warm-400">Community</span>
               </Link>
               <nav className="hidden items-center gap-1 md:flex">
-                <Link href="/" className="nav-link">
-                  广场
-                </Link>
-                <Link href="/explore" className="nav-link">
-                  探索
-                </Link>
                 <Link href="/servers" className="nav-link">
                   服务器
                 </Link>

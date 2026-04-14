@@ -35,18 +35,19 @@ interface ServerInboxNotificationRecord {
   createdAt: Date;
 }
 
-interface MobileInboxData {
+interface ServerMobileInboxData {
   serverTotal: number;
-  forumTotal: number;
   serverUnread: number;
-  forumUnread: number;
   serverNotifications: ServerInboxNotificationRecord[];
-  forumNotifications: never[];
 }
 
 interface MobileInboxGetDependencies {
   requireActiveUserImpl: () => Promise<MobileInboxAuthResult>;
-  loadInboxData: (input: { userId: string; unreadOnly: boolean; fetchLimit: number }) => Promise<MobileInboxData>;
+  loadServerInboxData: (input: {
+    userId: string;
+    unreadOnly: boolean;
+    fetchLimit: number;
+  }) => Promise<ServerMobileInboxData>;
   maxMergedFetchWindow?: number;
 }
 
@@ -111,7 +112,7 @@ export async function handleMobileInboxGet(request: Request, deps: MobileInboxGe
   }
 
   const fetchLimit = page * limit;
-  const inboxData = await deps.loadInboxData({
+  const inboxData = await deps.loadServerInboxData({
     userId,
     unreadOnly,
     fetchLimit,

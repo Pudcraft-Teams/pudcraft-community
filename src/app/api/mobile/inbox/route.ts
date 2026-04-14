@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   try {
     return await handleMobileInboxGet(request, {
       requireActiveUserImpl: requireActiveUser,
-      loadInboxData: async ({ userId, unreadOnly, fetchLimit }) => {
+      loadServerInboxData: async ({ userId, unreadOnly, fetchLimit }) => {
         const serverWhere = {
           userId,
           ...(unreadOnly ? { readAt: null } : {}),
