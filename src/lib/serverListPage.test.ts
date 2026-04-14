@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { buildServerListPath, parseServerListQuery } from "@/lib/serverListQuery";
+import { buildServerSearchRedirectPath } from "@/app/search/page";
 
 test("parseServerListQuery normalizes invalid values to defaults", () => {
   const query = parseServerListQuery({
@@ -39,4 +40,12 @@ test("buildServerListPath drops default values for clean redirects", () => {
   });
 
   assert.equal(path, "");
+});
+
+test("buildServerSearchRedirectPath preserves legacy q search terms", () => {
+  const path = buildServerSearchRedirectPath({
+    q: "生存",
+  });
+
+  assert.equal(path, "/servers?search=%E7%94%9F%E5%AD%98");
 });
