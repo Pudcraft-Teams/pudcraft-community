@@ -29,3 +29,14 @@ test("buildServerListPath preserves valid filters", () => {
 
   assert.equal(path, "?tag=RPG&search=stone+bricks&sort=popular&page=3");
 });
+
+test("buildServerListPath drops default values for clean redirects", () => {
+  const path = buildServerListPath({
+    page: 1,
+    sort: "newest",
+    tag: "",
+    search: "",
+  });
+
+  assert.equal(path, "");
+});

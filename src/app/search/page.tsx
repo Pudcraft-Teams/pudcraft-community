@@ -1,10 +1,14 @@
-import { Suspense } from "react";
-import { SearchPage } from "@/components/forum/SearchPage";
+import { redirect } from "next/navigation";
 
-export default function SearchPageRoute() {
-  return (
-    <Suspense>
-      <SearchPage />
-    </Suspense>
-  );
+import { buildServerListPath, parseServerListQuery } from "@/lib/serverListPage";
+
+interface SearchPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function SearchPageRoute({ searchParams }: SearchPageProps) {
+  const rawSearchParams = await searchParams;
+  const query = parseServerListQuery(rawSearchParams);
+
+  redirect(`/servers${buildServerListPath(query)}`);
 }
