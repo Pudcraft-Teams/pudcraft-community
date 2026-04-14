@@ -22,61 +22,34 @@ export async function POST(request: Request) {
     }
 
     if ("all" in parsedBody.data) {
-      await Promise.all([
-        prisma.serverNotification.updateMany({
-          where: {
-            userId,
-            readAt: null,
-          },
-          data: { readAt: new Date() },
-        }),
-        prisma.notification.updateMany({
-          where: {
-            recipientId: userId,
-            isRead: false,
-          },
-          data: { isRead: true },
-        }),
-      ]);
-    } else {
-      await Promise.all([
-        prisma.serverNotification.updateMany({
-          where: {
-            userId,
-            id: { in: parsedBody.data.ids },
-            readAt: null,
-          },
-          data: { readAt: new Date() },
-        }),
-        prisma.notification.updateMany({
-          where: {
-            recipientId: userId,
-            id: { in: parsedBody.data.ids },
-            isRead: false,
-          },
-          data: { isRead: true },
-        }),
-      ]);
-    }
-
-    const [serverUnread, forumUnread] = await Promise.all([
-      prisma.serverNotification.count({
+      await prisma.serverNotification.updateMany({
         where: {
           userId,
           readAt: null,
         },
-      }),
-      prisma.notification.count({
+        data: { readAt: new Date() },
+      });
+    } else {
+      await prisma.serverNotification.updateMany({
         where: {
-          recipientId: userId,
-          isRead: false,
+          userId,
+          id: { in: parsedBody.data.ids },
+          readAt: null,
         },
-      }),
-    ]);
+        data: { readAt: new Date() },
+      });
+    }
+
+    const serverUnread = await prisma.serverNotification.count({
+      where: {
+        userId,
+        readAt: null,
+      },
+    });
 
     return NextResponse.json({
       success: true,
-      ...buildMobileInboxUnreadSummary(serverUnread, forumUnread),
+      ...buildMobileInboxUnreadSummary(serverUnread),
     });
   } catch (error) {
     logger.error("[api/mobile/inbox/read] Unexpected POST error", error);

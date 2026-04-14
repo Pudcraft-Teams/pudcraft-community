@@ -4,7 +4,6 @@ import { NextResponse } from "next/server";
 import { requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { getPublicUrl } from "@/lib/storage";
 import { handleMobileInboxGet } from "@/lib/mobile/inboxFacade";
 
 export async function GET(request: Request) {
@@ -16,85 +15,37 @@ export async function GET(request: Request) {
           userId,
           ...(unreadOnly ? { readAt: null } : {}),
         };
-        const forumWhere = {
-          recipientId: userId,
-          ...(unreadOnly ? { isRead: false } : {}),
-        };
 
-        const [serverTotal, forumTotal, serverUnread, forumUnread, serverNotifications, forumNotifications] =
-          await Promise.all([
-            prisma.serverNotification.count({ where: serverWhere }),
-            prisma.notification.count({ where: forumWhere }),
-            prisma.serverNotification.count({
-              where: {
-                userId,
-                readAt: null,
-              },
-            }),
-            prisma.notification.count({
-              where: {
-                recipientId: userId,
-                isRead: false,
-              },
-            }),
-            prisma.serverNotification.findMany({
-              where: serverWhere,
-              orderBy: { createdAt: "desc" },
-              take: fetchLimit,
-              select: {
-                id: true,
-                title: true,
-                message: true,
-                link: true,
-                readAt: true,
-                createdAt: true,
-              },
-            }),
-            prisma.notification.findMany({
-              where: forumWhere,
-              orderBy: { createdAt: "desc" },
-              take: fetchLimit,
-              select: {
-                id: true,
-                type: true,
-                isRead: true,
-                createdAt: true,
-                sourceUser: {
-                  select: {
-                    id: true,
-                    uid: true,
-                    name: true,
-                    image: true,
-                  },
-                },
-                post: {
-                  select: {
-                    id: true,
-                    title: true,
-                    circle: {
-                      select: {
-                        slug: true,
-                      },
-                    },
-                  },
-                },
-              },
-            }),
-          ]);
+        const [serverTotal, serverUnread, serverNotifications] = await Promise.all([
+          prisma.serverNotification.count({ where: serverWhere }),
+          prisma.serverNotification.count({
+            where: {
+              userId,
+              readAt: null,
+            },
+          }),
+          prisma.serverNotification.findMany({
+            where: serverWhere,
+            orderBy: { createdAt: "desc" },
+            take: fetchLimit,
+            select: {
+              id: true,
+              title: true,
+              message: true,
+              link: true,
+              readAt: true,
+              createdAt: true,
+            },
+          }),
+        ]);
 
         return {
           serverTotal,
-          forumTotal,
+          forumTotal: 0,
           serverUnread,
-          forumUnread,
+          forumUnread: 0,
           serverNotifications,
-          forumNotifications: forumNotifications.map((notification) => ({
-            ...notification,
-            sourceUser: {
-              ...notification.sourceUser,
-              image: getPublicUrl(notification.sourceUser.image),
-            },
-          })),
+          forumNotifications: [],
         };
       },
     });

@@ -14,14 +14,11 @@ export async function GET() {
     }
     const userId = authResult.user.id;
 
-    const [serverUnread, forumUnread] = await Promise.all([
-      prisma.serverNotification.count({ where: { userId, readAt: null } }),
-      prisma.notification.count({ where: { recipientId: userId, isRead: false } }),
-    ]);
+    const serverUnread = await prisma.serverNotification.count({ where: { userId, readAt: null } });
 
     return NextResponse.json({
-      total: serverUnread + forumUnread,
-      ...buildMobileInboxUnreadSummary(serverUnread, forumUnread),
+      total: serverUnread,
+      ...buildMobileInboxUnreadSummary(serverUnread),
     });
   } catch (error) {
     logger.error("[api/mobile/inbox/unread-summary] Unexpected GET error", error);
