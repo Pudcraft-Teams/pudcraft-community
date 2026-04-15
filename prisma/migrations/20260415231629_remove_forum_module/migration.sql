@@ -76,6 +76,11 @@ ALTER TABLE "post_tags" DROP CONSTRAINT "post_tags_post_id_fkey";
 -- DropForeignKey
 ALTER TABLE "post_tags" DROP CONSTRAINT "post_tags_tag_id_fkey";
 
+-- Remove legacy forum reports before dropping forum tables so they do not survive
+-- as zombie moderation items. Keep server comment reports intact.
+DELETE FROM "reports"
+WHERE "target_type" IN ('post', 'forum_comment');
+
 -- DropTable
 DROP TABLE "circles";
 
