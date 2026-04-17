@@ -41,11 +41,8 @@ export async function GET(request: Request) {
 
         return {
           serverTotal,
-          forumTotal: 0,
           serverUnread,
-          forumUnread: 0,
           serverNotifications,
-          forumNotifications: [],
         };
       },
     });

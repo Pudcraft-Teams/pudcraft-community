@@ -66,9 +66,9 @@ export function HeaderSearch({
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="搜索帖子、圈子、用户..."
+              placeholder="搜索服务器..."
               className="m3-input min-w-0 flex-1"
-              aria-label="搜索帖子、圈子、用户"
+              aria-label="搜索服务器"
               autoFocus
             />
             <button type="submit" className="m3-btn m3-btn-primary px-3 py-2 text-xs">
@@ -131,7 +131,7 @@ export function HeaderSearch({
         type="search"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="搜索..."
+        placeholder="搜索服务器"
         className="m3-input w-28 py-1.5 pl-7 pr-2 text-xs sm:w-36"
       />
       <svg

@@ -1,22 +1,13 @@
 import { NextResponse } from "next/server";
 import { queryNotificationsSchema } from "@/lib/validation";
 
-export interface MobileInboxSourceUser {
-  id: string;
-  uid: number;
-  name: string | null;
-  image: string | null;
-}
-
 export interface MobileInboxItem {
-  kind: "server" | "forum";
   id: string;
   title: string;
   body: string;
   destination: string | null;
   read: boolean;
   createdAt: string;
-  sourceUser?: MobileInboxSourceUser;
 }
 
 interface MobileInboxAuthResult {
@@ -55,23 +46,20 @@ export const DEFAULT_MAX_MERGED_FETCH_WINDOW = 500;
 
 export interface MobileInboxUnreadSummary {
   serverUnread: number;
-  forumUnread: number;
   unreadCount: number;
 }
 
 export function buildMobileInboxUnreadSummary(serverUnread: number): MobileInboxUnreadSummary {
   return {
     serverUnread,
-    forumUnread: 0,
     unreadCount: serverUnread,
   };
 }
 
 export function mergeInboxItems(
   serverItems: MobileInboxItem[],
-  forumItems: MobileInboxItem[],
 ): MobileInboxItem[] {
-  return [...serverItems, ...forumItems].sort((lhs, rhs) => rhs.createdAt.localeCompare(lhs.createdAt));
+  return [...serverItems].sort((lhs, rhs) => rhs.createdAt.localeCompare(lhs.createdAt));
 }
 
 export function getMaxMobileInboxPages(limit: number, maxMergedFetchWindow = DEFAULT_MAX_MERGED_FETCH_WINDOW): number {
@@ -121,14 +109,12 @@ export async function handleMobileInboxGet(request: Request, deps: MobileInboxGe
   const merged = mergeInboxItems(
     inboxData.serverNotifications.map((notification): MobileInboxItem => ({
       id: notification.id,
-      kind: "server",
       title: notification.title,
       body: notification.message,
       destination: notification.link,
       read: notification.readAt !== null,
       createdAt: notification.createdAt.toISOString(),
     })),
-    [],
   );
 
   const total = inboxData.serverTotal;
