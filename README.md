@@ -4,11 +4,12 @@ Minecraft 服务器社区平台。用户可以浏览、提交、认领、评论�
 
 ## 技术栈
 
-- Next.js 15（App Router）+ React 19 + TypeScript 5
+- Next.js 16（App Router）+ React 19 + TypeScript 5（strict）
 - Tailwind CSS 3
 - PostgreSQL + Prisma ORM
 - NextAuth v5（Credentials + JWT Session）
 - Redis + BullMQ
+- 独立 WebSocket 服务（白名单同步推送）
 - Nodemailer
 - Zod
 - pnpm
@@ -17,8 +18,8 @@ Minecraft 服务器社区平台。用户可以浏览、提交、认领、评论�
 
 ### 前置要求
 
-- Node.js 20+
-- pnpm 9+
+- Node.js 20.9+
+- pnpm 10+
 - Docker 与 Docker Compose
 
 ### 1. 安装依赖
@@ -87,6 +88,9 @@ Web 负责页面和 API，Worker 负责 Minecraft 状态探测与认领验证任
 | `pnpm db:push`                  | 仅开发调试时直接同步 Schema |
 | `pnpm worker`                   | 启动 Worker                 |
 | `pnpm worker:dev`               | 以 watch 模式启动 Worker    |
+| `pnpm ws`                       | 启动白名单同步 WebSocket 服务 |
+| `pnpm ws:dev`                   | 以 watch 模式启动 WebSocket 服务 |
+| `pnpm test`                     | 运行 `tsx --test` 测试套件  |
 | `pnpm sync:favorite-counts`     | 同步修正收藏计数            |
 | `pnpm storage:check`            | 检查对象存储行为            |
 
@@ -139,7 +143,8 @@ src/
 ├── lib/                # 工具函数、认证、队列、存储封装
 ├── styles/             # 全局样式
 ├── types/              # 类型声明
-└── worker/             # BullMQ Worker 与调度器
+├── worker/             # BullMQ Worker 与调度器
+└── ws/                 # 白名单同步 WebSocket 服务
 prisma/
 ├── migrations/         # Prisma 迁移
 └── schema.prisma       # 数据模型
@@ -157,6 +162,7 @@ prisma/
 ```bash
 pnpm lint
 pnpm tsc --noEmit
+pnpm test
 ```
 
-同时确认没有提交 `.env`。
+同时确认没有把 `.env*` 加入暂存区。
