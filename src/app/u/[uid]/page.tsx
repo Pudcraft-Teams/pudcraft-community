@@ -25,8 +25,8 @@ function formatJoinTime(date: Date): string {
   }).format(date);
 }
 
-function resolveDisplayName(name: string | null, email: string): string {
-  return name?.trim() || email.split("@")[0] || "用户";
+function resolveDisplayName(name: string | null): string {
+  return name?.trim() || "用户";
 }
 
 const getUser = cache(async (rawId: string, viewerUserId?: string, viewerRole?: string) => {
@@ -48,7 +48,6 @@ const getUser = cache(async (rawId: string, viewerUserId?: string, viewerRole?: 
       id: true,
       uid: true,
       name: true,
-      email: true,
       image: true,
       bio: true,
       createdAt: true,
@@ -85,7 +84,7 @@ const getUser = cache(async (rawId: string, viewerUserId?: string, viewerRole?: 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { uid } = await params;
   const user = await getUser(uid);
-  const displayName = user ? resolveDisplayName(user.name, user.email) : "用户";
+  const displayName = user ? resolveDisplayName(user.name) : "用户";
 
   return {
     title: user?.name || "用户主页",
@@ -109,7 +108,7 @@ export default async function UserProfilePage({ params }: PageProps) {
     notFound();
   }
 
-  const displayName = resolveDisplayName(user.name, user.email);
+  const displayName = resolveDisplayName(user.name);
   const isOwnProfile = session?.user?.id === user.id;
   const canViewNonPublicServers = isOwnProfile || session?.user?.role === "admin";
 
@@ -136,7 +135,6 @@ export default async function UserProfilePage({ params }: PageProps) {
             <UserAvatar
               src={getPublicUrl(user.image)}
               name={user.name}
-              email={user.email}
               className="h-20 w-20"
             />
             <div>
