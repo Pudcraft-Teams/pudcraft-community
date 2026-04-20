@@ -228,7 +228,7 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-13 z-50 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-warm-200 bg-surface shadow-lg">
+        <div className="absolute right-0 top-full z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-warm-200 bg-surface shadow-lg">
           <div className="flex items-center justify-between border-b border-warm-200 px-4 py-2">
             <h3 className="text-sm font-semibold text-warm-800">服务器通知</h3>
             {serverUnreadCount > 0 && (

@@ -1,13 +1,5 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
+import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
+import nextTypescript from "eslint-config-next/typescript";
 
 const eslintConfig = [
   {
@@ -20,7 +12,8 @@ const eslintConfig = [
       "dist/**",
     ],
   },
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  ...nextCoreWebVitals,
+  ...nextTypescript,
   {
     rules: {
       "@typescript-eslint/no-unused-vars": [
@@ -28,6 +21,13 @@ const eslintConfig = [
         { argsIgnorePattern: "^_" },
       ],
       "@typescript-eslint/no-explicit-any": "error",
+      // React 19 + the current client-page data-loading architecture trigger this across
+      // many existing screens. Re-enabling it currently surfaces dozens of known findings
+      // and needs a broader fetch/state refactor rather than a one-off config toggle.
+      "react-hooks/set-state-in-effect": "off",
+      // This is currently noisy with React Compiler/manual memoization warnings in existing
+      // pages. Keep it disabled until the client-page memoization patterns are reviewed as a set.
+      "react-hooks/preserve-manual-memoization": "off",
     },
   },
 ];

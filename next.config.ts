@@ -1,11 +1,34 @@
 import type { NextConfig } from "next";
 import { buildStorageImageRemotePatterns } from "./src/lib/storage-image-policy";
 
+function firstNonEmptyEnv(...values: Array<string | undefined>): string | undefined {
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (trimmed) {
+      return trimmed;
+    }
+  }
+
+  return undefined;
+}
+
+const nextPublicStoragePublicBaseUrl = firstNonEmptyEnv(
+  process.env.NEXT_PUBLIC_STORAGE_PUBLIC_BASE_URL,
+  process.env.S3_PUBLIC_BASE_URL,
+  process.env.OSS_PUBLIC_BASE_URL,
+);
+
 const nextConfig: NextConfig = {
   output: "standalone",
+  env: nextPublicStoragePublicBaseUrl
+    ? {
+        // Keep client-side markdown image trust aligned with the effective next/image host allowlist.
+        NEXT_PUBLIC_STORAGE_PUBLIC_BASE_URL: nextPublicStoragePublicBaseUrl,
+      }
+    : undefined,
   images: {
     remotePatterns: buildStorageImageRemotePatterns({
-      nextPublicStoragePublicBaseUrl: process.env.NEXT_PUBLIC_STORAGE_PUBLIC_BASE_URL,
+      nextPublicStoragePublicBaseUrl: nextPublicStoragePublicBaseUrl,
       s3PublicBaseUrl: process.env.S3_PUBLIC_BASE_URL,
       ossPublicBaseUrl: process.env.OSS_PUBLIC_BASE_URL,
       s3Endpoint: process.env.S3_ENDPOINT,

@@ -28,13 +28,13 @@ function getTrustedMarkdownImageOrigins(): string[] {
   const origins = [
     toOrigin(process.env.NEXT_PUBLIC_SITE_URL),
     toOrigin(process.env.NEXT_PUBLIC_STORAGE_PUBLIC_BASE_URL),
-    toOrigin(process.env.S3_PUBLIC_BASE_URL),
-    toOrigin(process.env.OSS_PUBLIC_BASE_URL),
   ].filter((value): value is string => value !== null);
 
   return [...new Set(origins)];
 }
 
+// Client components must only rely on browser-safe env keys.
+// next.config.ts backfills NEXT_PUBLIC_STORAGE_PUBLIC_BASE_URL from legacy storage envs.
 const TRUSTED_MARKDOWN_IMAGE_ORIGINS = getTrustedMarkdownImageOrigins();
 
 function normalizeTrustedOrigins(

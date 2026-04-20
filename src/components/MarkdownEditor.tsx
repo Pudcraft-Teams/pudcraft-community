@@ -30,6 +30,8 @@ const RichTextEditor = dynamic(
 type EditorMode = "rich" | "markdown";
 type MarkdownMobileTab = "edit" | "preview";
 
+const EDITOR_IMAGE_ACCEPT = ".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp";
+
 export interface MarkdownEditorHandle {
   syncMarkdown: () => string;
 }
@@ -416,6 +418,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             html={richHtml}
             disabled={disabled}
             placeholder={placeholder}
+            imageAccept={EDITOR_IMAGE_ACCEPT}
             onHtmlChange={handleRichHtmlChange}
             onUploadImage={uploadEditorImage}
           />
@@ -424,7 +427,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             <input
               ref={markdownImageInputRef}
               type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif"
+              accept={EDITOR_IMAGE_ACCEPT}
               className="hidden"
               onChange={handleMarkdownImageChange}
             />

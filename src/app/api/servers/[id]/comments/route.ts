@@ -359,7 +359,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     });
     if (!modResult.passed) {
       return NextResponse.json(
-        { error: "评论包含违规内容，请修改后重试", detail: modResult.reason },
+        { error: "评论包含违规内容，请修改后重试", details: modResult.reason },
         { status: 422 },
       );
     }

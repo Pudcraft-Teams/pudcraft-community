@@ -8,6 +8,13 @@ import { prisma } from "@/lib/db";
 import { createReportSchema } from "@/lib/validation";
 import { logger } from "@/lib/logger";
 
+export function buildCreateReportSuccessPayload() {
+  return {
+    success: true,
+    message: "举报已提交，感谢你的反馈",
+  };
+}
+
 /**
  * POST /api/reports
  * 用户提交举报（服务器、评论、用户）。
@@ -149,7 +156,7 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    return NextResponse.json({ message: "举报已提交，感谢你的反馈" }, { status: 201 });
+    return NextResponse.json(buildCreateReportSuccessPayload(), { status: 201 });
   } catch (error) {
     logger.error("[api/reports] Unexpected POST error", error);
     return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });

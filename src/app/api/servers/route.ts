@@ -281,7 +281,7 @@ export async function POST(request: Request) {
     });
     if (!modResult.passed) {
       return NextResponse.json(
-        { error: "内容包含违规信息，请修改后重新提交", detail: modResult.reason },
+        { error: "内容包含违规信息，请修改后重新提交", details: modResult.reason },
         { status: 422 },
       );
     }

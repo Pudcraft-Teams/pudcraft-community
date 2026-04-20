@@ -223,7 +223,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     );
     if (!modResult.passed) {
       return NextResponse.json(
-        { error: "内容包含违规信息", detail: modResult.reason },
+        { error: "内容包含违规信息", details: modResult.reason },
         { status: 422 },
       );
     }
