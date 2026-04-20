@@ -150,6 +150,8 @@ Pudcraft Community 是一个面向 Minecraft 玩家的综合社区平台，集�
 
 ### 2.3 私有服务器系统
 
+> 说明：私有服务器子系统已实现，但当前线上默认通过 `NEXT_PUBLIC_ENABLE_PRIVATE_SERVERS` 功能开关关闭；关闭时不展示申请、邀请码和成员管理入口。
+
 #### 2.3.1 可见性模式
 
 | 模式 | 列表展示 | 地址可见 | 到达方式 |
@@ -622,8 +624,8 @@ Docker Compose:
 | `/circles/create` | 创建圈子 |
 | `/c/:slug/new` | 圈子内发帖 |
 | `/c/:slug/settings` | 圈子管理 |
-| `/servers/:id/apply` | 提交入服申请 |
-| `/servers/:id/join/:code` | 使用邀请码 |
+| `/servers/:id/apply` | 提交入服申请（功能开关启用时） |
+| `/servers/:id/join/:code` | 使用邀请码（功能开关启用时） |
 | `/servers/:id/edit` | 编辑服务器 |
 | `/favorites` | 收藏列表 |
 | `/notifications` | 通知中心 |
@@ -657,7 +659,7 @@ Docker Compose:
 - [x] 用户系统（注册、登录、密码重置、资料管理）
 - [x] 服务器系统（CRUD、列表、详情、评论、收藏、统计）
 - [x] 服务器认领（MOTD 验证）
-- [x] 私有服务器（可见性、加入模式、申请、邀请、成员管理）
+- [x] 私有服务器（可见性、加入模式、申请、邀请、成员管理，当前默认由功能开关关闭）
 - [x] 白名单同步（HTTP + WebSocket + Redis Pub/Sub）
 - [x] 整合包上传下载
 - [x] 社区论坛（圈子、帖子、评论、点赞、收藏）

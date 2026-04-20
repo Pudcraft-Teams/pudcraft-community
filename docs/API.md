@@ -375,9 +375,15 @@ GET /api/servers/:id/ping
 GET /api/servers/:id/verify   # 查询认领状态
 POST /api/servers/:id/verify  # 发起认领，获取 MOTD Token
 PATCH /api/servers/:id/verify # 触发验证任务
+GET /api/servers/:id/verify/claim-key  # 查询插件认领状态
+POST /api/servers/:id/verify/claim-key # 生成一次性插件认领密钥
 ```
 
 **认证**: 需登录
+
+**说明**: 当前支持两种认领方式：
+- `verify`：生成 MOTD Token，写入服务器 MOTD 后触发验证
+- `verify/claim-key`：生成一次性插件认领密钥；认领成功后该密钥直接成为服务器 API Key
 
 **POST 响应**:
 ```json
@@ -392,6 +398,8 @@ PATCH /api/servers/:id/verify # 触发验证任务
 ---
 
 ## 服务器私有功能 (Private Servers)
+
+> 当前整组私有服务器 API 受 `NEXT_PUBLIC_ENABLE_PRIVATE_SERVERS` 控制；默认关闭。关闭时服务端会返回 `404`，前端不应暴露申请、邀请码或成员管理入口。
 
 ### 获取成员状态
 ```
