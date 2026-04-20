@@ -122,13 +122,6 @@ export function AuthButtons() {
             我的主页
           </Link>
           <Link
-            href={`/user/${session.user.uid}`}
-            className="block rounded-lg px-3 py-2 text-sm text-warm-800 transition-colors hover:bg-warm-100"
-            onClick={() => setOpen(false)}
-          >
-            个人主页
-          </Link>
-          <Link
             href="/settings/profile"
             className="block rounded-lg px-3 py-2 text-sm text-warm-800 transition-colors hover:bg-warm-100"
             onClick={() => setOpen(false)}
