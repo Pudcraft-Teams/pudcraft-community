@@ -11,6 +11,7 @@ import { ServerDetailActions } from "@/components/ServerDetailActions";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { isPrivateServersEnabled } from "@/lib/features";
 import { serializeJsonForScript } from "@/lib/json";
 import { resolveServerCuid } from "@/lib/lookup";
 import { canAccessServer, isServerOwner } from "@/lib/server-access";
@@ -246,6 +247,7 @@ export default async function ServerDetailPage({ params }: Props) {
   const currentUserId = session?.user?.id ?? null;
   const isOwner = isServerOwner(server.ownerId, currentUserId);
   const isLoggedIn = !!currentUserId;
+  const privateServersEnabled = isPrivateServersEnabled();
   const canClaimUnverified = isLoggedIn && !server.isVerified;
   const canReclaimVerified = isLoggedIn && server.isVerified && server.ownerId !== currentUserId;
   const canAccessCurrentServer = canAccessServer({
@@ -444,12 +446,12 @@ export default async function ServerDetailPage({ params }: Props) {
                 <h1 className="truncate text-2xl font-bold tracking-tight text-warm-800 sm:text-3xl">
                   {server.name}
                 </h1>
-                {server.visibility === "unlisted" && (
+                {privateServersEnabled && server.visibility === "unlisted" && (
                   <span className="inline-flex shrink-0 items-center rounded-full bg-accent-hover px-2.5 py-1 text-xs font-semibold text-accent-hover ring-1 ring-accent-hover">
                     需申请加入
                   </span>
                 )}
-                {server.visibility === "private" && (
+                {privateServersEnabled && server.visibility === "private" && (
                   <span className="inline-flex shrink-0 items-center rounded-full bg-warm-100 px-2.5 py-1 text-xs font-semibold text-warm-400 ring-1 ring-warm-200">
                     私密服务器
                   </span>
@@ -575,7 +577,7 @@ export default async function ServerDetailPage({ params }: Props) {
         </div>
 
         {/* ─── Membership status & join mode (non-public servers, non-owner) ─── */}
-        {server.visibility !== "public" && !isOwner && (
+        {privateServersEnabled && server.visibility !== "public" && !isOwner && (
           <div className="mt-4 rounded-xl border border-warm-200 bg-warm-50 px-4 py-3">
             {/* Membership status */}
             {isMember ? (
