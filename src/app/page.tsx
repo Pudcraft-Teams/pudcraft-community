@@ -1,4 +1,5 @@
 import { HomePageClient } from "@/components/HomePageClient";
+import { auth } from "@/lib/auth";
 import { serializeJsonForScript } from "@/lib/json";
 import {
   loadServerListPageData,
@@ -22,12 +23,16 @@ interface HomePageProps {
 export default async function HomePage({ searchParams }: HomePageProps) {
   const rawSearchParams = await searchParams;
   const query = parseServerListQuery(rawSearchParams);
+  const session = await auth();
 
   let servers: ServerListItem[] = [];
   let totalPages = 1;
 
   try {
-    const result = await loadServerListPageData(query);
+    const result = await loadServerListPageData(query, {
+      userId: session?.user?.id,
+      role: session?.user?.role,
+    });
     servers = result.servers;
     totalPages = result.totalPages;
   } catch {

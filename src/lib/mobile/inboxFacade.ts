@@ -3,6 +3,7 @@ import { queryNotificationsSchema } from "@/lib/validation";
 
 export interface MobileInboxItem {
   id: string;
+  kind: "server";
   title: string;
   body: string;
   destination: string | null;
@@ -45,12 +46,14 @@ interface MobileInboxGetDependencies {
 export const DEFAULT_MAX_MERGED_FETCH_WINDOW = 500;
 
 export interface MobileInboxUnreadSummary {
+  forumUnread: number;
   serverUnread: number;
   unreadCount: number;
 }
 
 export function buildMobileInboxUnreadSummary(serverUnread: number): MobileInboxUnreadSummary {
   return {
+    forumUnread: 0,
     serverUnread,
     unreadCount: serverUnread,
   };
@@ -109,6 +112,7 @@ export async function handleMobileInboxGet(request: Request, deps: MobileInboxGe
   const merged = mergeInboxItems(
     inboxData.serverNotifications.map((notification): MobileInboxItem => ({
       id: notification.id,
+      kind: "server",
       title: notification.title,
       body: notification.message,
       destination: notification.link,

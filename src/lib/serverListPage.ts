@@ -8,6 +8,37 @@ export { buildServerListPath, parseServerListQuery } from "@/lib/serverListQuery
 
 const DEFAULT_LIMIT = 12;
 
+interface ViewerAccessContext {
+  viewerUserId: string | null;
+  viewerRole: string | null;
+  memberServerIds: Set<string>;
+}
+
+interface ServerAddressAccessInput {
+  serverId: string;
+  visibility: string;
+  ownerId: string | null;
+}
+
+export function canViewerSeeServerAddress(
+  server: ServerAddressAccessInput,
+  viewer: ViewerAccessContext,
+): boolean {
+  if (server.visibility === "public") {
+    return true;
+  }
+
+  if (viewer.viewerRole === "admin") {
+    return true;
+  }
+
+  if (viewer.viewerUserId && server.ownerId === viewer.viewerUserId) {
+    return true;
+  }
+
+  return viewer.memberServerIds.has(server.serverId);
+}
+
 function buildOrderBy(sort: ServerSort): Prisma.ServerOrderByWithRelationInput[] {
   const orderBy: Prisma.ServerOrderByWithRelationInput[] = [{ isOnline: "desc" }];
 
@@ -30,7 +61,13 @@ function buildOrderBy(sort: ServerSort): Prisma.ServerOrderByWithRelationInput[]
   return orderBy;
 }
 
-export async function loadServerListPageData(query: ServerListPageQuery): Promise<{
+export async function loadServerListPageData(
+  query: ServerListPageQuery,
+  viewer?: {
+    userId?: string | null;
+    role?: string | null;
+  },
+): Promise<{
   servers: ServerListItem[];
   totalPages: number;
 }> {
@@ -81,13 +118,40 @@ export async function loadServerListPageData(query: ServerListPageQuery): Promis
         lastPingedAt: true,
         updatedAt: true,
         visibility: true,
+        ownerId: true,
       },
     }),
   ]);
 
+  const nonPublicServerIds = servers
+    .filter((server) => server.visibility !== "public")
+    .map((server) => server.id);
+  let memberServerIds = new Set<string>();
+  if (viewer?.userId && nonPublicServerIds.length > 0) {
+    const memberships = await prisma.serverMember.findMany({
+      where: {
+        userId: viewer.userId,
+        serverId: { in: nonPublicServerIds },
+      },
+      select: { serverId: true },
+    });
+    memberServerIds = new Set(memberships.map((membership) => membership.serverId));
+  }
+
   const totalPages = Math.max(1, Math.ceil(total / DEFAULT_LIMIT));
   const data: ServerListItem[] = servers.map((server) => {
-    const canSeeAddress = server.visibility === "public";
+    const canSeeAddress = canViewerSeeServerAddress(
+      {
+        serverId: server.id,
+        visibility: server.visibility,
+        ownerId: server.ownerId,
+      },
+      {
+        viewerUserId: viewer?.userId ?? null,
+        viewerRole: viewer?.role ?? null,
+        memberServerIds,
+      },
+    );
 
     return {
       id: server.id,
