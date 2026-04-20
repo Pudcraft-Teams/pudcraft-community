@@ -25,7 +25,8 @@
 - `src/app/favorites/page.tsx` — remove post bookmarks tab, keep server favorites only
 - `src/app/notifications/page.tsx` — server notifications only
 - `src/components/Providers.tsx` — remove `ComposeProvider`
-- `src/components/AuthButtons.tsx` — remove forum navigation and `/u/:uid` user menu entry
+- `src/components/AuthButtons.tsx` — remove forum navigation; keep the `/u/:uid` user menu entry
+- `src/app/u/[uid]/page.tsx` — reframe as a general user profile page: drop forum surfaces (joined circles, post history, bookmarks) and instead show the user's owned/approved servers and basic profile. Keep the route as every site needs a user profile page.
 - `src/components/NotificationBell.tsx` — remove forum tab + forum fetches
 - `src/lib/mobile/inboxFacade.ts` — collapse merged forum/server inbox into server-only inbox
 - `src/lib/mobile/inboxFacade.test.ts` — update tests for server-only inbox semantics
@@ -46,7 +47,7 @@
 - `src/app/c/[slug]/new/page.tsx`
 - `src/app/c/[slug]/post/[postId]/page.tsx`
 - `src/app/c/[slug]/settings/page.tsx`
-- `src/app/u/[uid]/page.tsx`
+- `src/app/user/[id]/page.tsx` — legacy `/user/:id` route, replaced by `/u/:uid`
 - `src/app/circles/create/page.tsx`
 - `src/app/api/forum/notifications/route.ts`
 - `src/app/api/forum/notifications/read/route.ts`
