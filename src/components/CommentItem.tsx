@@ -144,7 +144,7 @@ export function CommentItem({
             className="h-8 w-8"
             fallbackClassName="bg-gradient-to-br from-coral to-coral-amber text-white"
           />
-          <Link href={`/user/${comment.author.uid}`} className="m3-link text-sm font-medium">
+          <Link href={`/u/${comment.author.uid}`} className="m3-link text-sm font-medium">
             {displayAuthorName(comment.author)}
           </Link>
         </div>

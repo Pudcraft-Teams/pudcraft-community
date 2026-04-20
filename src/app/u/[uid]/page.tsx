@@ -15,7 +15,7 @@ import type { ServerListItem } from "@/lib/types";
 import { userLookupIdSchema } from "@/lib/validation";
 
 interface PageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ uid: string }>;
 }
 
 function formatJoinTime(date: Date): string {
@@ -67,6 +67,7 @@ const getUser = cache(async (rawId: string, viewerUserId?: string, viewerRole?: 
           description: true,
           tags: true,
           iconUrl: true,
+          favoriteCount: true,
           isVerified: true,
           verifiedAt: true,
           isOnline: true,
@@ -82,8 +83,8 @@ const getUser = cache(async (rawId: string, viewerUserId?: string, viewerRole?: 
 });
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { id } = await params;
-  const user = await getUser(id);
+  const { uid } = await params;
+  const user = await getUser(uid);
   const displayName = user ? resolveDisplayName(user.name, user.email) : "用户";
 
   return {
@@ -98,11 +99,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 /**
  * 用户公开主页。
- * 展示头像、昵称、简介与该用户提交的服务器。
+ * 展示头像、昵称、简介与该用户提交 / 运营的已审核服务器。
  */
 export default async function UserProfilePage({ params }: PageProps) {
-  const [{ id }, session] = await Promise.all([params, auth()]);
-  const user = await getUser(id, session?.user?.id, session?.user?.role);
+  const [{ uid }, session] = await Promise.all([params, auth()]);
+  const user = await getUser(uid, session?.user?.id, session?.user?.role);
 
   if (!user) {
     notFound();
@@ -121,6 +122,7 @@ export default async function UserProfilePage({ params }: PageProps) {
     description: server.description,
     tags: server.tags,
     iconUrl: getPublicUrl(server.iconUrl),
+    favoriteCount: server.favoriteCount,
     isVerified: server.isVerified,
     verifiedAt: server.verifiedAt?.toISOString() ?? null,
     status: buildServerStatusResponse(server),

@@ -237,7 +237,7 @@ export function HomePageClient({
 
       // 9 位纯数字 → UID 跳转
       if (/^\d{9}$/.test(trimmed)) {
-        router.push(`/user/${trimmed}`);
+        router.push(`/u/${trimmed}`);
         return;
       }
 

@@ -112,6 +112,15 @@ export function AuthButtons() {
 
       {open && (
         <div className="m3-surface absolute right-0 top-11 z-50 w-44 p-2">
+          {session.user.uid !== undefined && (
+            <Link
+              href={`/u/${session.user.uid}`}
+              className="block rounded-lg px-3 py-2 text-sm text-warm-800 transition-colors hover:bg-warm-100"
+              onClick={() => setOpen(false)}
+            >
+              我的主页
+            </Link>
+          )}
           <Link
             href="/settings/profile"
             className="block rounded-lg px-3 py-2 text-sm text-warm-800 transition-colors hover:bg-warm-100"
@@ -321,6 +330,15 @@ export function MobileNavMenu() {
                     >
                       通知中心
                     </Link>
+                    {session.user.uid !== undefined && (
+                      <Link
+                        href={`/u/${session.user.uid}`}
+                        className={MOBILE_MENU_LINK_CLASS}
+                        onClick={() => setOpen(false)}
+                      >
+                        我的主页
+                      </Link>
+                    )}
                     <Link
                       href="/settings/profile"
                       className={MOBILE_MENU_LINK_CLASS}
