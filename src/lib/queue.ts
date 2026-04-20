@@ -30,17 +30,39 @@ export function getVerifyJobId(serverId: string, token: string): string {
   return `server-verify-${serverId}-${token}`;
 }
 
-export const pingQueue = new Queue<PingJobData>(PING_QUEUE_NAME, {
-  connection: getRedisConnectionOptions(),
-});
+let pingQueueInstance: Queue<PingJobData> | null = null;
+let verifyQueueInstance: Queue<VerifyJobData> | null = null;
+let verifyQueueEventsInstance: QueueEvents | null = null;
 
-export const verifyQueue = new Queue<VerifyJobData>(VERIFY_QUEUE_NAME, {
-  connection: getRedisConnectionOptions(),
-});
+export function getPingQueue(): Queue<PingJobData> {
+  if (!pingQueueInstance) {
+    pingQueueInstance = new Queue<PingJobData>(PING_QUEUE_NAME, {
+      connection: getRedisConnectionOptions(),
+    });
+  }
 
-export const verifyQueueEvents = new QueueEvents(VERIFY_QUEUE_NAME, {
-  connection: getRedisConnectionOptions(),
-});
+  return pingQueueInstance;
+}
+
+export function getVerifyQueue(): Queue<VerifyJobData> {
+  if (!verifyQueueInstance) {
+    verifyQueueInstance = new Queue<VerifyJobData>(VERIFY_QUEUE_NAME, {
+      connection: getRedisConnectionOptions(),
+    });
+  }
+
+  return verifyQueueInstance;
+}
+
+export function getVerifyQueueEvents(): QueueEvents {
+  if (!verifyQueueEventsInstance) {
+    verifyQueueEventsInstance = new QueueEvents(VERIFY_QUEUE_NAME, {
+      connection: getRedisConnectionOptions(),
+    });
+  }
+
+  return verifyQueueEventsInstance;
+}
 
 export function getQueueConnection() {
   return getRedisConnectionOptions();

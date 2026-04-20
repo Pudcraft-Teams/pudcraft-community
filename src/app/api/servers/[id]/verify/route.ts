@@ -6,7 +6,12 @@ import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { resolveServerCuid } from "@/lib/lookup";
-import { getVerifyJobId, verifyQueue, verifyQueueEvents, type VerifyJobResult } from "@/lib/queue";
+import {
+  getVerifyJobId,
+  getVerifyQueue,
+  getVerifyQueueEvents,
+  type VerifyJobResult,
+} from "@/lib/queue";
 import { serverLookupIdSchema } from "@/lib/validation";
 
 interface RouteContext {
@@ -235,6 +240,9 @@ export async function PATCH(_request: Request, { params }: RouteContext) {
     if (server.verifyExpiresAt.getTime() <= Date.now()) {
       return NextResponse.json({ error: "验证码已过期，请重新获取后再验证" }, { status: 400 });
     }
+
+    const verifyQueue = getVerifyQueue();
+    const verifyQueueEvents = getVerifyQueueEvents();
 
     const job = await verifyQueue.add(
       `verify-${server.id}`,

@@ -1,6 +1,6 @@
 import { db } from "../lib/db";
 import { logger } from "../lib/logger";
-import { getPingJobId, pingQueue } from "../lib/queue";
+import { getPingJobId, getPingQueue } from "../lib/queue";
 
 const PING_INTERVAL_MS = 5 * 60 * 1000;
 const PLUGIN_REPORT_SKIP_MS = 2 * 60 * 1000;
@@ -33,6 +33,7 @@ export async function scheduleAllPings(): Promise<void> {
 
     logger.info("[scheduler] Queueing servers for ping", { count: servers.length });
 
+    const pingQueue = getPingQueue();
     await Promise.all(
       servers.map((server) =>
         pingQueue.add(

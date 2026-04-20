@@ -101,7 +101,7 @@ export const pingWorker = new Worker<PingJobData>(
 
       return result;
     } catch (error) {
-      console.error("[ping-worker] Job failed", {
+      logger.error("[ping-worker] Job failed", {
         serverId,
         address,
         error: error instanceof Error ? error.message : String(error),

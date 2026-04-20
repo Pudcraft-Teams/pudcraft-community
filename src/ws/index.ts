@@ -5,6 +5,7 @@ import Redis from "ioredis";
 import { createHash } from "crypto";
 import { addConnection, removeConnection, getConnections } from "./connections";
 import { db } from "../lib/db";
+import { logger } from "../lib/logger";
 import { getRedisConnectionOptions } from "../lib/redis-config";
 
 const WHITELIST_CHANNEL = "whitelist:change";
@@ -20,6 +21,10 @@ let isWhitelistSubscribed = false;
 
 // Track liveness per socket
 const alive = new WeakMap<WebSocket, boolean>();
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "unknown";
+}
 
 function getBearerToken(authorizationHeader: string | undefined): string | null {
   if (!authorizationHeader) return null;
@@ -101,13 +106,13 @@ httpServer.on("upgrade", (req, socket, head) => {
       });
     })
     .catch((err) => {
-      console.error("[ws] Auth lookup failed:", err);
+      logger.error("[ws] Auth lookup failed", { error: getErrorMessage(err) });
       socket.destroy();
     });
 });
 
 wss.on("connection", (ws: WebSocket, _req: unknown, serverId: string) => {
-  console.log(`[ws] Client connected for server ${serverId}`);
+  logger.info("[ws] Client connected", { serverId });
   addConnection(serverId, ws);
   alive.set(ws, true);
 
@@ -120,12 +125,15 @@ wss.on("connection", (ws: WebSocket, _req: unknown, serverId: string) => {
   });
 
   ws.on("close", () => {
-    console.log(`[ws] Client disconnected from server ${serverId}`);
+    logger.info("[ws] Client disconnected", { serverId });
     removeConnection(serverId, ws);
   });
 
   ws.on("error", (err) => {
-    console.error(`[ws] Socket error for server ${serverId}:`, err);
+    logger.error("[ws] Socket error", {
+      serverId,
+      error: getErrorMessage(err),
+    });
     removeConnection(serverId, ws);
   });
 });
@@ -134,13 +142,16 @@ wss.on("connection", (ws: WebSocket, _req: unknown, serverId: string) => {
 subscriber.subscribe(WHITELIST_CHANNEL, (err) => {
   if (err) {
     isWhitelistSubscribed = false;
-    console.error("[ws] Failed to subscribe to Redis channel:", err);
+    logger.error("[ws] Failed to subscribe to Redis channel", {
+      channel: WHITELIST_CHANNEL,
+      error: getErrorMessage(err),
+    });
     return;
   }
 
   hasEstablishedWhitelistSubscription = true;
   isWhitelistSubscribed = true;
-  console.log(`[ws] Subscribed to Redis channel: ${WHITELIST_CHANNEL}`);
+  logger.info("[ws] Subscribed to Redis channel", { channel: WHITELIST_CHANNEL });
 });
 
 subscriber.on("ready", () => {
@@ -175,7 +186,10 @@ subscriber.on("message", (channel, message) => {
       }
     }
   } catch (err) {
-    console.error("[ws] Failed to process Redis message:", err);
+    logger.error("[ws] Failed to process Redis message", {
+      channel,
+      error: getErrorMessage(err),
+    });
   }
 });
 
@@ -193,12 +207,12 @@ const heartbeat = setInterval(() => {
 
 // --- Start listening ---
 httpServer.listen(WS_PORT, () => {
-  console.log(`[ws] WebSocket server listening on port ${WS_PORT}`);
+  logger.info("[ws] WebSocket server listening", { port: WS_PORT });
 });
 
 // --- Graceful shutdown ---
 function shutdown() {
-  console.log("[ws] Shutting down...");
+  logger.info("[ws] Shutting down");
   clearInterval(heartbeat);
 
   for (const ws of wss.clients) {
@@ -208,16 +222,24 @@ function shutdown() {
   subscriber
     .unsubscribe(WHITELIST_CHANNEL)
     .then(() => subscriber.quit())
-    .catch((err) => console.error("[ws] Redis cleanup error:", err));
+    .catch((err) =>
+      logger.error("[ws] Redis cleanup error", { error: getErrorMessage(err) }),
+    );
 
-  publisher.quit().catch((err) => console.error("[ws] Redis publisher cleanup error:", err));
+  publisher
+    .quit()
+    .catch((err) =>
+      logger.error("[ws] Redis publisher cleanup error", {
+        error: getErrorMessage(err),
+      }),
+    );
 
   wss.close(() => {
     httpServer.close(() => {
       db
         .$disconnect()
         .then(() => {
-          console.log("[ws] Shutdown complete");
+          logger.info("[ws] Shutdown complete");
           process.exit(0);
         })
         .catch(() => {
