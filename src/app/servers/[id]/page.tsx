@@ -7,6 +7,7 @@ import { CopyIdBadge } from "@/components/CopyIdBadge";
 import { CopyServerIpButton } from "@/components/CopyServerIpButton";
 import { CommentSection } from "@/components/CommentSection";
 import { DeleteModpackButton } from "@/components/DeleteModpackButton";
+import { LiveFavoriteCount } from "@/components/LiveFavoriteCount";
 import { ServerDetailActions } from "@/components/ServerDetailActions";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { auth } from "@/lib/auth";
@@ -546,7 +547,9 @@ export default async function ServerDetailPage({ params }: Props) {
           <span className="text-warm-500">
             当前在线 {server.playerCount} / {server.maxPlayers}
           </span>
-          <span className="text-warm-500">{favoriteCount} 人收藏</span>
+          <span className="text-warm-500">
+            <LiveFavoriteCount initialCount={favoriteCount} serverId={server.id} />
+          </span>
           <span className="text-warm-400">最后检测：{lastPingLabel}</span>
         </div>
 
