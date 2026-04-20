@@ -127,6 +127,8 @@ Pudcraft Community 当前定位为一个面向 Minecraft 玩家的 server-only �
 
 ### 4.6 私有服能力
 
+> 当前线上默认通过 `NEXT_PUBLIC_ENABLE_PRIVATE_SERVERS` 功能开关关闭；关闭时不展示申请、邀请码和成员管理入口，对应 API 返回 `404`。
+
 - 可见性模式：`public` / `unlisted` / `private`
 - 加入模式：`open` / `apply` / `invite` / `apply_and_invite`
 - 申请表、审批、邀请、成员移除

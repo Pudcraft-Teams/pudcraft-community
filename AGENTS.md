@@ -112,7 +112,7 @@ Commit message 使用 `<type>: <description>`，如 `feat:` / `fix:` / `refactor
 - `/submit`：提交服务器
 - `/favorites`：我的收藏
 - `/notifications`：通知中心
-- `/user/{id}`：公开用户主页（服务器维度）
+- `/u/{uid}`：公开用户主页（服务器维度）
 - `/settings/profile`：个人资料设置
 - `/login` / `/register` / `/forgot-password`
 - `/changelog`

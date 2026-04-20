@@ -15,15 +15,15 @@ export const metadata: Metadata = {
     template: "%s | PudCraft Community",
   },
   description:
-    "发现优质 Minecraft 服务器，加入圈子，分享动态，和同好一起交流讨论。",
-  keywords: ["Minecraft", "MC服务器", "我的世界", "服务器列表", "圈子", "社区", "MC联机"],
+    "发现优质 Minecraft 服务器，提交、认领、评论与收藏，与服主和玩家一起交流。",
+  keywords: ["Minecraft", "MC服务器", "我的世界", "服务器列表", "社区", "MC联机"],
   authors: [{ name: "PudCraft" }],
   openGraph: {
     type: "website",
     locale: "zh_CN",
     siteName: "PudCraft Community",
     title: "PudCraft Community - Minecraft 服务器与社区广场",
-    description: "发现优质 Minecraft 服务器，加入圈子，分享动态，和同好一起交流讨论。",
+    description: "发现优质 Minecraft 服务器，提交、认领、评论与收藏，与服主和玩家一起交流。",
     url: "https://pudcraft.cn",
   },
   robots: {
