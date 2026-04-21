@@ -8,7 +8,7 @@ import { getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { requireAdmin, isAdminError, translateAdminError } from "@/lib/admin";
 import { adminReportActionSchema } from "@/lib/validation";
-import { createNotification } from "@/lib/notification";
+import { createTranslatedNotification } from "@/lib/notification";
 
 /**
  * PATCH /api/admin/reports/:id — dispose of a report (dismiss / resolve).
@@ -76,15 +76,21 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
     // Notify reporter (non-blocking)
     try {
-      await createNotification({
-        userId: report.reporterId,
-        type: action === "dismiss" ? "report_dismissed" : "report_resolved",
-        title: action === "dismiss" ? "举报已驳回" : "举报已处理",
-        message:
-          action === "dismiss"
-            ? "你提交的举报经审核后未发现违规行为"
-            : "你提交的举报已被管理员处理，感谢你的反馈",
-      });
+      if (action === "dismiss") {
+        await createTranslatedNotification({
+          userId: report.reporterId,
+          type: "report_dismissed",
+          titleKey: "reportDismissedTitle",
+          bodyKey: "reportDismissedBody",
+        });
+      } else {
+        await createTranslatedNotification({
+          userId: report.reporterId,
+          type: "report_resolved",
+          titleKey: "reportResolvedTitle",
+          bodyKey: "reportResolvedBody",
+        });
+      }
     } catch (error) {
       logger.error("[api/admin/reports/[id]] Failed to notify reporter", error);
     }
@@ -116,11 +122,11 @@ async function executeActions(
       switch (act) {
         case "warn": {
           if (!ownerId) break;
-          await createNotification({
+          await createTranslatedNotification({
             userId: ownerId,
             type: "content_warning",
-            title: "内容违规警告",
-            message: "你发布的内容因被举报并经管理员审核，确认存在违规。请注意遵守社区规范，否则可能被进一步处罚。",
+            titleKey: "contentWarningTitle",
+            bodyKey: "contentWarningBody",
           });
           break;
         }
@@ -137,11 +143,12 @@ async function executeActions(
               });
               if (server.ownerId) {
                 try {
-                  await createNotification({
+                  await createTranslatedNotification({
                     userId: server.ownerId,
                     type: "content_takedown",
-                    title: "服务器已被下架",
-                    message: `你的服务器「${server.name}」因违规举报已被下架`,
+                    titleKey: "serverTakedownTitle",
+                    bodyKey: "serverTakedownBody",
+                    params: { serverName: server.name },
                     link: `/servers/${server.psid}`,
                     serverId: server.id,
                   });
@@ -158,11 +165,11 @@ async function executeActions(
             if (comment) {
               await prisma.serverComment.delete({ where: { id: comment.id } });
               try {
-                await createNotification({
+                await createTranslatedNotification({
                   userId: comment.authorId,
                   type: "content_takedown",
-                  title: "评论已被删除",
-                  message: "你发布的评论因违规举报已被管理员删除",
+                  titleKey: "commentTakedownTitle",
+                  bodyKey: "commentTakedownBody",
                 });
               } catch (error) {
                 logger.error("[api/admin/reports/[id]] Failed to notify comment author (takedown)", error);

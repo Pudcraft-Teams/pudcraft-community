@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { resolveServerCuid } from "@/lib/lookup";
-import { createNotification } from "@/lib/notification";
+import { createTranslatedNotification } from "@/lib/notification";
 import { requireAdmin, isAdminError, translateAdminError } from "@/lib/admin";
 import { serverLookupIdSchema, adminServerActionSchema } from "@/lib/validation";
 import { deleteFile, deleteObject } from "@/lib/storage";
@@ -29,28 +29,45 @@ async function createReviewNotification({
 }: ReviewNotificationParams): Promise<void> {
   try {
     if (action === "approve") {
-      await createNotification({
+      await createTranslatedNotification({
         userId: ownerId,
         type: "server_approved",
-        title: "服务器审核通过",
-        message: `你的服务器「${serverName}」已通过审核，现在所有人都可以看到了`,
+        titleKey: "serverApprovedTitle",
+        bodyKey: "serverApprovedBody",
+        params: { serverName },
         link: `/servers/${serverPsid}`,
         serverId,
       });
       return;
     }
 
-    await createNotification({
+    // Translated body key carries `{reason}`; when the admin skipped the
+    // reason we use `serverRejectedBodyFallbackReason` as a placeholder so
+    // the final sentence still reads naturally in the recipient's locale.
+    const resolvedReason =
+      reason ?? (await resolveRejectFallbackReason(ownerId));
+    await createTranslatedNotification({
       userId: ownerId,
       type: "server_rejected",
-      title: "服务器审核未通过",
-      message: `你的服务器「${serverName}」未通过审核：${reason ?? "请联系管理员了解详情"}`,
+      titleKey: "serverRejectedTitle",
+      bodyKey: "serverRejectedBody",
+      params: { serverName, reason: resolvedReason },
       link: "/my-servers",
       serverId,
     });
   } catch (error) {
     logger.error("[api/admin/servers/[id]] Failed to create review notification", error);
   }
+}
+
+async function resolveRejectFallbackReason(ownerId: string): Promise<string> {
+  const user = await prisma.user.findUnique({
+    where: { id: ownerId },
+    select: { locale: true },
+  });
+  const locale = user?.locale === "en" ? "en" : "zh";
+  const t = await getTranslations({ locale, namespace: "notifications.system" });
+  return t("serverRejectedBodyFallbackReason");
 }
 
 /**

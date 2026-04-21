@@ -7,7 +7,7 @@ import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { isPrivateServersEnabled } from "@/lib/features";
 import { logger } from "@/lib/logger";
-import { createNotification } from "@/lib/notification";
+import { createTranslatedNotification } from "@/lib/notification";
 import { resolveServerCuid } from "@/lib/lookup";
 import { publishWhitelistChange } from "@/lib/whitelist-pubsub";
 import { serverLookupIdSchema, serverIdSchema } from "@/lib/validation";
@@ -18,8 +18,9 @@ interface RouteContext {
 
 /**
  * DELETE /api/servers/:id/members/:memberId
- * 移除服务器成员（仅服务器 owner 可操作）。
- * 先发布白名单移除消息（Redis pub/sub），再删除成员记录。
+ * Removes a server member (owner-only).
+ * Publishes the whitelist-remove Redis pub/sub message first, then
+ * deletes the member row.
  */
 export async function DELETE(request: Request, { params }: RouteContext) {
   const locale = await getRequestLocale(request);
@@ -99,11 +100,12 @@ export async function DELETE(request: Request, { params }: RouteContext) {
     });
 
     // Send notification to the removed user (fire-and-forget)
-    void createNotification({
+    void createTranslatedNotification({
       userId: member.userId,
       type: "member_removed",
-      title: "你已被移出服务器",
-      message: `你已被移出「${server.name}」的成员列表`,
+      titleKey: "memberRemovedTitle",
+      bodyKey: "memberRemovedBody",
+      params: { serverName: server.name },
       link: `/servers/${server.psid}`,
       serverId,
     }).catch((notifError) => {

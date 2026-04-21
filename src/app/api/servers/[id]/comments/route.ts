@@ -8,7 +8,7 @@ import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { moderateContent } from "@/lib/moderation";
-import { createNotification } from "@/lib/notification";
+import { createTranslatedNotification } from "@/lib/notification";
 import { rateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 import { canViewServerDetails, isPrivilegedServerViewer } from "@/lib/server-access";
@@ -68,11 +68,12 @@ async function createCommentNotification({
       });
 
       if (parentComment && parentComment.authorId !== actorId) {
-        await createNotification({
+        await createTranslatedNotification({
           userId: parentComment.authorId,
           type: "comment_reply",
-          title: "新的评论回复",
-          message: `${actorName} 回复了你的评论`,
+          titleKey: "commentReplyTitle",
+          bodyKey: "commentReplyBody",
+          params: { actor: actorName },
           link: `/servers/${server.psid}#comment-${commentId}`,
           serverId,
           commentId,
@@ -83,11 +84,12 @@ async function createCommentNotification({
     }
 
     if (server.ownerId && server.ownerId !== actorId) {
-      await createNotification({
+      await createTranslatedNotification({
         userId: server.ownerId,
         type: "comment_reply",
-        title: "新的服务器评论",
-        message: `${actorName} 评论了「${server.name}」`,
+        titleKey: "newCommentTitle",
+        bodyKey: "newCommentBody",
+        params: { actor: actorName, serverName: server.name },
         link: `/servers/${server.psid}#comment-${commentId}`,
         serverId,
         commentId,
@@ -148,7 +150,7 @@ function mapComments(
 
 /**
  * GET /api/servers/:id/comments
- * 获取服务器顶层评论（含一层回复），支持分页。
+ * Returns top-level comments (plus one layer of replies) with pagination.
  */
 export async function GET(request: Request, { params }: RouteContext) {
   const locale = await getRequestLocale(request);
@@ -277,7 +279,7 @@ export async function GET(request: Request, { params }: RouteContext) {
 
 /**
  * POST /api/servers/:id/comments
- * 发表评论或回复（仅支持两层：评论 -> 回复）。
+ * Posts a comment or reply (two-layer max: root comment → reply).
  */
 export async function POST(request: Request, { params }: RouteContext) {
   const locale = await getRequestLocale(request);
@@ -362,7 +364,7 @@ export async function POST(request: Request, { params }: RouteContext) {
 
     const { content, parentId } = parsedBody.data;
 
-    // ─── 内容审查 ───
+    // ─── Content moderation ───
     const modResult = await moderateContent(content, "comment", {
       userId,
       userIp: getClientIp(request),

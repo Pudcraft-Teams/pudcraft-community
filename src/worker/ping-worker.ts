@@ -2,6 +2,7 @@ import { Worker, type Job } from "bullmq";
 import { db } from "../lib/db";
 import { pingServer } from "../lib/mc-ping";
 import { logger } from "../lib/logger";
+import { createTranslatedBulkNotifications } from "../lib/notification";
 import { getRedisConnection } from "../lib/redis";
 import { getQueueConnection, PING_QUEUE_NAME, type PingJobData } from "../lib/queue";
 
@@ -36,16 +37,17 @@ async function notifyServerOnline(
       return;
     }
 
-    await db.serverNotification.createMany({
-      data: favorites.map((favorite) => ({
+    await createTranslatedBulkNotifications(
+      favorites.map((favorite) => ({
         userId: favorite.userId,
         type: "server_online",
-        title: "服务器已上线",
-        message: `你收藏的「${serverName}」已上线`,
+        titleKey: "serverOnlineTitle",
+        bodyKey: "serverOnlineBody",
+        params: { serverName },
         link: `/servers/${serverPsid}`,
         serverId,
       })),
-    });
+    );
   } catch (error) {
     logger.error("[worker] Failed to create server online notifications", {
       serverId,
@@ -55,7 +57,7 @@ async function notifyServerOnline(
 }
 
 /**
- * 消费 server-ping 队列并写入状态结果。
+ * Consumes the server-ping queue and persists ping results.
  */
 export const pingWorker = new Worker<PingJobData>(
   PING_QUEUE_NAME,

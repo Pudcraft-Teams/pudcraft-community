@@ -117,8 +117,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 }
 
 /**
- * 服务器上线通知（从 ping-worker 复用逻辑，1 小时冷却）。
- * 副作用失败只记日志，不阻塞主操作。
+ * Server-online notification (mirrors the ping-worker logic with a 1-hour
+ * cooldown). Side-effect failures are logged only and never block the main
+ * operation.
  */
 async function notifyServerOnline(
   serverId: string,
@@ -140,16 +141,18 @@ async function notifyServerOnline(
 
     if (favorites.length === 0) return;
 
-    await prisma.serverNotification.createMany({
-      data: favorites.map((f) => ({
+    const { createTranslatedBulkNotifications } = await import("@/lib/notification");
+    await createTranslatedBulkNotifications(
+      favorites.map((f) => ({
         userId: f.userId,
         type: "server_online",
-        title: "服务器已上线",
-        message: `你收藏的「${serverName}」已上线`,
+        titleKey: "serverOnlineTitle",
+        bodyKey: "serverOnlineBody",
+        params: { serverName },
         link: `/servers/${serverPsid}`,
         serverId,
       })),
-    });
+    );
   } catch (error) {
     logger.error("[status/report] Failed to create server online notifications", {
       serverId,

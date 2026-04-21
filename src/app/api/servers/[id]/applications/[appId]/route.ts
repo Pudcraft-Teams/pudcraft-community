@@ -10,7 +10,7 @@ import { getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { resolveServerCuid } from "@/lib/lookup";
 import { publishWhitelistChange } from "@/lib/whitelist-pubsub";
-import { createNotification } from "@/lib/notification";
+import { createTranslatedNotification } from "@/lib/notification";
 import { serverLookupIdSchema, serverIdSchema, reviewApplicationSchema } from "@/lib/validation";
 
 interface RouteContext {
@@ -177,11 +177,12 @@ export async function PUT(request: Request, { params }: RouteContext) {
 
       // Create notification for applicant (fire-and-forget)
       try {
-        await createNotification({
+        await createTranslatedNotification({
           userId: application.userId,
           type: "application_approved",
-          title: "入服申请已通过",
-          message: `你的「${server.name}」入服申请已通过`,
+          titleKey: "applicationApprovedTitle",
+          bodyKey: "applicationApprovedBody",
+          params: { serverName: server.name },
           link: `/servers/${server.psid}`,
           serverId: server.id,
         });
@@ -210,14 +211,27 @@ export async function PUT(request: Request, { params }: RouteContext) {
 
     // Create notification for applicant (fire-and-forget)
     try {
-      await createNotification({
-        userId: application.userId,
-        type: "application_rejected",
-        title: "入服申请未通过",
-        message: `你的「${server.name}」入服申请未通过${reviewNote ? `：${reviewNote}` : ""}`,
-        link: `/servers/${server.psid}`,
-        serverId: server.id,
-      });
+      if (reviewNote) {
+        await createTranslatedNotification({
+          userId: application.userId,
+          type: "application_rejected",
+          titleKey: "applicationRejectedTitle",
+          bodyKey: "applicationRejectedBodyWithReason",
+          params: { serverName: server.name, reason: reviewNote },
+          link: `/servers/${server.psid}`,
+          serverId: server.id,
+        });
+      } else {
+        await createTranslatedNotification({
+          userId: application.userId,
+          type: "application_rejected",
+          titleKey: "applicationRejectedTitle",
+          bodyKey: "applicationRejectedBody",
+          params: { serverName: server.name },
+          link: `/servers/${server.psid}`,
+          serverId: server.id,
+        });
+      }
     } catch (err) {
       logger.warn("[api/servers/[id]/applications/[appId]] create reject notification failed", err);
     }
