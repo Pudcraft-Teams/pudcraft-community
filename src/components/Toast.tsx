@@ -75,8 +75,8 @@ function buildToastId(): string {
 }
 
 /**
- * 全局 Toast Provider。
- * 提供 success/error 两种通知，并支持自动消失与手动关闭。
+ * Global toast provider. Exposes success / error notifications with
+ * auto-dismiss and manual close.
  */
 export function ToastProvider({ children }: ToastProviderProps) {
   const [items, setItems] = useState<ToastItem[]>([]);

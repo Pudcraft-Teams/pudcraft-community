@@ -17,8 +17,8 @@ const PLUGIN_CONNECTED_TTL = 60;
 
 /**
  * POST /api/servers/:id/status/report
- * 插件状态上报：更新服务器在线状态、玩家数等信息。
- * Auth via API key (Bearer token).
+ * Plugin status report: updates the server's online state, player counts,
+ * and related info. Auth via API key (Bearer token).
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const locale = await getRequestLocale(request);

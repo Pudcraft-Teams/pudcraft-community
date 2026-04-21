@@ -10,8 +10,9 @@ interface ProvidersProps {
 }
 
 /**
- * 全局客户端 Provider 容器。
- * 目前用于注入 NextAuth SessionProvider。
+ * Global client-side provider tree.
+ * Currently wires NextAuth SessionProvider plus the shared Confirm/Toast
+ * primitives.
  */
 export function Providers({ children }: ProvidersProps) {
   return (
