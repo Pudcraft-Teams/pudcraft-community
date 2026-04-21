@@ -1,12 +1,14 @@
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { EmptyState } from "@/components/EmptyState";
 import { FavoritesPageClient } from "@/components/FavoritesPageClient";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { loadUserFavoriteServers } from "@/lib/userFavorites";
 
 export default async function FavoritesPage() {
+  const t = await getTranslations("favorites.page");
   const authResult = await requireActiveUser();
   if (isActiveUserError(authResult) && authResult.response.status === 401) {
     redirect("/login?callbackUrl=%2Ffavorites");
@@ -15,8 +17,8 @@ export default async function FavoritesPage() {
   if (isActiveUserError(authResult)) {
     return (
       <EmptyState
-        title="账号已被封禁"
-        description="你的账号当前无法查看收藏的服务器"
+        title={t("bannedTitle")}
+        description={t("bannedDescription")}
       />
     );
   }
@@ -27,9 +29,9 @@ export default async function FavoritesPage() {
     <div>
       <section className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight text-warm-800">
-          我的收藏
+          {t("heading")}
         </h1>
-        <p className="mt-1.5 text-sm text-warm-500">收藏的服务器都在这里</p>
+        <p className="mt-1.5 text-sm text-warm-500">{t("subtitle")}</p>
       </section>
 
       <FavoritesPageClient initialServers={servers} />

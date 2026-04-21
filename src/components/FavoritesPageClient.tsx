@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { EmptyState } from "@/components/EmptyState";
@@ -12,14 +13,15 @@ interface FavoritesPageClientProps {
 }
 
 export function FavoritesPageClient({ initialServers }: FavoritesPageClientProps) {
+  const t = useTranslations("favorites.page");
   const [servers, setServers] = useState(initialServers);
 
   if (servers.length === 0) {
     return (
       <EmptyState
-        title="暂无收藏的服务器"
-        description="浏览服务器列表，点击星标收藏"
-        action={{ label: "去发现服务器", href: "/servers" }}
+        title={t("emptyTitle")}
+        description={t("emptyDescription")}
+        action={{ label: t("emptyCtaLabel"), href: "/servers" }}
       />
     );
   }
