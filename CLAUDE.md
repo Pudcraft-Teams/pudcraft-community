@@ -12,6 +12,25 @@ Pudcraft Community is currently a server-only Minecraft server community platfor
 - `docs/API.md` and `docs/PRD.md` are the live documents. Older design drafts or forum-era planning docs (no longer tracked in this branch; some may exist locally under `docs/plans/` or `docs/superpowers/` but are gitignored) are archival only and do not override current behavior.
 - Dependency upgrade policy is in `docs/dependency-pins.md`. The rule: keep the live runtime stack fresh, retain only the few pins that still have a real migration cost.
 
+## Written output language
+
+Default all written output that lands in the repo or on GitHub to **English**:
+
+- Commit messages (subject and body)
+- Pull request titles and descriptions
+- GitHub issue / PR / review comments
+- Documentation (`.md` files, including inline code fences)
+- Code comments, TODOs, JSDoc
+- Log statements and internal error messages (`logger.*`, thrown `Error` messages)
+- Branch names
+
+Exceptions — keep as-is, do not rewrite:
+
+- Interactive conversation with the user (reply in whatever language the user writes in)
+- User-facing UI strings and API error responses visible to end users (these are product copy; change them only when the task is about copy)
+- Existing quoted content, screenshots, or data samples inside docs
+- Third-party content (upstream changelogs, dependency notes, vendor docs)
+
 ## Product scope
 
 Current live scope:
