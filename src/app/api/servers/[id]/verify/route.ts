@@ -2,6 +2,8 @@ export const dynamic = "force-dynamic";
 
 import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -51,9 +53,9 @@ function generateVerifyToken(): string {
   return `pudcraft-${suffix}`;
 }
 
-function parseVerifyJobResult(raw: unknown): VerifyJobResult {
+function parseVerifyJobResult(raw: unknown, invalidReason: string): VerifyJobResult {
   if (typeof raw !== "object" || raw === null) {
-    return { success: false, reason: "验证任务返回了无效结果" };
+    return { success: false, reason: invalidReason };
   }
 
   const payload = raw as Record<string, unknown>;
@@ -88,7 +90,10 @@ async function findServerById(serverId: string): Promise<VerifyServer | null> {
  * 发起认领，生成 30 分钟有效期的 MOTD 验证 Token。
  * 任意登录用户都可发起；验证通过后 owner 会转移到发起者。
  */
-export async function POST(_request: Request, { params }: RouteContext) {
+export async function POST(request: Request, { params }: RouteContext) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -99,24 +104,24 @@ export async function POST(_request: Request, { params }: RouteContext) {
     const { id } = await params;
     const parsedServerId = serverLookupIdSchema.safeParse(id);
     if (!parsedServerId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const serverId = await resolveServerCuid(parsedServerId.data);
     if (!serverId) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const server = await findServerById(serverId);
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const token = generateVerifyToken();
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
     const currentOwnerHint =
       server.ownerId && server.ownerId !== userId
-        ? "该服务器已有管理员，认领成功后所有权将转移给你"
+        ? tServers("verifyCurrentOwnerHint")
         : null;
 
     await prisma.server.update({
@@ -131,12 +136,12 @@ export async function POST(_request: Request, { params }: RouteContext) {
     return NextResponse.json({
       token,
       expiresAt: expiresAt.toISOString(),
-      instruction: "请将此 Token 添加到服务器 MOTD 中",
+      instruction: tServers("verifyInstruction"),
       currentOwner: currentOwnerHint,
     });
   } catch (error) {
     logger.error("[api/servers/[id]/verify] Unexpected POST error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
 
@@ -145,7 +150,10 @@ export async function POST(_request: Request, { params }: RouteContext) {
  * 查询当前服务器认领状态与验证码信息。
  * 仅向验证码发起者返回 verifyToken，避免泄漏。
  */
-export async function GET(_request: Request, { params }: RouteContext) {
+export async function GET(request: Request, { params }: RouteContext) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -156,17 +164,17 @@ export async function GET(_request: Request, { params }: RouteContext) {
     const { id } = await params;
     const parsedServerId = serverLookupIdSchema.safeParse(id);
     if (!parsedServerId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const serverId = await resolveServerCuid(parsedServerId.data);
     if (!serverId) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const server = await findServerById(serverId);
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const isCurrentOwner = !!server.ownerId && server.ownerId === userId;
@@ -194,7 +202,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
     });
   } catch (error) {
     logger.error("[api/servers/[id]/verify] Unexpected GET error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
 
@@ -202,7 +210,10 @@ export async function GET(_request: Request, { params }: RouteContext) {
  * PATCH /api/servers/:id/verify
  * 触发 BullMQ 验证任务，并等待最多 15 秒返回验证结果。
  */
-export async function PATCH(_request: Request, { params }: RouteContext) {
+export async function PATCH(request: Request, { params }: RouteContext) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -213,32 +224,32 @@ export async function PATCH(_request: Request, { params }: RouteContext) {
     const { id } = await params;
     const parsedServerId = serverLookupIdSchema.safeParse(id);
     if (!parsedServerId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const serverId = await resolveServerCuid(parsedServerId.data);
     if (!serverId) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const server = await findServerById(serverId);
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     if (!server.verifyToken || !server.verifyExpiresAt || !server.verifyUserId) {
-      return NextResponse.json({ error: "请先获取验证码后再验证" }, { status: 400 });
+      return NextResponse.json({ error: tServers("verifyTokenRequired") }, { status: 400 });
     }
 
     if (server.verifyUserId !== userId) {
       return NextResponse.json(
-        { error: "验证码不是你生成的，请重新获取后再验证" },
+        { error: tServers("verifyTokenNotYours") },
         { status: 403 },
       );
     }
 
     if (server.verifyExpiresAt.getTime() <= Date.now()) {
-      return NextResponse.json({ error: "验证码已过期，请重新获取后再验证" }, { status: 400 });
+      return NextResponse.json({ error: tServers("verifyTokenExpired") }, { status: 400 });
     }
 
     const verifyQueue = getVerifyQueue();
@@ -261,7 +272,7 @@ export async function PATCH(_request: Request, { params }: RouteContext) {
     );
 
     const rawResult = await job.waitUntilFinished(verifyQueueEvents, 15_000);
-    const result = parseVerifyJobResult(rawResult);
+    const result = parseVerifyJobResult(rawResult, tServers("verifyInvalidResult"));
 
     if (result.success) {
       const ownershipTransferred = !!server.ownerId && server.ownerId !== userId;
@@ -269,8 +280,8 @@ export async function PATCH(_request: Request, { params }: RouteContext) {
         success: true,
         verified: true,
         message: ownershipTransferred
-          ? "验证通过！你已成为该服务器的新管理员。"
-          : "验证通过！你已成功认领该服务器。",
+          ? tServers("verifySuccessNewOwner")
+          : tServers("verifySuccessClaimed"),
       });
     }
 
@@ -278,8 +289,8 @@ export async function PATCH(_request: Request, { params }: RouteContext) {
       {
         success: false,
         verified: false,
-        message: "验证未通过",
-        reason: result.reason ?? "MOTD 中未找到验证码",
+        message: tServers("verifyFailedGeneric"),
+        reason: result.reason ?? tServers("verifyReasonNoToken"),
       },
       { status: 400 },
     );
@@ -291,7 +302,7 @@ export async function PATCH(_request: Request, { params }: RouteContext) {
       return NextResponse.json(
         {
           success: false,
-          message: "验证超时，请确认 Worker 已运行后重试",
+          message: tServers("verifyTimeout"),
         },
         { status: 504 },
       );
@@ -300,6 +311,6 @@ export async function PATCH(_request: Request, { params }: RouteContext) {
     logger.error("[api/servers/[id]/verify] Unexpected PATCH error", {
       error: resolveErrorMessage(error),
     });
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

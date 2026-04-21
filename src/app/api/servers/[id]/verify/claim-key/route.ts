@@ -1,6 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { generateApiKey } from "@/lib/api-key";
 import { prisma } from "@/lib/db";
@@ -15,9 +17,12 @@ const CLAIM_KEY_TTL_MS = 30 * 60 * 1000; // 30 分钟
  * 查询插件认领状态（需登录）。
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -28,12 +33,12 @@ export async function GET(
     const { id } = await params;
     const parsedId = serverLookupIdSchema.safeParse(id);
     if (!parsedId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const cuid = await resolveServerCuid(parsedId.data);
     if (!cuid) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const server = await prisma.server.findUnique({
@@ -50,7 +55,7 @@ export async function GET(
     });
 
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const isCurrentClaimUser = server.verifyUserId === userId;
@@ -69,7 +74,7 @@ export async function GET(
     });
   } catch (err) {
     logger.error("[api/servers/[id]/verify/claim-key] Unexpected GET error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
 
@@ -79,9 +84,13 @@ export async function GET(
  * 认领成功后该密钥直接成为服务器 API Key，无需再次获取。
  */
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
+  const tAuth = await getTranslations({ locale, namespace: "errors.api.auth" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -92,12 +101,12 @@ export async function POST(
     const { id } = await params;
     const parsedId = serverLookupIdSchema.safeParse(id);
     if (!parsedId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const cuid = await resolveServerCuid(parsedId.data);
     if (!cuid) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const server = await prisma.server.findUnique({
@@ -111,11 +120,11 @@ export async function POST(
     });
 
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     if (server.ownerId && server.ownerId !== userId) {
-      return NextResponse.json({ error: "无权限" }, { status: 403 });
+      return NextResponse.json({ error: tAuth("forbidden") }, { status: 403 });
     }
 
     if (
@@ -124,7 +133,7 @@ export async function POST(
       server.verifyExpiresAt &&
       server.verifyExpiresAt > new Date()
     ) {
-      return NextResponse.json({ error: "已有其他用户正在进行认领" }, { status: 409 });
+      return NextResponse.json({ error: tServers("claimKeyConflict") }, { status: 409 });
     }
 
     const { raw, hash } = generateApiKey();
@@ -145,10 +154,10 @@ export async function POST(
       success: true,
       claimKey: raw,
       expiresAt: expiresAt.toISOString(),
-      message: "认领密钥已生成，请妥善保存。认领成功后此密钥将成为服务器 API Key。",
+      message: tServers("claimKeyGenerated"),
     });
   } catch (err) {
     logger.error("[api/servers/[id]/verify/claim-key] Unexpected POST error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
