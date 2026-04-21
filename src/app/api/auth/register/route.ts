@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { getRequestLocale } from "@/i18n/locale";
 import { db } from "@/lib/db";
+import { flattenZodErrorWithLocale } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { generateAndReserveUid } from "@/lib/numeric-id";
 import { getClientIp } from "@/lib/request-ip";
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
     const parsed = registerSchema.safeParse(rawBody);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: tCommon("validationFailed"), details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
         { status: 400 },
       );
     }

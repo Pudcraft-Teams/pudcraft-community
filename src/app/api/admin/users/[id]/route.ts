@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getRequestLocale } from "@/i18n/locale";
 import { prisma } from "@/lib/db";
-import { getZodErrorMap } from "@/lib/i18nZod";
+import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { resolveUserCuid } from "@/lib/lookup";
 import { requireAdmin, isAdminError, translateAdminError } from "@/lib/admin";
@@ -48,7 +48,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     });
     if (!parsed.success) {
       return NextResponse.json(
-        { error: tCommon("validationFailed"), details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
         { status: 400 },
       );
     }

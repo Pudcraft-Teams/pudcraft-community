@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { z } from "zod";
-import { getZodErrorMap } from "./i18nZod";
+import { flattenZodErrorWithLocale, getZodErrorMap, translateZodIssues } from "./i18nZod";
 
 test("getZodErrorMap(zh): string too_small uses length copy", () => {
   const errorMap = getZodErrorMap("zh");
@@ -54,6 +54,41 @@ test("getZodErrorMap(en): returns a working map (no runtime errors)", () => {
   const errorMap = getZodErrorMap("en");
   const result = z.string().min(1).safeParse("", { errorMap });
   assert.equal(result.success, false);
+});
+
+test("translateZodIssues: resolves errors.validation.* key paths", () => {
+  const schema = z.string().min(3, "errors.validation.servers.mcUsernameMin");
+  const result = schema.safeParse("ab");
+  assert.equal(result.success, false);
+  if (!result.success) {
+    const translated = translateZodIssues(result.error.issues, "zh");
+    assert.equal(translated[0].message, "MC 用户名至少 3 个字符");
+  }
+});
+
+test("translateZodIssues: passes non-key messages through", () => {
+  const schema = z.string().min(3, "custom literal");
+  const result = schema.safeParse("ab");
+  assert.equal(result.success, false);
+  if (!result.success) {
+    const translated = translateZodIssues(result.error.issues, "zh");
+    assert.equal(translated[0].message, "custom literal");
+  }
+});
+
+test("flattenZodErrorWithLocale: translates field-level key messages", () => {
+  const schema = z.object({
+    host: z.string().min(1, "errors.validation.servers.hostRequired"),
+  });
+  const result = schema.safeParse({ host: "" });
+  assert.equal(result.success, false);
+  if (!result.success) {
+    const flat = flattenZodErrorWithLocale(result.error, "zh");
+    assert.ok(
+      flat.fieldErrors.host?.includes("主机地址不能为空"),
+      `expected translated field error, got: ${JSON.stringify(flat.fieldErrors)}`,
+    );
+  }
 });
 
 test("getZodErrorMap: independent instances do not share state", () => {

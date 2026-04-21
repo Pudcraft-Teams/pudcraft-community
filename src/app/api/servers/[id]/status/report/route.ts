@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getRequestLocale } from "@/i18n/locale";
 import { prisma } from "@/lib/db";
-import { getZodErrorMap } from "@/lib/i18nZod";
+import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { authenticatePlugin } from "@/lib/plugin-auth";
 import { getRedisConnection } from "@/lib/redis";
@@ -48,10 +48,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!parsed.success) {
       logger.warn("[api/servers/[id]/status/report] Validation failed", {
         body,
-        errors: parsed.error.flatten(),
+        errors: flattenZodErrorWithLocale(parsed.error, locale),
       });
       return NextResponse.json(
-        { error: tCommon("validationFailed"), details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
         { status: 400 },
       );
     }

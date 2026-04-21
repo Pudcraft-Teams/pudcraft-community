@@ -5,7 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { getRequestLocale } from "@/i18n/locale";
 import type { Locale } from "@/i18n/config";
 import { prisma } from "@/lib/db";
-import { getZodErrorMap } from "@/lib/i18nZod";
+import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { requireAdmin, isAdminError, translateAdminError } from "@/lib/admin";
 import { adminReportActionSchema } from "@/lib/validation";
@@ -50,7 +50,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     });
     if (!parsed.success) {
       return NextResponse.json(
-        { error: tCommon("validationFailed"), details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
         { status: 400 },
       );
     }

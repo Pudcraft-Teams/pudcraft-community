@@ -68,7 +68,56 @@
       "invalidEmail": "邮箱格式不正确",
       "invalidUrl": "链接格式不正确",
       "invalidEnum": "取值不在允许范围内",
-      "custom": "校验失败"
+      "custom": "校验失败",
+      "servers": {
+        "hostRequired": "主机地址不能为空",
+        "hostTooLong": "主机地址过长",
+        "hostFormat": "无效的主机地址格式",
+        "hostBlocked": "不允许使用本地或内网地址",
+        "portMin": "端口号最小为 1",
+        "portMax": "端口号最大为 65535",
+        "invalidId": "无效的服务器 ID",
+        "invalidUserId": "无效的用户 ID",
+        "nameMin": "名称至少 2 个字符",
+        "nameMax": "名称最多 50 个字符",
+        "versionRequired": "请输入游戏版本",
+        "tagsMin": "至少选择 1 个服务器类型",
+        "tagsMax": "服务器类型最多 10 个",
+        "tagLengthMax": "服务器类型长度不能超过 20",
+        "descriptionMax": "简介最多 200 字",
+        "contentMax": "详细介绍最多 10000 字",
+        "qqGroupFormat": "QQ 群号格式不正确",
+        "mcUsernameMin": "MC 用户名至少 3 个字符",
+        "mcUsernameMax": "MC 用户名最多 16 个字符",
+        "mcUsernameFormat": "MC 用户名只能包含字母、数字和下划线"
+      },
+      "auth": {
+        "passwordMin": "密码至少 8 位",
+        "passwordRequired": "请输入密码",
+        "codeLength": "验证码为 6 位数字"
+      },
+      "comments": {
+        "contentRequired": "评论内容不能为空",
+        "contentMax": "评论最多 1000 字"
+      },
+      "notifications": {
+        "idsRequired": "至少传入一条通知 ID"
+      },
+      "user": {
+        "nameMin": "昵称至少 2 个字符",
+        "nameMax": "昵称最多 20 个字符",
+        "bioMax": "简介最多 200 字"
+      },
+      "modpacks": {
+        "versionMax": "版本号最多 64 个字符",
+        "gameVersionMax": "游戏版本最多 32 个字符"
+      },
+      "changelog": {
+        "titleRequired": "标题不能为空",
+        "titleMax": "标题最多 100 字",
+        "contentRequired": "内容不能为空",
+        "contentMax": "内容最多 20000 字"
+      }
     },
     "api": {
       "internal": "服务器内部错误",

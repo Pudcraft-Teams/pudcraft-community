@@ -8,6 +8,7 @@ import { getRequestLocale } from "@/i18n/locale";
 import { auth } from "@/lib/auth";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
+import { flattenZodErrorWithLocale } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { generateAndReservePsid } from "@/lib/numeric-id";
 import { getClientIp } from "@/lib/request-ip";
@@ -98,7 +99,7 @@ export async function GET(request: Request) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: tCommon("validationFailed"), details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
         { status: 400 },
       );
     }
@@ -267,7 +268,7 @@ export async function POST(request: Request) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: tCommon("validationFailed"), details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
         { status: 400 },
       );
     }

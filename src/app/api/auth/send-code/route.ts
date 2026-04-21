@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { getTranslations } from "next-intl/server";
 import { NextResponse } from "next/server";
 import { getRequestLocale } from "@/i18n/locale";
+import { flattenZodErrorWithLocale } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { sendVerificationCode } from "@/lib/mail";
 import { getClientIp } from "@/lib/request-ip";
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
     const parsed = sendCodeSchema.safeParse(rawBody);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: tCommon("validationFailed"), details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
         { status: 400 },
       );
     }
