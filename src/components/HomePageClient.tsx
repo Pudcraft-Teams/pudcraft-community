@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import { EmptyState } from "@/components/EmptyState";
 import { PageLoading } from "@/components/PageLoading";
 import { Pagination } from "@/components/Pagination";
@@ -13,7 +14,19 @@ import { useToast } from "@/hooks/useToast";
 import { buildServerListPath, type ServerSort } from "@/lib/serverListQuery";
 import type { ServerListItem } from "@/lib/types";
 
-const TAG_FILTERS = ["全部", "生存", "创造", "RPG", "PVP", "科技", "模组", "空岛"];
+const TAG_FILTER_KEYS = [
+  "tagAll",
+  "tagSurvival",
+  "tagCreative",
+  "tagRpg",
+  "tagPvp",
+  "tagTech",
+  "tagMod",
+  "tagSkyblock",
+] as const;
+
+// Raw tag values used as API filter params. Keep aligned with TAG_FILTER_KEYS.
+const TAG_FILTER_VALUES = ["全部", "生存", "创造", "RPG", "PVP", "科技", "模组", "空岛"];
 const DEFAULT_LIMIT = 12;
 
 interface HomePageClientProps {
@@ -58,6 +71,7 @@ export function HomePageClient({
   const router = useRouter();
   const { status } = useSession();
   const { toast } = useToast();
+  const t = useTranslations("servers.list");
   const [servers, setServers] = useState<ServerListItem[]>(initialServers);
   const [loading, setLoading] = useState(false);
   const [totalPages, setTotalPages] = useState(Math.max(1, initialTotalPages));
@@ -71,7 +85,7 @@ export function HomePageClient({
 
   const skipFirstFetchRef = useRef(true);
 
-  const activeTag = query.tag || "全部";
+  const activeTag = query.tag || TAG_FILTER_VALUES[0];
   const buildUrl = useCallback((nextQuery: QueryState) => {
     return `${basePath}${buildServerListPath(nextQuery)}`;
   }, [basePath]);
@@ -142,7 +156,7 @@ export function HomePageClient({
 
         const response = await fetch(`/api/servers?${params.toString()}`);
         if (!response.ok) {
-          throw new Error("服务器列表加载失败");
+          throw new Error(t("loadFailed"));
         }
 
         const payload = (await response.json()) as ServersResponse;
@@ -167,7 +181,7 @@ export function HomePageClient({
         if (!cancelled) {
           setServers([]);
           setTotalPages(1);
-          toast.error("服务器列表加载失败，请稍后重试");
+          toast.error(t("loadFailedToast"));
         }
       } finally {
         if (!cancelled) {
@@ -181,7 +195,7 @@ export function HomePageClient({
     return () => {
       cancelled = true;
     };
-  }, [query.page, query.search, query.sort, query.tag, toast]);
+  }, [query.page, query.search, query.sort, query.tag, t, toast]);
 
   useEffect(() => {
     if (status !== "authenticated") {
@@ -253,29 +267,33 @@ export function HomePageClient({
       {/* Hero — 精简：只保留文案和搜索 */}
       <section className="mb-8 pt-2">
         <h1 className="text-2xl font-bold tracking-tight text-warm-800">
-          发现 Minecraft 服务器
+          {t("heroTitle")}
         </h1>
-        <p className="mt-1.5 text-sm text-warm-500">
-          浏览国内优质私人服务器，找到志同道合的玩家
-        </p>
+        <p className="mt-1.5 text-sm text-warm-500">{t("heroSubtitle")}</p>
 
         <div className="mt-5 max-w-lg">
           <SearchBar onSearch={handleSearch} initialValue={query.search} />
         </div>
 
         <div className="scrollbar-hide mt-3 flex gap-1.5 overflow-x-auto pb-1">
-          {TAG_FILTERS.map((tag) => (
-            <button
-              key={tag}
-              type="button"
-              onClick={() => {
-                updateQuery({ tag: tag === "全部" ? "" : tag }, { resetPage: true });
-              }}
-              className={`m3-chip ${tag === activeTag ? "m3-chip-active" : ""}`}
-            >
-              {tag}
-            </button>
-          ))}
+          {TAG_FILTER_KEYS.map((key, index) => {
+            const value = TAG_FILTER_VALUES[index];
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => {
+                  updateQuery(
+                    { tag: value === TAG_FILTER_VALUES[0] ? "" : value },
+                    { resetPage: true },
+                  );
+                }}
+                className={`m3-chip ${value === activeTag ? "m3-chip-active" : ""}`}
+              >
+                {t(key)}
+              </button>
+            );
+          })}
         </div>
       </section>
 
@@ -292,7 +310,7 @@ export function HomePageClient({
       {loading ? (
         <PageLoading />
       ) : servers.length === 0 ? (
-        <EmptyState title="暂无服务器" description="试试其他筛选条件或搜索关键词" />
+        <EmptyState title={t("emptyTitle")} description={t("emptyDescription")} />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {servers.map((server, index) => (

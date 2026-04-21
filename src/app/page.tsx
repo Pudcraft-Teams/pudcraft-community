@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { HomePageClient } from "@/components/HomePageClient";
 import { auth } from "@/lib/auth";
 import { serializeJsonForScript } from "@/lib/json";
@@ -11,10 +13,13 @@ export const dynamic = "force-dynamic";
 
 const SITE_URL = "https://pudcraft.cn";
 
-export const metadata = {
-  title: "发现 Minecraft 服务器",
-  description: "浏览国内优质 Minecraft 服务器，找到适合你的社区。",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("servers.list");
+  return {
+    title: t("metaHomeTitle"),
+    description: t("metaHomeDescription"),
+  };
+}
 
 interface HomePageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -24,6 +29,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const rawSearchParams = await searchParams;
   const query = parseServerListQuery(rawSearchParams);
   const session = await auth();
+  const t = await getTranslations("servers.list");
 
   let servers: ServerListItem[] = [];
   let totalPages = 1;
@@ -44,7 +50,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     "@type": "WebSite",
     name: "PudCraft Community",
     url: SITE_URL,
-    description: "PudCraft Minecraft 服务器社区，浏览服务器、筛选标签、搜索关键词",
+    description: t("websiteSchemaDescription"),
     potentialAction: {
       "@type": "SearchAction",
       target: `${SITE_URL}/servers?search={search_term_string}`,

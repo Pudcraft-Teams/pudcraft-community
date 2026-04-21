@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
@@ -39,6 +41,8 @@ function buildPageItems(currentPage: number, totalPages: number): PageItem[] {
 }
 
 export function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
+  const t = useTranslations("servers.list");
+
   if (totalPages <= 1) {
     return null;
   }
@@ -46,7 +50,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
   const pageItems = buildPageItems(currentPage, totalPages);
 
   return (
-    <nav className="mt-8" aria-label="分页导航">
+    <nav className="mt-8" aria-label={t("paginationNavLabel")}>
       <div className="flex items-center justify-center gap-4 sm:hidden">
         <button
           type="button"
@@ -54,7 +58,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
           disabled={currentPage <= 1}
           className="m3-btn m3-btn-tonal rounded-lg px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          上一页
+          {t("paginationPrev")}
         </button>
         <span className="text-sm text-warm-600">
           {currentPage} / {totalPages}
@@ -65,7 +69,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
           disabled={currentPage >= totalPages}
           className="m3-btn m3-btn-tonal rounded-lg px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          下一页
+          {t("paginationNext")}
         </button>
       </div>
 
@@ -76,7 +80,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
           disabled={currentPage <= 1}
           className="m3-btn m3-btn-tonal rounded-lg px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          上一页
+          {t("paginationPrev")}
         </button>
 
         {pageItems.map((item, index) => {
@@ -110,7 +114,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
           disabled={currentPage >= totalPages}
           className="m3-btn m3-btn-tonal rounded-lg px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          下一页
+          {t("paginationNext")}
         </button>
       </div>
     </nav>

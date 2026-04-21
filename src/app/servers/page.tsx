@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { HomePageClient } from "@/components/HomePageClient";
 import { auth } from "@/lib/auth";
 import {
@@ -8,10 +10,13 @@ import type { ServerListItem } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = {
-  title: "服务器列表",
-  description: "浏览国内优质 Minecraft 私人服务器，找到适合你的社区。",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("servers.list");
+  return {
+    title: t("metaListTitle"),
+    description: t("metaListDescription"),
+  };
+}
 
 interface ServersPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
