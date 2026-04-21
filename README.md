@@ -1,66 +1,66 @@
 # Pudcraft Community
 
-Minecraft 服务器社区平台。用户可以浏览、提交、认领、评论、收藏服务器，并下载服务器公开发布的整合包。
+A Minecraft server community platform. Players can browse, submit, claim, comment on, and favorite servers, as well as download modpacks that server owners publish.
 
-## 技术栈
+## Stack
 
-- Next.js 16（App Router）+ React 19 + TypeScript 5（strict）
+- Next.js 16 (App Router) + React 19 + TypeScript 5 (strict)
 - Tailwind CSS 3
 - PostgreSQL + Prisma ORM
-- NextAuth v5（Credentials + JWT Session）
+- NextAuth v5 (Credentials + JWT session)
 - Redis + BullMQ
-- 独立 WebSocket 服务（白名单同步推送）
+- Standalone WebSocket service (whitelist-sync push)
 - Nodemailer
 - Zod
 - pnpm
 
-## 本地开发
+## Local development
 
-### 前置要求
+### Prerequisites
 
 - Node.js 20.9+
 - pnpm 10+
-- Docker 与 Docker Compose
+- Docker and Docker Compose
 
-### 1. 安装依赖
+### 1. Install dependencies
 
 ```bash
 pnpm install
 ```
 
-`postinstall` 会自动执行 `prisma generate`。
+`postinstall` will run `prisma generate` automatically.
 
-### 2. 启动 PostgreSQL 与 Redis
+### 2. Start PostgreSQL and Redis
 
 ```bash
 docker compose up -d
 docker compose ps
 ```
 
-默认端口：
+Default ports:
 
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
 
-### 3. 配置环境变量
+### 3. Configure environment variables
 
 ```bash
 cp .env.example .env
 ```
 
-本地开发可直接使用 `.env.example` 中的默认值；生产环境请改为真实密钥和服务地址。
+For local development the defaults in `.env.example` work as-is; in production use real secrets and service endpoints.
 
-### 4. 初始化数据库
+### 4. Initialize the database
 
 ```bash
 pnpm db:migrate --name init_local
 ```
 
-后续模型变更也使用 Prisma migration，不要在生产环境使用 `db push`。
+Use Prisma migrations for subsequent schema changes. Never use `db push` in production.
 
-### 5. 启动应用与 Worker
+### 5. Start the app and worker
 
-开发时需要两个终端：
+Two terminals in development:
 
 ```bash
 pnpm dev
@@ -70,51 +70,51 @@ pnpm dev
 pnpm worker:dev
 ```
 
-Web 负责页面和 API，Worker 负责 Minecraft 状态探测与认领验证任务。
+`web` serves pages and APIs; `worker` runs Minecraft-status probing and claim verification jobs.
 
-## 常用命令
+## Common commands
 
-| 命令                            | 说明                        |
-| ------------------------------- | --------------------------- |
-| `pnpm dev`                      | 启动 Next.js 开发服务器     |
-| `pnpm build`                    | 构建生产版本                |
-| `pnpm start`                    | 启动生产服务器              |
-| `pnpm lint`                     | 运行 ESLint 检查            |
-| `pnpm format`                   | 使用 Prettier 格式化 `src/` |
-| `pnpm format:check`             | 检查 `src/` 的格式是否规范  |
-| `pnpm db:migrate --name <name>` | 创建并执行 Prisma 迁移      |
-| `pnpm db:generate`              | 重新生成 Prisma Client      |
-| `pnpm db:studio`                | 打开 Prisma Studio          |
-| `pnpm db:push`                  | 仅开发调试时直接同步 Schema |
-| `pnpm worker`                   | 启动 Worker                 |
-| `pnpm worker:dev`               | 以 watch 模式启动 Worker    |
-| `pnpm ws`                       | 启动白名单同步 WebSocket 服务 |
-| `pnpm ws:dev`                   | 以 watch 模式启动 WebSocket 服务 |
-| `pnpm test`                     | 运行 `tsx --test` 测试套件  |
-| `pnpm sync:favorite-counts`     | 同步修正收藏计数            |
-| `pnpm storage:check`            | 检查对象存储行为            |
+| Command                         | Description                                |
+| ------------------------------- | ------------------------------------------ |
+| `pnpm dev`                      | Start the Next.js dev server               |
+| `pnpm build`                    | Build production bundle                    |
+| `pnpm start`                    | Run the production server                  |
+| `pnpm lint`                     | Run ESLint                                 |
+| `pnpm format`                   | Format `src/` with Prettier                |
+| `pnpm format:check`             | Check `src/` formatting                    |
+| `pnpm db:migrate --name <name>` | Create and apply a Prisma migration        |
+| `pnpm db:generate`              | Regenerate the Prisma client               |
+| `pnpm db:studio`                | Open Prisma Studio                         |
+| `pnpm db:push`                  | Dev-only quick schema sync                 |
+| `pnpm worker`                   | Start the worker                           |
+| `pnpm worker:dev`               | Start the worker in watch mode             |
+| `pnpm ws`                       | Start the whitelist-sync WebSocket service |
+| `pnpm ws:dev`                   | Start the WebSocket service in watch mode  |
+| `pnpm test`                     | Run the `tsx --test` test suite            |
+| `pnpm sync:favorite-counts`     | Reconcile favorite counts                  |
+| `pnpm storage:check`            | Check object-storage behavior              |
 
-## 核心环境变量
+## Core environment variables
 
-### 基础配置
+### Basic
 
-| 变量              | 说明                                                       |
-| ----------------- | ---------------------------------------------------------- |
-| `DATABASE_URL`    | PostgreSQL 连接串                                          |
-| `NEXTAUTH_SECRET` | NextAuth 密钥                                              |
-| `NEXTAUTH_URL`    | 生产自托管时建议显式配置                                   |
-| `LOG_LEVEL`       | `debug` / `info` / `warn` / `error`，非法值会回退到 `info` |
+| Variable          | Description                                                          |
+| ----------------- | -------------------------------------------------------------------- |
+| `DATABASE_URL`    | PostgreSQL connection string                                         |
+| `NEXTAUTH_SECRET` | NextAuth secret                                                      |
+| `NEXTAUTH_URL`    | Set explicitly when self-hosting in production                       |
+| `LOG_LEVEL`       | `debug` / `info` / `warn` / `error`; invalid values fall back to `info` |
 
 ### Redis
 
-二选一：
+Either:
 
 - `REDIS_URL`
-- `REDIS_HOST` + `REDIS_PORT`（可选 `REDIS_PASSWORD`）
+- `REDIS_HOST` + `REDIS_PORT` (optional `REDIS_PASSWORD`)
 
-应用限流、验证码和 BullMQ 队列共用同一套 Redis 解析逻辑。
+Application rate-limiting, verification codes, and the BullMQ queues share the same Redis resolver.
 
-### 邮件
+### Email
 
 - `SMTP_HOST`
 - `SMTP_PORT`
@@ -122,42 +122,42 @@ Web 负责页面和 API，Worker 负责 Minecraft 状态探测与认领验证任
 - `SMTP_PASS`
 - `SMTP_FROM`
 
-### 文件存储
+### File storage
 
 - `STORAGE_DRIVER=local|s3|oss`
-- 使用 S3 兼容存储时需要配置 `S3_BUCKET`、`S3_ACCESS_KEY_ID`、`S3_ACCESS_KEY_SECRET`，以及 `S3_ENDPOINT` 或 `S3_REGION`
+- When using an S3-compatible backend, set `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_ACCESS_KEY_SECRET`, plus either `S3_ENDPOINT` or `S3_REGION`
 
-### 反向代理 IP
+### Reverse-proxy client IP
 
-| 变量                      | 说明                                                                                                             |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `TRUSTED_PROXY_IP_HEADER` | 可选，指定用于限流的可信客户端 IP 头；未设置时依次读取 `x-real-ip`、`cf-connecting-ip`、`x-vercel-forwarded-for` |
+| Variable                   | Description                                                                                                  |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `TRUSTED_PROXY_IP_HEADER`  | Optional. Trusted client-IP header used for rate-limiting; when unset, falls back to `x-real-ip`, `cf-connecting-ip`, `x-vercel-forwarded-for` in that order |
 
-## 项目结构
+## Project layout
 
 ```text
 src/
-├── app/                # Next.js 页面与 API Route
-├── components/         # 可复用 UI 组件
-├── hooks/              # 自定义 Hooks
-├── lib/                # 工具函数、认证、队列、存储封装
-├── styles/             # 全局样式
-├── types/              # 类型声明
-├── worker/             # BullMQ Worker 与调度器
-└── ws/                 # 白名单同步 WebSocket 服务
+├── app/                # Next.js pages and API Routes
+├── components/         # Reusable UI components
+├── hooks/              # Custom hooks
+├── lib/                # Utilities, auth, queues, storage wrappers
+├── styles/             # Global styles
+├── types/              # Type declarations
+├── worker/             # BullMQ workers and scheduler
+└── ws/                 # Whitelist-sync WebSocket service
 prisma/
-├── migrations/         # Prisma 迁移
-└── schema.prisma       # 数据模型
+├── migrations/         # Prisma migrations
+└── schema.prisma       # Data model
 ```
 
-## 运行边界
+## Runtime boundaries
 
-- 页面和 API 不直接 ping Minecraft 服务器，只读数据库缓存字段
-- `server-ping` 队列每 5 分钟探测一次已审核服务器
-- `server-verify` 队列处理 MOTD 认领验证
-- 未审核服务器默认不可公开访问，owner / admin 例外
+- Pages and APIs never ping Minecraft servers directly; they read cached fields from the database
+- The `server-ping` queue probes approved servers every 5 minutes
+- The `server-verify` queue handles MOTD claim verification
+- Unapproved servers are not publicly accessible; owners and admins are the exception
 
-## 提交前检查
+## Pre-commit checks
 
 ```bash
 pnpm lint
@@ -165,4 +165,4 @@ pnpm tsc --noEmit
 pnpm test
 ```
 
-同时确认没有把 `.env*` 加入暂存区。
+Also confirm no `.env*` files are staged.

@@ -1,166 +1,166 @@
-# Pudcraft Community — 产品需求文档（PRD）
+# Pudcraft Community — Product Requirements Document (PRD)
 
-> 版本：server-only branch
-> 状态：当前分支现状文档
-> 更新时间：2026-04-19
+> Branch: server-only
+> Status: current-state document for this branch
+> Updated: 2026-04-19
 
-## 1. 产品概述
+## 1. Product overview
 
-### 1.1 当前定位
+### 1.1 Positioning today
 
-Pudcraft Community 当前定位为一个面向 Minecraft 玩家的 server-only 社区平台：
+Pudcraft Community is positioned as a server-only community platform for Minecraft players:
 
-- 帮玩家发现、筛选、收藏和评论服务器
-- 帮服主管理服务器信息、认领流程、私有服成员与白名单同步
-- 帮平台管理员完成审核、举报处理、内容审查与更新日志发布
+- Help players discover, filter, favorite, and comment on servers
+- Help server owners manage server info, claim flow, private-server members, and whitelist sync
+- Help platform admins run review, report handling, content moderation, and changelog publishing
 
-历史上的论坛 / MoltBook 形态已经从当前 live surface 移除。任何圈子、帖子广场、forum notifications、bookmarks、话题页等能力，都不再属于当前产品范围。
+The historical forum / MoltBook shape has been removed from the live surface. Any circle, post feed, forum notifications, bookmarks, or topic-page capability is no longer part of the product.
 
-### 1.2 目标用户
+### 1.2 Target users
 
-| 角色 | 描述 | 核心诉求 |
+| Role | Description | Core needs |
 |---|---|---|
-| 普通玩家 | 寻找和比较服务器的 Minecraft 玩家 | 快速发现、筛选、收藏、申请加入、查看通知 |
-| 服主 | 运营服务器的管理者 | 提交服务器、认领管理权、维护私有服成员、同步白名单 |
-| 平台管理员 | 维护平台秩序与质量 | 审核服务器、处理举报、查看审查日志、发布更新日志 |
-| 原生客户端用户 | 通过移动端接入的用户 | 稳定登录、轻量通知收件箱、统一未读状态 |
+| Player | Minecraft players looking for and comparing servers | Fast discovery, filtering, favorites, applying to join, checking notifications |
+| Server owner | Administrators running a server | Submitting a server, claiming ownership, maintaining private-server members, syncing whitelists |
+| Platform admin | Keeping the platform orderly and quality-controlled | Reviewing servers, handling reports, auditing moderation logs, publishing changelog entries |
+| Native-client user | Users who connect via the mobile client | Stable login, a lightweight notification inbox, unified unread state |
 
-### 1.3 产品目标
+### 1.3 Product goals
 
-1. 提供稳定的服务器发现与搜索体验。
-2. 提供清晰的服务器提交、审核、认领闭环。
-3. 支持私有服的申请、邀请、成员管理与白名单同步。
-4. 保持收藏、评论、通知、举报等基础互动能力完整可用。
-5. 让移动端通过精简 API 获得可用的登录与通知能力。
+1. Provide a stable server discovery and search experience.
+2. Provide a clear loop for server submission, review, and claiming.
+3. Support private-server applications, invites, member management, and whitelist sync.
+4. Keep favorites, comments, notifications, and reports working end-to-end.
+5. Give mobile usable login and notification capabilities through a minimal API surface.
 
-## 2. 当前范围与非目标
+## 2. Scope and non-goals
 
-### 2.1 当前范围
+### 2.1 In scope
 
-- 服务器列表、搜索、排序、标签筛选
-- 服务器详情、评论、收藏
-- 服务器提交、重复收录提示、管理员审核
-- MOTD 验证认领
-- 私有服设置、申请、邀请码、成员管理、API Key
-- 白名单同步（HTTP + Redis + WebSocket）
-- 通知中心、更新日志、举报
-- 管理后台（服务器、用户、审查、举报、更新日志）
-- 移动端 session / inbox API
+- Server list, search, sort, tag filters
+- Server detail, comments, favorites
+- Server submission, duplicate-entry prompts, admin review
+- MOTD-based claim verification
+- Private-server settings, applications, invite codes, member management, API keys
+- Whitelist sync (HTTP + Redis + WebSocket)
+- Notification center, changelog, reports
+- Admin console (servers, users, moderation, reports, changelog)
+- Mobile session / inbox APIs
 
-### 2.2 明确非目标
+### 2.2 Explicit non-goals
 
-- 圈子 / 小组系统
-- 帖子广场与帖子详情
-- forum bookmarks / forum notifications
-- 话题标签系统（forum tags）
-- 用户围绕帖子与圈子的社交资料页
+- Circles / groups
+- Post feed and post details
+- Forum bookmarks / forum notifications
+- Topic tag system (forum tags)
+- User social profile pages built around posts and circles
 
-### 2.3 存档说明
+### 2.3 Archival note
 
-仓库里可能仍存在历史设计稿、superpowers 文档、旧 forum 计划。它们属于历史资料，不等于当前产品需求。
+The repository may still contain historical design drafts, superpowers documents, or older forum plans locally. They are archival material and do not represent current product requirements.
 
-## 3. 核心用户旅程
+## 3. Core user journeys
 
-### 3.1 玩家发现服务器
+### 3.1 A player discovers a server
 
-1. 进入 `/` 或 `/servers`
-2. 通过关键词、标签、排序筛选服务器
-3. 打开 `/servers/{id}` 查看详情、状态、整合包、评论
-4. 收藏服务器或进入申请 / 邀请流程
+1. Open `/` or `/servers`
+2. Filter by keyword, tag, and sort order
+3. Open `/servers/{id}` to see details, status, modpacks, and comments
+4. Favorite the server or enter the apply / invite flow
 
-### 3.2 服主提交并认领服务器
+### 3.2 An owner submits and claims a server
 
-1. 登录后进入 `/submit`
-2. 提交服务器信息与图标
-3. 如果地址已被收录，系统提示跳转到认领页
-4. 管理员审核通过后，服主通过 `/servers/{id}/verify` 发起 MOTD 验证
-5. 认领成功后，进入 `/console` 与 `/console/{serverId}` 管理服务器
+1. Sign in, go to `/submit`
+2. Submit server info and icon
+3. If the address is already registered, the system prompts to jump to the claim page
+4. After admin approval, the owner starts MOTD verification via `/servers/{id}/verify`
+5. On success, the owner manages the server under `/console` and `/console/{serverId}`
 
-### 3.3 私有服成员流转
+### 3.3 Private-server membership flow
 
-1. 服主在控制台配置 `visibility`、`joinMode`、申请表与邀请码
-2. 玩家通过申请页或邀请码加入服务器
-3. 服主审批或撤销成员
-4. 系统将成员变更写入同步记录，并通过 WebSocket 推送给插件
-5. 插件 ACK 后，控制台更新同步状态
+1. The owner configures `visibility`, `joinMode`, application form, and invite codes in the console
+2. Players join via the application page or an invite code
+3. The owner approves or revokes members
+4. The system writes member changes to sync records and pushes them to the plugin via WebSocket
+5. Once the plugin ACKs, the console reflects the updated sync status
 
-### 3.4 玩家接收反馈
+### 3.4 Players receive feedback
 
-- 评论回复、审核结果、服务器上线、申请结果等事件进入通知中心
-- 收藏页应实时反映当前收藏集合
-- 举报结果与内容审查相关反馈由通知系统承接
+- Comment replies, review results, server-online events, and application outcomes arrive in the notification center
+- The favorites page should reflect the current favorite set in real time
+- Report outcomes and content-moderation feedback go through the notification system
 
-## 4. 功能模块
+## 4. Features
 
-### 4.1 账户与资料
+### 4.1 Accounts and profile
 
-- 邮箱注册、登录、重置密码
-- 个人资料编辑
-- 用户公开主页仅展示与服务器系统相关的信息
-- 被封禁用户不能继续访问需要活跃账号的关键能力
+- Email registration, login, password reset
+- Profile editing
+- Public user pages only surface server-related information
+- Banned users cannot continue to use capabilities that require an active account
 
-### 4.2 服务器发现
+### 4.2 Server discovery
 
-- 首页 `/` 与 `/servers` 共用同一套 server list 体验
-- 支持 `newest / popular / players / name` 排序
-- 支持标签与关键词过滤
-- 非公开服务器地址对非成员隐藏
+- `/` and `/servers` share the same server-list experience
+- Sort: `newest / popular / players / name`
+- Tag and keyword filtering
+- Non-public server addresses are hidden from non-members
 
-### 4.3 服务器详情与互动
+### 4.3 Server detail and interaction
 
-- 展示基础资料、在线状态、收藏数、整合包
-- 支持两层服务器评论
-- 收藏与取消收藏
-- 举报服务器、评论、用户
+- Shows basics, online status, favorite count, modpacks
+- Two-level server comments
+- Favorite / unfavorite
+- Report on servers, comments, users
 
-### 4.4 服务器提交与审核
+### 4.4 Server submission and review
 
-- 登录用户可提交服务器
-- 同地址重复提交时要明确提示已存在记录，并引导到认领流程
-- 管理后台负责审核通过、驳回、删除等操作
+- Signed-in users can submit a server
+- Duplicate address submissions prompt clearly and guide the user into the claim flow
+- Admin console handles approvals, rejections, and deletions
 
-### 4.5 认领与服主管理
+### 4.5 Claiming and owner management
 
-- MOTD Token 验证
-- 认领后可编辑服务器资料
-- 查看统计、同步状态、成员、申请、邀请码、API Key
+- MOTD-token verification
+- After claiming, the owner can edit server info
+- Access statistics, sync status, members, applications, invite codes, API keys
 
-### 4.6 私有服能力
+### 4.6 Private-server capabilities
 
-> 当前线上默认通过 `NEXT_PUBLIC_ENABLE_PRIVATE_SERVERS` 功能开关关闭；关闭时不展示申请、邀请码和成员管理入口，对应 API 返回 `404`。
+> By default these are disabled in production via the `NEXT_PUBLIC_ENABLE_PRIVATE_SERVERS` feature flag; while disabled, application, invite-code, and member-management entry points are hidden, and corresponding APIs return `404`.
 
-- 可见性模式：`public` / `unlisted` / `private`
-- 加入模式：`open` / `apply` / `invite` / `apply_and_invite`
-- 申请表、审批、邀请、成员移除
-- 白名单同步状态追踪：`pending / pushed / acked / failed`
+- Visibility modes: `public` / `unlisted` / `private`
+- Join modes: `open` / `apply` / `invite` / `apply_and_invite`
+- Application form, approvals, invites, member removal
+- Whitelist sync status: `pending / pushed / acked / failed`
 
-### 4.7 通知与更新日志
+### 4.7 Notifications and changelog
 
-- 通知中心支持分页与批量已读
-- 支持 server-only 的通知类型
-- 更新日志公开展示，管理员可后台维护
+- Notification center supports pagination and bulk mark-as-read
+- Covers server-only notification types
+- Changelog is public; admins maintain it from the console
 
-### 4.8 移动端支持
+### 4.8 Mobile support
 
-- 移动端登录与 session 管理
-- 轻量收件箱与未读摘要
-- 不在移动端 API 中恢复 forum 相关收件箱结构
+- Mobile login and session management
+- Lightweight inbox and unread summary
+- The mobile API does not reinstate the legacy forum inbox structure
 
-### 4.9 管理后台
+### 4.9 Admin console
 
-- 服务器审核与删除
-- 用户封禁 / 解封 / 管理
-- 审查日志查看与处理
-- 举报处理
-- 更新日志维护
+- Server review and deletion
+- User ban / unban / management
+- Moderation log review and resolution
+- Report handling
+- Changelog maintenance
 
-## 5. 现网页面清单
+## 5. Live page inventory
 
-### 公共 / 用户页
+### Public / user pages
 
 - `/`
 - `/servers`
-- `/search`（重定向到 `/servers`）
+- `/search` (redirects to `/servers`)
 - `/servers/{id}`
 - `/servers/{id}/apply`
 - `/servers/{id}/join/{code}`
@@ -175,11 +175,11 @@ Pudcraft Community 当前定位为一个面向 Minecraft 玩家的 server-only �
 - `/login` / `/register` / `/forgot-password`
 - `/changelog`
 
-### 控制台 / 后台页
+### Console / admin pages
 
 - `/console`
 - `/console/{serverId}`
-- `/my-servers`（旧入口重定向）
+- `/my-servers` (legacy redirect)
 - `/admin`
 - `/admin/servers`
 - `/admin/users`
@@ -187,43 +187,43 @@ Pudcraft Community 当前定位为一个面向 Minecraft 玩家的 server-only �
 - `/admin/moderation`
 - `/admin/changelog`
 
-## 6. 非功能要求
+## 6. Non-functional requirements
 
-### 6.1 安全
+### 6.1 Security
 
-- 服务器地址校验需继续阻断 localhost / 内网 IP
-- 所有写操作必须有服务端权限校验
-- API Key 只展示一次，数据库只存 hash
-- 邮箱验证码保持冷却和锁定机制
-- 举报需要防重复、防刷与信誉限流
+- Server address validation continues to block localhost and private IPs
+- Every write operation must enforce permission on the server
+- API keys are shown once; only a hash is stored
+- Email verification codes keep cooldown and lockout
+- Reports must have deduplication, abuse prevention, and reputation-based rate limiting
 
-### 6.2 性能
+### 6.2 Performance
 
-- 页面请求中不直接 ping 服务器
-- Worker 异步写入在线状态与人数缓存
-- 高频列表避免 N+1
-- 收藏与成员状态尽量批量读取
-- 白名单同步不阻塞主要页面渲染
+- Page requests do not ping servers directly
+- Workers asynchronously write cached online status and player counts
+- High-frequency lists avoid N+1 queries
+- Favorite state and membership should be read in batches
+- Whitelist sync must not block primary page rendering
 
-### 6.3 可维护性
+### 6.3 Maintainability
 
-- 现网文档必须和 live 路由、live API 一起更新
-- `AGENTS.md` 与 `CLAUDE.md` 必须同步
-- 历史 forum 文档不得再写入现网说明
-- pinned 依赖与升级边界记录在 `docs/dependency-pins.md`
+- Live documentation must be updated alongside live routes and APIs
+- `AGENTS.md` and `CLAUDE.md` must stay in sync
+- Old forum documents must not bleed back into live descriptions
+- Dependency pins and upgrade limits are recorded in `docs/dependency-pins.md`
 
-## 7. 当前约束与已知边界
+## 7. Current constraints and known boundaries
 
-- 当前产品只围绕服务器系统，不再继续承载论坛形态。
-- 搜索入口已简化为服务器搜索，不再混搜帖子、圈子、话题。
-- 用户资料页是“服务器维度”的公开资料，不再展示帖子或圈子历史。
-- 管理与通知模型都应按 server-only 语义维护。
+- The product today is scoped around the server system only; it no longer hosts a forum.
+- The search entry is simplified to server search — no mixed search across posts, circles, or topics.
+- The user profile page is a server-centric public page and no longer surfaces post or circle history.
+- Admin and notification models are maintained with server-only semantics.
 
-## 8. 后续演进原则
+## 8. Principles for future evolution
 
-未来新增需求必须先回答两个问题：
+New requirements must first answer two questions:
 
-1. 它是否仍然服务于 server-only 的核心产品目标？
-2. 它是否会重新引入 forum 时代的复杂面，而没有明确的迁移和维护预算？
+1. Does it still serve the core server-only product goal?
+2. Will it reintroduce the complexity surface of the forum era without a clear migration and maintenance budget?
 
-如果答案不清楚，默认不进入当前分支的 live PRD。
+If the answer is unclear, the feature does not enter the live PRD for this branch by default.

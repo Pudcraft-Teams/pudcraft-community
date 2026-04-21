@@ -1,21 +1,21 @@
-# Pudcraft Community API 文档
+# Pudcraft Community API Reference
 
-> 版本：server-only branch
-> 基础路径：`/api`
+> Branch: server-only
+> Base path: `/api`
 
-当前文档只描述 live 的 server-only 接口。历史 forum / MoltBook 相关接口已经从当前分支移除，不再属于现网 API 面。
+This document describes only the live server-only endpoints. Forum / MoltBook endpoints from earlier branches have been removed and are no longer part of the live API surface.
 
-## 通用约定
+## Conventions
 
-### 认证方式
+### Authentication
 
-- Web：Session Cookie（Auth.js / NextAuth）
-- 插件 / 同步 / 插件认领：Bearer API Key 或认领密钥
-- 移动端：`/api/mobile/session*` 返回的受信 session cookie
+- Web: session cookie (Auth.js / NextAuth)
+- Plugin / sync / plugin claim: bearer API key or claim key
+- Mobile: trusted session cookie returned by `/api/mobile/session*`
 
-### 响应格式
+### Response format
 
-成功响应通常返回以下结构之一：
+Successful responses typically use one of:
 
 ```json
 { "data": {} }
@@ -37,175 +37,175 @@
 }
 ```
 
-错误响应统一为：
+Error responses are uniformly:
 
 ```json
 {
-  "error": "错误描述",
+  "error": "error description",
   "details": {}
 }
 ```
 
-其中 `details` 是可选字段；很多业务错误只返回 `{ error }`，校验失败或需要补充上下文时才会附带 `details`。
+`details` is optional; most business errors return `{ error }` alone, and only attach `details` for validation failures or when extra context is needed.
 
-### 常用状态码
+### Common status codes
 
-- `200`：成功
-- `201`：创建成功
-- `400`：参数错误 / 校验失败
-- `401`：未登录
-- `403`：无权限或账号不可用
-- `404`：资源不存在
-- `409`：资源冲突 / 重复提交
-- `429`：限流
-- `500`：服务器内部错误
+- `200`: success
+- `201`: created
+- `400`: bad request / validation failure
+- `401`: not authenticated
+- `403`: forbidden or account unavailable
+- `404`: not found
+- `409`: conflict / duplicate submission
+- `429`: rate limited
+- `500`: internal server error
 
-### 服务器 ID 说明
+### Server identifiers
 
-部分接口支持以下两种服务器标识：
+Some endpoints accept either of two identifiers:
 
-- 数据库 `cuid`
-- 对外展示的 `PSID`
+- The database `cuid`
+- The public-facing `PSID`
 
-文档统一写作 `{id}`。
+In this document both are written as `{id}`.
 
-## 认证接口
+## Authentication endpoints
 
-| 方法 | 路径 | 认证 | 说明 |
+| Method | Path | Auth | Notes |
 |---|---|---|---|
-| GET / POST | `/auth/[...nextauth]` | - | Auth.js 标准路由 |
-| POST | `/auth/register` | - | 邮箱注册 |
-| POST | `/auth/send-code` | - | 发送邮箱验证码 |
-| POST / PATCH | `/auth/reset-password` | - | 发送重置验证码 / 使用验证码重置密码 |
+| GET / POST | `/auth/[...nextauth]` | - | Standard Auth.js routes |
+| POST | `/auth/register` | - | Email registration |
+| POST | `/auth/send-code` | - | Send email verification code |
+| POST / PATCH | `/auth/reset-password` | - | Send reset code / reset password with code |
 
-## 公共与用户接口
+## Public and user endpoints
 
-### 服务器发现与详情
+### Server discovery and detail
 
-| 方法 | 路径 | 认证 | 说明 |
+| Method | Path | Auth | Notes |
 |---|---|---|---|
-| GET | `/servers` | 可选 | 服务器列表；支持 `page`、`limit/pageSize`、`tag`、`search`、`sort`、`ownerId` |
-| POST | `/servers` | 需要登录 | 提交服务器，支持 multipart/form-data 和图标上传 |
-| GET | `/servers/{id}` | 可选 | 获取服务器详情；未审核或非公开服务器按权限裁剪 |
-| PATCH | `/servers/{id}` | owner | 编辑服务器信息 |
-| DELETE | `/servers/{id}` | owner / admin | 删除服务器 |
-| GET | `/servers/{id}/ping` | 可选 | 轻量延迟探针；不查数据库，只校验服务器 ID 格式后立即返回 |
-| GET | `/servers/{id}/stats` | owner | 服务器统计数据；支持 `period=24h|7d|30d` |
-| POST | `/servers/{id}/status/report` | 插件 API Key | 上报在线状态 |
+| GET | `/servers` | Optional | Server list; supports `page`, `limit/pageSize`, `tag`, `search`, `sort`, `ownerId` |
+| POST | `/servers` | Signed in | Submit a server; accepts multipart/form-data and icon upload |
+| GET | `/servers/{id}` | Optional | Server detail; unapproved or non-public servers are filtered by permission |
+| PATCH | `/servers/{id}` | Owner | Edit server info |
+| DELETE | `/servers/{id}` | Owner / admin | Delete server |
+| GET | `/servers/{id}/ping` | Optional | Lightweight latency probe; does not hit the database — validates the server ID format and returns immediately |
+| GET | `/servers/{id}/stats` | Owner | Server statistics; supports `period=24h|7d|30d` |
+| POST | `/servers/{id}/status/report` | Plugin API key | Plugin-reported online status |
 
-### 收藏与评论
+### Favorites and comments
 
-| 方法 | 路径 | 认证 | 说明 |
+| Method | Path | Auth | Notes |
 |---|---|---|---|
-| GET | `/servers/{id}/favorite` | 需要登录 | 查询当前用户对目标服务器的收藏状态 |
-| POST | `/servers/{id}/favorite` | 需要登录 | 收藏服务器 |
-| DELETE | `/servers/{id}/favorite` | 需要登录 | 取消收藏 |
-| GET | `/user/favorites` | 需要登录 | 当前用户收藏的服务器列表 |
-| GET | `/user/favorites/ids` | 需要登录 | 当前用户收藏服务器 ID 列表 |
-| GET | `/servers/{id}/comments` | 可选 | 评论列表 |
-| POST | `/servers/{id}/comments` | 需要登录 | 发表评论或回复 |
-| DELETE | `/servers/{id}/comments/{commentId}` | 作者 / admin | 删除评论 |
+| GET | `/servers/{id}/favorite` | Signed in | Current user's favorite state for the server |
+| POST | `/servers/{id}/favorite` | Signed in | Favorite a server |
+| DELETE | `/servers/{id}/favorite` | Signed in | Unfavorite |
+| GET | `/user/favorites` | Signed in | Current user's favorited servers |
+| GET | `/user/favorites/ids` | Signed in | IDs of the current user's favorited servers |
+| GET | `/servers/{id}/comments` | Optional | Comments |
+| POST | `/servers/{id}/comments` | Signed in | Post a comment or reply |
+| DELETE | `/servers/{id}/comments/{commentId}` | Author / admin | Delete a comment |
 
-### 用户资料、通知、举报
+### User profile, notifications, reports
 
-| 方法 | 路径 | 认证 | 说明 |
+| Method | Path | Auth | Notes |
 |---|---|---|---|
-| GET | `/user/{id}` | 可选 | 用户公开资料与其公开服务器 |
-| GET | `/user/profile` | 需要登录 | 当前用户资料 |
-| PATCH | `/user/profile` | 需要登录 | 更新当前用户资料 |
-| GET | `/notifications` | 需要登录 | 通知列表，支持分页与 `unreadOnly` |
-| PATCH | `/notifications` | 需要登录 | 批量标记通知已读 |
-| GET | `/notifications/unread-count` | 需要登录 | 获取未读通知数量 |
-| POST | `/reports` | 需要登录 | 举报服务器、评论或用户 |
-| GET | `/changelog` | 可选 | 公开更新日志 |
-| GET | `/health` | - | 健康检查 |
-| POST | `/uploads/editor-image` | 需要登录 | 编辑器图片上传 |
+| GET | `/user/{id}` | Optional | Public user profile and their public servers |
+| GET | `/user/profile` | Signed in | Current user's profile |
+| PATCH | `/user/profile` | Signed in | Update current user's profile |
+| GET | `/notifications` | Signed in | Notifications list; supports pagination and `unreadOnly` |
+| PATCH | `/notifications` | Signed in | Bulk mark as read |
+| GET | `/notifications/unread-count` | Signed in | Unread notification count |
+| POST | `/reports` | Signed in | Report a server, comment, or user |
+| GET | `/changelog` | Optional | Public changelog |
+| GET | `/health` | - | Health check |
+| POST | `/uploads/editor-image` | Signed in | Editor image upload |
 
-## 服务器认领与服主管理接口
+## Server claiming and owner-management endpoints
 
-### 认领流程
+### Claim flow
 
-| 方法 | 路径 | 认证 | 说明 |
+| Method | Path | Auth | Notes |
 |---|---|---|---|
-| GET | `/servers/{id}/verify` | 需要登录 | 获取当前登录用户视角下的认领状态；仅当前 claim 发起者可看到 `verifyToken` |
-| POST | `/servers/{id}/verify` | 需要登录 | 发起 MOTD Token 认领；任意登录用户都可发起，成功后 owner 可能转移 |
-| PATCH | `/servers/{id}/verify` | 需要登录（当前 claim 发起者） | 触发 BullMQ 验证任务并等待结果 |
-| POST | `/servers/{id}/verify/claim` | Bearer 认领密钥 / API Key | 插件侧完成认领或已认领服务器的 API Key 验证 |
-| GET | `/servers/{id}/verify/claim-key` | 需要登录 | 查看当前登录用户相关的 claim key 状态 |
-| POST | `/servers/{id}/verify/claim-key` | 需要登录 | 为未认领服务器生成 claim key；当前 owner 或有效 claim 发起者可操作 |
+| GET | `/servers/{id}/verify` | Signed in | Claim state from the current user's perspective; only the current claim initiator can see `verifyToken` |
+| POST | `/servers/{id}/verify` | Signed in | Start a MOTD-token claim; any signed-in user may initiate, ownership may transfer on success |
+| PATCH | `/servers/{id}/verify` | Signed in (current claim initiator) | Trigger the BullMQ verify job and await the result |
+| POST | `/servers/{id}/verify/claim` | Bearer claim key / API key | Plugin-side claim completion or API-key validation for an already-claimed server |
+| GET | `/servers/{id}/verify/claim-key` | Signed in | Claim-key state for the current user |
+| POST | `/servers/{id}/verify/claim-key` | Signed in | Generate a claim key for an unclaimed server; current owner or a valid claim initiator may do this |
 
-### 私有服设置、申请、邀请、成员
+### Private-server settings, applications, invites, members
 
-> 说明：以下接口受 `NEXT_PUBLIC_ENABLE_PRIVATE_SERVERS` 控制；默认关闭，关闭时会统一返回 `404`，前端不应暴露申请、邀请码或成员管理入口。
+> Note: these endpoints are gated by `NEXT_PUBLIC_ENABLE_PRIVATE_SERVERS`. When disabled they all return `404`, and the UI must not expose application, invite-code, or member-management entry points.
 
-| 方法 | 路径 | 认证 | 说明 |
+| Method | Path | Auth | Notes |
 |---|---|---|---|
-| PUT | `/servers/{id}/settings` | owner | 更新可见性、加入模式、申请表等设置 |
-| GET | `/servers/{id}/membership` | 需要登录 | 当前用户的成员 / 申请状态 |
-| GET | `/servers/{id}/applications` | owner | 申请列表 |
-| POST | `/servers/{id}/applications` | 需要登录 | 提交入服申请 |
-| PUT | `/servers/{id}/applications/{appId}` | owner | 审批申请 |
-| GET | `/servers/{id}/invites` | owner | 邀请码列表 |
-| POST | `/servers/{id}/invites` | owner | 创建邀请码 |
-| DELETE | `/servers/{id}/invites/{code}` | owner | 撤销邀请码 |
-| POST | `/servers/{id}/join/{code}` | 需要登录 | 使用邀请码加入服务器 |
-| GET | `/servers/{id}/members` | owner | 成员列表 |
-| DELETE | `/servers/{id}/members/{memberId}` | owner | 移除成员 |
-| POST | `/servers/{id}/api-key` | owner | 生成或重置插件 API Key |
+| PUT | `/servers/{id}/settings` | Owner | Update visibility, join mode, application form, etc. |
+| GET | `/servers/{id}/membership` | Signed in | Current user's member / application state |
+| GET | `/servers/{id}/applications` | Owner | Application list |
+| POST | `/servers/{id}/applications` | Signed in | Submit a join application |
+| PUT | `/servers/{id}/applications/{appId}` | Owner | Review an application |
+| GET | `/servers/{id}/invites` | Owner | Invite codes |
+| POST | `/servers/{id}/invites` | Owner | Create an invite code |
+| DELETE | `/servers/{id}/invites/{code}` | Owner | Revoke an invite code |
+| POST | `/servers/{id}/join/{code}` | Signed in | Join via invite code |
+| GET | `/servers/{id}/members` | Owner | Member list |
+| DELETE | `/servers/{id}/members/{memberId}` | Owner | Remove a member |
+| POST | `/servers/{id}/api-key` | Owner | Generate or reset the plugin API key |
 
-### 整合包
+### Modpacks
 
-| 方法 | 路径 | 认证 | 说明 |
+| Method | Path | Auth | Notes |
 |---|---|---|---|
-| GET | `/servers/{id}/modpack` | 可选 | 当前服务器整合包列表；未过审服务器仅 owner / admin 可见，私有服仍要求成员关系 |
-| POST | `/servers/{id}/modpack` | owner | 上传整合包 |
-| DELETE | `/modpacks/{modpackId}` | owner | 删除整合包 |
-| GET | `/modpacks/{modpackId}/download` | 可选 | 下载整合包；未过审服务器仅 owner / admin 可下载，私有服仍要求成员关系 |
+| GET | `/servers/{id}/modpack` | Optional | Modpack list for a server; unapproved servers are visible only to owner / admin, private servers still require membership |
+| POST | `/servers/{id}/modpack` | Owner | Upload a modpack |
+| DELETE | `/modpacks/{modpackId}` | Owner | Delete a modpack |
+| GET | `/modpacks/{modpackId}/download` | Optional | Download a modpack; unapproved servers are downloadable only by owner / admin, private servers still require membership |
 
-## 白名单同步与移动端接口
+## Whitelist-sync and mobile endpoints
 
-### 白名单同步
+### Whitelist sync
 
-| 方法 | 路径 | 认证 | 说明 |
+| Method | Path | Auth | Notes |
 |---|---|---|---|
-| POST | `/servers/{id}/sync/handshake` | 插件 API Key | 首次同步握手，返回白名单与 WS 信息 |
-| GET | `/servers/{id}/sync/pending` | 插件 API Key | 查询待处理 / 失败同步项 |
-| GET | `/servers/{id}/sync/status` | owner | 控制台查看同步总览 |
-| POST | `/sync/{syncId}/ack` | 插件 API Key | 确认某条同步事件已处理 |
+| POST | `/servers/{id}/sync/handshake` | Plugin API key | Initial sync handshake; returns whitelist and WS info |
+| GET | `/servers/{id}/sync/pending` | Plugin API key | Pending / failed sync items |
+| GET | `/servers/{id}/sync/status` | Owner | Sync overview for the console |
+| POST | `/sync/{syncId}/ack` | Plugin API key | Acknowledge a processed sync event |
 
-### 原生移动端接口
+### Native mobile endpoints
 
-| 方法 | 路径 | 认证 | 说明 |
+| Method | Path | Auth | Notes |
 |---|---|---|---|
-| GET | `/mobile/session` | 移动端 session | 获取当前移动端会话 |
-| DELETE | `/mobile/session` | 移动端 session | 注销移动端会话 |
-| POST | `/mobile/session/login` | - | 移动端登录 |
-| GET | `/mobile/inbox` | 移动端 session | 获取合并后的移动端通知收件箱 |
-| POST | `/mobile/inbox/read` | 移动端 session | 标记移动端收件箱消息已读 |
-| GET | `/mobile/inbox/unread-summary` | 移动端 session | 获取移动端未读摘要 |
+| GET | `/mobile/session` | Mobile session | Current mobile session |
+| DELETE | `/mobile/session` | Mobile session | Log out the mobile session |
+| POST | `/mobile/session/login` | - | Mobile login |
+| GET | `/mobile/inbox` | Mobile session | Aggregated mobile inbox |
+| POST | `/mobile/inbox/read` | Mobile session | Mark mobile inbox items as read |
+| GET | `/mobile/inbox/unread-summary` | Mobile session | Mobile unread summary |
 
-## 管理后台接口
+## Admin endpoints
 
-### 服务器 / 用户 / 审查 / 举报 / 更新日志
+### Servers / users / moderation / reports / changelog
 
-| 方法 | 路径 | 认证 | 说明 |
+| Method | Path | Auth | Notes |
 |---|---|---|---|
-| GET | `/admin/servers` | admin | 管理后台服务器列表 |
-| PATCH | `/admin/servers/{id}` | admin | 审核 / 更新服务器状态 |
-| DELETE | `/admin/servers/{id}` | admin | 删除服务器 |
-| GET | `/admin/users` | admin | 用户列表 |
-| PATCH | `/admin/users/{id}` | admin | 封禁、解封、角色调整等 |
-| GET | `/admin/moderation` | admin | 审查日志列表 |
-| PATCH | `/admin/moderation/{id}` | admin | 处理审查记录 |
-| GET | `/admin/reports` | admin | 举报列表 |
-| PATCH | `/admin/reports/{id}` | admin | 处理举报 |
-| GET | `/admin/changelog` | admin | 更新日志列表 |
-| POST | `/admin/changelog` | admin | 创建更新日志 |
-| PATCH | `/admin/changelog/{id}` | admin | 编辑更新日志 |
-| DELETE | `/admin/changelog/{id}` | admin | 删除更新日志 |
+| GET | `/admin/servers` | Admin | Admin server list |
+| PATCH | `/admin/servers/{id}` | Admin | Review / update server status |
+| DELETE | `/admin/servers/{id}` | Admin | Delete a server |
+| GET | `/admin/users` | Admin | User list |
+| PATCH | `/admin/users/{id}` | Admin | Ban, unban, role changes, etc. |
+| GET | `/admin/moderation` | Admin | Moderation logs |
+| PATCH | `/admin/moderation/{id}` | Admin | Resolve a moderation record |
+| GET | `/admin/reports` | Admin | Report list |
+| PATCH | `/admin/reports/{id}` | Admin | Resolve a report |
+| GET | `/admin/changelog` | Admin | Changelog list |
+| POST | `/admin/changelog` | Admin | Create a changelog entry |
+| PATCH | `/admin/changelog/{id}` | Admin | Edit a changelog entry |
+| DELETE | `/admin/changelog/{id}` | Admin | Delete a changelog entry |
 
-## 现网约束
+## Live constraints
 
-- 搜索、发现、收藏、通知、举报、控制台都只围绕服务器系统展开。
-- forum / circles / posts / tags / bookmarks / forum notifications 等接口已经不在当前分支中；如果有外部调用方仍依赖它们，需要走兼容层或迁移方案，而不是在现网文档里继续保留旧说明。
-- 若代码与文档冲突，以当前 `src/app/api/**/route.ts` 为准，并立即同步本文件。
+- Search, discovery, favorites, notifications, reports, and the console are all centered on the server system.
+- Forum / circles / posts / tags / bookmarks / forum-notification endpoints are no longer on this branch; any remaining external caller needs a compatibility layer or migration plan — do not re-add the old descriptions to this document.
+- If code and docs disagree, `src/app/api/**/route.ts` wins; sync this file to match immediately.
