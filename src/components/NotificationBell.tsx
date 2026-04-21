@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { timeAgo } from "@/lib/time";
 import type {
@@ -34,11 +35,12 @@ function markLocalAsRead(
 }
 
 /**
- * 导航栏通知铃铛，支持未读计数、最近通知预览和快速标记已读。
- * 仅展示服务器相关通知。
+ * Navigation bell: unread count, recent notification preview and
+ * quick "mark all read" action. Server-only notifications.
  */
 export function NotificationBell() {
   const router = useRouter();
+  const t = useTranslations("notifications.bell");
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
   const [serverUnreadCount, setServerUnreadCount] = useState(0);
@@ -61,7 +63,7 @@ export function NotificationBell() {
             setServerUnreadCount(payload.count);
           }
         } catch {
-          // 忽略解析错误
+          // Ignore parse errors.
         }
       }
     };
@@ -77,7 +79,7 @@ export function NotificationBell() {
     };
   }, []);
 
-  // 点击外部关闭 & Escape 关闭
+  // Close on outside click or Escape.
   useEffect(() => {
     if (!open) {
       return;
@@ -159,7 +161,7 @@ export function NotificationBell() {
         prev.map((notification) => ({ ...notification, readAt })),
       );
     } catch {
-      // 忽略标记失败，保留当前 UI。
+      // Ignore mark-all failures; keep the current UI.
     } finally {
       setIsServerMarkingAll(false);
     }
@@ -186,7 +188,7 @@ export function NotificationBell() {
       try {
         await markOneServerAsRead(notification.id);
       } catch {
-        // 标记已读失败不阻断跳转。
+        // Mark-read failure must not block navigation.
       }
     }
 
@@ -202,7 +204,7 @@ export function NotificationBell() {
         type="button"
         className="relative inline-flex h-11 w-11 items-center justify-center rounded-xl border border-warm-200 bg-surface text-warm-500 transition-colors hover:bg-warm-100"
         onClick={() => setOpen((prev) => !prev)}
-        aria-label="通知"
+        aria-label={t("triggerLabel")}
         aria-expanded={open}
       >
         <svg
@@ -230,7 +232,7 @@ export function NotificationBell() {
       {open && (
         <div className="absolute right-0 top-full z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-warm-200 bg-surface shadow-lg">
           <div className="flex items-center justify-between border-b border-warm-200 px-4 py-2">
-            <h3 className="text-sm font-semibold text-warm-800">服务器通知</h3>
+            <h3 className="text-sm font-semibold text-warm-800">{t("headerTitle")}</h3>
             {serverUnreadCount > 0 && (
               <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-accent/15 px-1.5 text-[10px] font-semibold text-accent">
                 {formatUnreadCount(serverUnreadCount)}
@@ -239,7 +241,7 @@ export function NotificationBell() {
           </div>
 
           <div className="flex items-center justify-between border-b border-warm-200 px-4 py-2">
-            <p className="text-xs text-warm-500">最近与你的服务器、收藏和审核状态相关的提醒</p>
+            <p className="text-xs text-warm-500">{t("headerDescription")}</p>
             <button
               type="button"
               onClick={() => {
@@ -248,15 +250,15 @@ export function NotificationBell() {
               disabled={isServerMarkingAll || serverUnreadCount === 0}
               className="text-xs font-medium text-accent transition-colors hover:text-accent-hover disabled:cursor-not-allowed disabled:text-warm-400"
             >
-              {isServerMarkingAll ? "处理中..." : "全部标记已读"}
+              {isServerMarkingAll ? t("marking") : t("markAllRead")}
             </button>
           </div>
 
           <div className="max-h-80 overflow-y-auto">
             {isServerLoading ? (
-              <div className="px-4 py-6 text-center text-sm text-warm-400">加载中...</div>
+              <div className="px-4 py-6 text-center text-sm text-warm-400">{t("loading")}</div>
             ) : serverNotifications.length === 0 ? (
-              <div className="px-4 py-6 text-center text-sm text-warm-400">暂无通知</div>
+              <div className="px-4 py-6 text-center text-sm text-warm-400">{t("empty")}</div>
             ) : (
               serverNotifications.map((notification) => (
                 <button
@@ -295,7 +297,7 @@ export function NotificationBell() {
               onClick={() => setOpen(false)}
               className="text-sm font-medium text-accent transition-colors hover:text-accent-hover"
             >
-              查看全部通知 →
+              {t("viewAll")}
             </Link>
           </div>
         </div>
