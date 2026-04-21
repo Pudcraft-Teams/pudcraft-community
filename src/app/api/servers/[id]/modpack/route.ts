@@ -8,11 +8,12 @@ import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { getZodErrorMap } from "@/lib/i18nZod";
+import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import {
   getFallbackModpackName,
   hashFileBuffer,
+  ModpackError,
   parseMrpackFile,
   validateMrpackFile,
 } from "@/lib/modpack";
@@ -39,6 +40,19 @@ function resolveErrorMessage(error: unknown, fallback: string): string {
   }
 
   return fallback;
+}
+
+type ModpackErrorKeyLookup = (key: string, params?: Record<string, string | number>) => string;
+
+function resolveModpackErrorMessage(
+  error: unknown,
+  fallback: string,
+  translateModpackKey: ModpackErrorKeyLookup,
+): string {
+  if (error instanceof ModpackError) {
+    return translateModpackKey(error.key, error.params);
+  }
+  return resolveErrorMessage(error, fallback);
 }
 
 /**
@@ -140,6 +154,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const locale = await getRequestLocale(request);
   const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
   const tAuth = await getTranslations({ locale, namespace: "errors.api.auth" });
+  const tModpacks = await getTranslations({ locale, namespace: "errors.api.modpacks" });
+  const translateModpackKey: ModpackErrorKeyLookup = (key, params) => {
+    try {
+      // params is runtime-typed; tModpacks's signature narrows per key,
+      // but we accept any key at runtime and let `next-intl` resolve it.
+      return tModpacks(
+        key as never,
+        (params ?? {}) as never,
+      );
+    } catch {
+      return key;
+    }
+  };
   let uploadedFileKey: string | null = null;
 
   try {
@@ -191,7 +218,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       validateMrpackFile(fileField.name, fileField.size);
     } catch (error) {
       return NextResponse.json(
-        { error: resolveErrorMessage(error, tServers("modpackFileCheckFailed")) },
+        {
+          error: resolveModpackErrorMessage(
+            error,
+            tServers("modpackFileCheckFailed"),
+            translateModpackKey,
+          ),
+        },
         { status: 400 },
       );
     }
@@ -205,7 +238,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     });
     if (!parsedMeta.success) {
       return NextResponse.json(
-        { error: tServers("modpackParamInvalid"), details: parsedMeta.error.flatten() },
+        {
+          error: tServers("modpackParamInvalid"),
+          details: flattenZodErrorWithLocale(parsedMeta.error, locale),
+        },
         { status: 400 },
       );
     }
@@ -217,16 +253,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       parsedPack = await parseMrpackFile(fileBuffer);
     } catch (error) {
       return NextResponse.json(
-        { error: resolveErrorMessage(error, tServers("modpackStructureInvalid")) },
+        {
+          error: resolveModpackErrorMessage(
+            error,
+            tServers("modpackStructureInvalid"),
+            translateModpackKey,
+          ),
+        },
         { status: 400 },
       );
     }
     const hashes = hashFileBuffer(fileBuffer);
 
-    // ─── 内容审查 ───
+    const fallbackName = getFallbackModpackName(fileField.name) || tModpacks("fallbackName");
+    // Content moderation.
     const modResult = await moderateFields(
       {
-        名称: parsedPack.name || getFallbackModpackName(fileField.name),
+        名称: parsedPack.name || fallbackName,
         描述: parsedPack.summary ?? "",
       },
       "modpack",
@@ -245,7 +288,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       data: {
         serverId: server.id,
         uploaderId: userId,
-        name: parsedPack.name || getFallbackModpackName(fileField.name),
+        name: parsedPack.name || fallbackName,
         version: parsedMeta.data.version ?? parsedPack.version,
         loader: parsedMeta.data.loader ?? parsedPack.loader,
         gameVersion: parsedMeta.data.gameVersion ?? parsedPack.gameVersion,
