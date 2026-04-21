@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -45,11 +46,11 @@ function safeBool(raw: unknown, key: string): boolean {
   return safeParse<unknown>(raw, key) === true;
 }
 
-function formatRemainingTime(remainingMs: number): string {
+function splitRemainingTime(remainingMs: number): { minutes: number; seconds: string } {
   const totalSeconds = Math.max(0, Math.floor(remainingMs / 1000));
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
-  return `${minutes} 分 ${String(seconds).padStart(2, "0")} 秒`;
+  return { minutes, seconds: String(seconds).padStart(2, "0") };
 }
 
 function formatDateTime(dateString: string | null): string | null {
@@ -76,11 +77,22 @@ export default function ServerVerifyPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const { status: sessionStatus } = useSession();
+  const t = useTranslations("servers.verify");
+  const tMotd = useTranslations("servers.verify.motd");
+  const tPlugin = useTranslations("servers.verify.plugin");
+  const tCommon = useTranslations("servers.common");
+  const formatRemainingTime = useCallback(
+    (remainingMs: number) => {
+      const { minutes, seconds } = splitRemainingTime(remainingMs);
+      return t("motd.remainingUnit", { minutes, seconds });
+    },
+    [t],
+  );
 
   // ── 共享状态 ──
   const [isLoading, setIsLoading] = useState(true);
   const [pageError, setPageError] = useState<string | null>(null);
-  const [serverName, setServerName] = useState("该服务器");
+  const [serverName, setServerName] = useState("");
   const [activeTab, setActiveTab] = useState<ClaimMethod>("motd");
   const [tick, setTick] = useState(() => Date.now());
   const [apiUrl, setApiUrl] = useState(
@@ -128,11 +140,11 @@ export default function ServerVerifyPage() {
       return false;
     }
     if (res.status === 404) {
-      setPageError("服务器不存在或已被删除");
+      setPageError(t("notFoundOrDeleted"));
       return false;
     }
     if (!res.ok) {
-      setPageError(safeStr(data, "error") ?? "加载认领状态失败");
+      setPageError(safeStr(data, "error") ?? t("loadFailed"));
       return false;
     }
 
@@ -151,7 +163,7 @@ export default function ServerVerifyPage() {
       hasPendingClaimByOtherUser: safeBool(data, "hasPendingClaimByOtherUser"),
     });
     return true;
-  }, [id, router]);
+  }, [id, router, t]);
 
   const fetchClaimKeyStatus = useCallback(async (): Promise<boolean> => {
     const res = await fetch(`/api/servers/${id}/verify/claim-key`, { cache: "no-store" });
@@ -213,7 +225,7 @@ export default function ServerVerifyPage() {
         const ok = await fetchVerifyStatus();
         if (ok && !cancelled) await fetchClaimKeyStatus();
       } catch {
-        if (!cancelled) setPageError("加载认领状态失败，请稍后重试");
+        if (!cancelled) setPageError(t("loadFailedRetry"));
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -223,7 +235,7 @@ export default function ServerVerifyPage() {
     return () => {
       cancelled = true;
     };
-  }, [fetchVerifyStatus, fetchClaimKeyStatus, sessionStatus]);
+  }, [fetchVerifyStatus, fetchClaimKeyStatus, sessionStatus, t]);
 
   // 倒计时 tick
   useEffect(() => {
@@ -279,8 +291,8 @@ export default function ServerVerifyPage() {
         copyTimerRef.current = null;
       }, 2000);
     } catch {
-      if (activeTab === "motd") setMotdError("复制失败，请手动复制");
-      else setPluginError("复制失败，请手动复制");
+      if (activeTab === "motd") setMotdError(tMotd("copyFailed"));
+      else setPluginError(tPlugin("copyFailed"));
     }
   };
 
@@ -299,11 +311,11 @@ export default function ServerVerifyPage() {
         return;
       }
       if (res.status === 403) {
-        setMotdError(safeStr(data, "error") ?? safeStr(data, "message") ?? "无权限操作");
+        setMotdError(safeStr(data, "error") ?? safeStr(data, "message") ?? tMotd("forbidden"));
         return;
       }
       if (!res.ok) {
-        setMotdError(safeStr(data, "error") ?? safeStr(data, "message") ?? "获取验证码失败");
+        setMotdError(safeStr(data, "error") ?? safeStr(data, "message") ?? tMotd("generateFailed"));
         return;
       }
       if (safeBool(data, "isVerified")) {
@@ -314,18 +326,18 @@ export default function ServerVerifyPage() {
           verifyToken: null,
           verifyExpiresAt: null,
         }));
-        setMotdMessage(safeStr(data, "message") ?? "服务器已认领，无需重复验证");
+        setMotdMessage(safeStr(data, "message") ?? tMotd("alreadyClaimed"));
         return;
       }
 
       const ok = await fetchVerifyStatus();
       if (ok) {
-        const instruction = safeStr(data, "instruction") ?? "验证码已生成，请将其写入 MOTD 后开始验证";
+        const instruction = safeStr(data, "instruction") ?? tMotd("defaultInstruction");
         const ownerMsg = safeStr(data, "currentOwner");
         setMotdMessage([ownerMsg, instruction].filter((s): s is string => !!s).join(" "));
       }
     } catch {
-      setMotdError("网络异常，获取验证码失败");
+      setMotdError(tMotd("networkError"));
     } finally {
       setIsGeneratingToken(false);
     }
@@ -347,21 +359,21 @@ export default function ServerVerifyPage() {
         return;
       }
       if (res.status === 403) {
-        setMotdError(safeStr(data, "error") ?? safeStr(data, "reason") ?? "该验证码不属于当前账号");
+        setMotdError(safeStr(data, "error") ?? safeStr(data, "reason") ?? tMotd("tokenNotYours"));
         return;
       }
       if (!res.ok) {
-        setMotdError(safeStr(data, "reason") ?? safeStr(data, "error") ?? "验证未通过");
+        setMotdError(safeStr(data, "reason") ?? safeStr(data, "error") ?? tMotd("genericError"));
         return;
       }
       if (safeBool(data, "success") && safeBool(data, "verified")) {
-        setMotdMessage(safeStr(data, "message") ?? "验证通过！你的服务器已获得认领标识。");
+        setMotdMessage(safeStr(data, "message") ?? tMotd("defaultSuccess"));
         await fetchVerifyStatus();
         return;
       }
-      setMotdError(safeStr(data, "reason") ?? safeStr(data, "message") ?? "验证未通过");
+      setMotdError(safeStr(data, "reason") ?? safeStr(data, "message") ?? tMotd("genericError"));
     } catch {
-      setMotdError("网络异常，验证失败");
+      setMotdError(tMotd("verifyNetworkError"));
     } finally {
       setIsVerifying(false);
     }
@@ -382,11 +394,11 @@ export default function ServerVerifyPage() {
         return;
       }
       if (res.status === 409) {
-        setPluginError(safeStr(data, "error") ?? "服务器已被认领");
+        setPluginError(safeStr(data, "error") ?? tPlugin("conflict"));
         return;
       }
       if (!res.ok) {
-        setPluginError(safeStr(data, "error") ?? "生成失败，请稍后重试");
+        setPluginError(safeStr(data, "error") ?? tPlugin("generateFailed"));
         return;
       }
 
@@ -395,7 +407,7 @@ export default function ServerVerifyPage() {
       // 生成认领密钥会清除 MOTD token，同步一下
       await fetchVerifyStatus();
     } catch {
-      setPluginError("网络异常，生成失败");
+      setPluginError(tPlugin("networkError"));
     } finally {
       setIsGeneratingKey(false);
     }
@@ -406,50 +418,49 @@ export default function ServerVerifyPage() {
   if (sessionStatus === "loading" || isLoading) return <PageLoading />;
 
   if (sessionStatus === "unauthenticated") {
-    return <div className="py-12 text-center text-sm text-warm-400">正在跳转到登录页...</div>;
+    return <div className="py-12 text-center text-sm text-warm-400">{tCommon("redirectingToLogin")}</div>;
   }
 
   if (pageError) {
     return <div className="m3-alert-error mx-auto max-w-2xl px-4 py-3">{pageError}</div>;
   }
 
+  const displayServerName = serverName || t("serverFallback");
+
   return (
     <div className="mx-auto max-w-3xl space-y-4 px-4">
       <nav className="flex items-center gap-2 text-sm text-warm-400">
         <Link href={`/servers/${id}`} className="m3-link">
-          &larr; 返回服务器详情
+          &larr; {t("backToDetail")}
         </Link>
       </nav>
 
       <section className="m3-surface p-6">
-        <h1 className="text-2xl font-semibold text-warm-800">认领服务器「{serverName}」</h1>
-        <p className="mt-2 text-sm text-warm-500">
-          认领通过后你将成为该服务器管理员，并获得「已认领」标识。
-        </p>
+        <h1 className="text-2xl font-semibold text-warm-800">{t("heading", { name: displayServerName })}</h1>
+        <p className="mt-2 text-sm text-warm-500">{t("description")}</p>
 
         {isManagedByAnotherUser && (
-          <div className="m3-alert-error mt-4">
-            该服务器已被其他用户认领。你可以通过验证服务器所有权来重新认领。
-          </div>
+          <div className="m3-alert-error mt-4">{t("anotherOwnerNotice")}</div>
         )}
 
         {/* ── 已认领成功 ── */}
         {isVerifiedByCurrentUser ? (
           <div className="mt-6 space-y-4">
             <div className="m3-alert-success">
-              <p className="font-medium">该服务器已由你认领。</p>
+              <p className="font-medium">{t("ownedByYou")}</p>
               {verifiedAtLabel && (
                 <p className="mt-1 text-xs">
-                  验证时间：<span suppressHydrationWarning>{verifiedAtLabel}</span>
+                  {t("verifiedAtLabel")}
+                  <span suppressHydrationWarning>{verifiedAtLabel}</span>
                 </p>
               )}
             </div>
             <div className="flex gap-2">
               <Link href={`/servers/${id}`} className="m3-btn m3-btn-primary inline-flex">
-                返回服务器详情
+                {t("backToDetail")}
               </Link>
               <Link href={`/console/${id}`} className="m3-btn m3-btn-tonal inline-flex">
-                前往控制台
+                {t("goConsole")}
               </Link>
             </div>
           </div>
@@ -466,7 +477,7 @@ export default function ServerVerifyPage() {
                     : "text-warm-400 hover:text-warm-500"
                 }`}
               >
-                MOTD 认领
+                {t("tabMotd")}
               </button>
               <button
                 type="button"
@@ -477,7 +488,7 @@ export default function ServerVerifyPage() {
                     : "text-warm-400 hover:text-warm-500"
                 }`}
               >
-                插件认领
+                {t("tabPlugin")}
               </button>
             </div>
 
@@ -486,19 +497,19 @@ export default function ServerVerifyPage() {
               <div className="mt-5 space-y-5">
                 {verifyState.hasPendingClaimByOtherUser && !verifyState.isTokenOwnedByCurrentUser && (
                   <div className="rounded-xl border border-accent-hover bg-accent-hover px-4 py-3 text-sm text-accent-hover">
-                    当前已有其他用户在认领该服务器。你重新获取验证码会覆盖之前的认领流程。
+                    {tMotd("conflictHint")}
                   </div>
                 )}
 
                 {!verifyState.verifyToken && (
                   <div className="space-y-4">
                     <div className="m3-surface-soft p-4">
-                      <p className="text-sm font-medium text-warm-800">认领步骤：</p>
+                      <p className="text-sm font-medium text-warm-800">{tMotd("stepsHeading")}</p>
                       <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-warm-500">
-                        <li>点击下方按钮获取验证码</li>
-                        <li>将验证码添加到 server.properties 的 motd= 行</li>
-                        <li>重启服务器使 MOTD 生效，然后回到本页点击「开始验证」</li>
-                        <li>验证通过后可移除 MOTD 中的验证码</li>
+                        <li>{tMotd("step1")}</li>
+                        <li>{tMotd("step2")}</li>
+                        <li>{tMotd("step3")}</li>
+                        <li>{tMotd("step4")}</li>
                       </ol>
                     </div>
                     <button
@@ -507,7 +518,7 @@ export default function ServerVerifyPage() {
                       disabled={isGeneratingToken}
                       className="m3-btn m3-btn-primary"
                     >
-                      {isGeneratingToken ? "生成中..." : "获取验证码"}
+                      {isGeneratingToken ? tMotd("generatingBtn") : tMotd("generateBtn")}
                     </button>
                   </div>
                 )}
@@ -515,7 +526,7 @@ export default function ServerVerifyPage() {
                 {verifyState.verifyToken && (
                   <div className="space-y-4">
                     <div>
-                      <p className="mb-2 text-sm font-medium text-warm-800">你的验证码：</p>
+                      <p className="mb-2 text-sm font-medium text-warm-800">{tMotd("tokenHeading")}</p>
                       <div className="m3-surface-soft flex items-center justify-between gap-3 px-4 py-3">
                         <code className="break-all font-mono text-sm text-warm-800">
                           {verifyState.verifyToken}
@@ -525,26 +536,24 @@ export default function ServerVerifyPage() {
                           onClick={() => handleCopy("motd-token", verifyState.verifyToken!)}
                           className="m3-btn m3-btn-tonal shrink-0 px-3 py-1.5 text-xs"
                         >
-                          {copiedField === "motd-token" ? "已复制" : "复制"}
+                          {copiedField === "motd-token" ? tMotd("copied") : tMotd("copy")}
                         </button>
                       </div>
                     </div>
 
                     <div className="rounded-xl border border-warm-200 bg-warm-50 px-4 py-3 text-sm text-warm-800">
-                      <p>请将验证码添加到 server.properties 文件中的 motd= 行：</p>
+                      <p>{tMotd("configTitle")}</p>
                       <p className="mt-2 font-mono text-xs text-warm-500">
-                        motd=你的原始MOTD {verifyState.verifyToken}
+                        {tMotd("configExample", { token: verifyState.verifyToken })}
                       </p>
-                      <p className="mt-3 text-xs text-warm-400">
-                        注意：修改 MOTD 后必须重启服务器，变更才会生效。
-                      </p>
+                      <p className="mt-3 text-xs text-warm-400">{tMotd("configNote")}</p>
                     </div>
 
                     {isMotdTokenExpired ? (
-                      <p className="text-sm text-accent-hover">验证码已过期，请重新获取。</p>
+                      <p className="text-sm text-accent-hover">{tMotd("expired")}</p>
                     ) : (
-                      <p className="text-sm text-warm-500">
-                      验证码有效期：还剩 <span suppressHydrationWarning>{formatRemainingTime(motdRemainingMs)}</span>
+                      <p className="text-sm text-warm-500" suppressHydrationWarning>
+                        {tMotd("remainingTime", { time: formatRemainingTime(motdRemainingMs) })}
                       </p>
                     )}
 
@@ -555,7 +564,7 @@ export default function ServerVerifyPage() {
                         disabled={isGeneratingToken}
                         className="m3-btn m3-btn-tonal"
                       >
-                        {isGeneratingToken ? "生成中..." : "重新获取验证码"}
+                        {isGeneratingToken ? tMotd("generatingBtn") : tMotd("regenerate")}
                       </button>
                       <button
                         type="button"
@@ -563,12 +572,12 @@ export default function ServerVerifyPage() {
                         disabled={isVerifying || isMotdTokenExpired || isGeneratingToken}
                         className="m3-btn m3-btn-primary disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        {isVerifying ? "验证中..." : "开始验证"}
+                        {isVerifying ? tMotd("verifying") : tMotd("startVerify")}
                       </button>
                     </div>
 
                     {isVerifying && (
-                      <p className="text-sm text-warm-400">正在连接服务器，请稍候...</p>
+                      <p className="text-sm text-warm-400">{tMotd("verifyingNote")}</p>
                     )}
                   </div>
                 )}
@@ -577,18 +586,16 @@ export default function ServerVerifyPage() {
 
                 {motdError && (
                   <div className="m3-alert-error space-y-2">
-                    <p className="font-medium">验证未通过</p>
-                    <p>原因：{motdError}</p>
-                    <p className="text-xs text-accent-hover">
-                      请确认：验证码已写入 MOTD、服务器已重启、服务器当前在线。
-                    </p>
+                    <p className="font-medium">{tMotd("verifyFailedTitle")}</p>
+                    <p>{tMotd("verifyFailedReason", { reason: motdError })}</p>
+                    <p className="text-xs text-accent-hover">{tMotd("verifyFailedChecklist")}</p>
                     {verifyState.verifyToken && !isMotdTokenExpired && (
                       <button
                         type="button"
                         onClick={handleVerify}
                         className="m3-btn m3-btn-tonal px-3 py-1.5 text-xs"
                       >
-                        重试验证
+                        {tMotd("retryVerify")}
                       </button>
                     )}
                   </div>
@@ -601,26 +608,24 @@ export default function ServerVerifyPage() {
               <div className="mt-5 space-y-5">
                 {claimKey.hasPendingClaimByOtherUser && (
                   <div className="rounded-xl border border-accent-hover bg-accent-hover px-4 py-3 text-sm text-accent-hover">
-                    当前已有其他用户在认领该服务器。生成新密钥会覆盖之前的认领流程。
+                    {tPlugin("conflictHint")}
                   </div>
                 )}
 
                 <div className="m3-surface-soft p-4">
-                  <p className="text-sm font-medium text-warm-800">认领步骤：</p>
+                  <p className="text-sm font-medium text-warm-800">{tPlugin("stepsHeading")}</p>
                   <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-warm-500">
-                    <li>点击下方按钮生成认领密钥</li>
-                    <li>在你的 Minecraft 服务器中安装 Pudcraft 插件</li>
-                    <li>将认领密钥和服务器 ID 填入插件配置文件</li>
-                    <li>启动 / 重启 Minecraft 服务器，插件会自动完成认领</li>
+                    <li>{tPlugin("step1")}</li>
+                    <li>{tPlugin("step2")}</li>
+                    <li>{tPlugin("step3")}</li>
+                    <li>{tPlugin("step4")}</li>
                   </ol>
-                  <p className="mt-3 text-xs text-warm-400">
-                    认领需要从服务器本机发起请求，系统会校验请求来源 IP 是否与服务器地址一致。
-                  </p>
+                  <p className="mt-3 text-xs text-warm-400">{tPlugin("ipNote")}</p>
                 </div>
 
                 {/* 服务器 ID */}
                 <div>
-                  <p className="mb-2 text-sm font-medium text-warm-800">服务器 ID：</p>
+                  <p className="mb-2 text-sm font-medium text-warm-800">{tPlugin("serverIdHeading")}</p>
                   <div className="m3-surface-soft flex items-center justify-between gap-3 px-4 py-3">
                     <code className="font-mono text-sm text-warm-800">{id}</code>
                     <button
@@ -628,7 +633,7 @@ export default function ServerVerifyPage() {
                       onClick={() => handleCopy("server-id", id)}
                       className="m3-btn m3-btn-tonal shrink-0 px-3 py-1.5 text-xs"
                     >
-                      {copiedField === "server-id" ? "已复制" : "复制"}
+                      {copiedField === "server-id" ? tPlugin("copied") : tPlugin("copy")}
                     </button>
                   </div>
                 </div>
@@ -636,7 +641,7 @@ export default function ServerVerifyPage() {
                 {/* 刚生成的密钥 */}
                 {generatedKey && (
                   <div>
-                    <p className="mb-2 text-sm font-medium text-warm-800">认领密钥（仅显示一次）：</p>
+                    <p className="mb-2 text-sm font-medium text-warm-800">{tPlugin("keyHeading")}</p>
                     <div className="m3-surface-soft flex items-center justify-between gap-3 px-4 py-3">
                       <code className="break-all font-mono text-sm text-warm-800">
                         {generatedKey}
@@ -646,33 +651,31 @@ export default function ServerVerifyPage() {
                         onClick={() => handleCopy("claim-key", generatedKey)}
                         className="m3-btn m3-btn-tonal shrink-0 px-3 py-1.5 text-xs"
                       >
-                        {copiedField === "claim-key" ? "已复制" : "复制"}
+                        {copiedField === "claim-key" ? tPlugin("copied") : tPlugin("copy")}
                       </button>
                     </div>
-                    <p className="mt-2 text-xs text-accent-hover">
-                      请立即复制并保存。认领成功后此密钥将成为服务器的 API Key，后续无需再次获取。
-                    </p>
+                    <p className="mt-2 text-xs text-accent-hover">{tPlugin("keyHint")}</p>
                   </div>
                 )}
 
                 {/* 已有密钥但刷新了页面 */}
                 {!generatedKey && claimKey.hasClaimKey && !isPluginKeyExpired && (
                   <div className="rounded-xl border border-accent bg-accent-muted px-4 py-3 text-sm text-accent">
-                    <p className="font-medium">认领密钥已生成</p>
-                    <p className="mt-1">等待插件从服务器发起认领请求...</p>
+                    <p className="font-medium">{tPlugin("keyGenerated")}</p>
+                    <p className="mt-1">{tPlugin("keyWaiting")}</p>
                   </div>
                 )}
 
                 {/* 倒计时 */}
                 {claimKey.hasClaimKey && !isPluginKeyExpired && (
-                  <p className="text-sm text-warm-500">
-                    密钥有效期：还剩 <span suppressHydrationWarning>{formatRemainingTime(pluginRemainingMs)}</span>
+                  <p className="text-sm text-warm-500" suppressHydrationWarning>
+                    {tPlugin("remainingTime", { time: formatRemainingTime(pluginRemainingMs) })}
                   </p>
                 )}
 
                 {/* 过期 */}
                 {claimKey.hasClaimKey && isPluginKeyExpired && (
-                  <p className="text-sm text-accent-hover">认领密钥已过期，请重新生成。</p>
+                  <p className="text-sm text-accent-hover">{tPlugin("expired")}</p>
                 )}
 
                 {/* 生成按钮 */}
@@ -683,21 +686,21 @@ export default function ServerVerifyPage() {
                   className="m3-btn m3-btn-primary"
                 >
                   {isGeneratingKey
-                    ? "生成中..."
+                    ? tPlugin("generating")
                     : claimKey.hasClaimKey
-                      ? "重新生成密钥"
-                      : "生成认领密钥"}
+                      ? tPlugin("regenerate")
+                      : tPlugin("generate")}
                 </button>
 
                 {/* 配置示例 */}
                 {(generatedKey || (claimKey.hasClaimKey && !isPluginKeyExpired)) && (
                   <div className="rounded-xl border border-warm-200 bg-warm-50 px-4 py-3 text-sm text-warm-800">
-                    <p className="font-medium">插件配置示例：</p>
+                    <p className="font-medium">{tPlugin("configExampleTitle")}</p>
                 <pre className="mt-2 overflow-x-auto whitespace-pre rounded-lg bg-warm-100 p-3 font-mono text-xs text-warm-500">
 {`# config.yml
 server-id: "${id}"
-api-key: "${generatedKey ?? "pdc_你的认领密钥"}"
-api-url: "${apiUrl || "https://your-domain.com"}"
+api-key: "${generatedKey ?? tPlugin("configKeyFallback")}"
+api-url: "${apiUrl || tPlugin("configUrlFallback")}"
 `}
                 </pre>
                   </div>
