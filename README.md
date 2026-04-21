@@ -1,3 +1,5 @@
+**English** | [简体中文](./README.zh-CN.md)
+
 # Pudcraft Community
 
 A Minecraft server community platform. Players can browse, submit, claim, comment on, and favorite servers, as well as download modpacks that server owners publish.
