@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { ZodErrorMap } from "zod";
 import { queryNotificationsSchema } from "@/lib/validation";
 
 export interface MobileInboxItem {
@@ -33,6 +34,18 @@ interface ServerMobileInboxData {
   serverNotifications: ServerInboxNotificationRecord[];
 }
 
+export interface MobileInboxErrorText {
+  notAuthenticated: string;
+  validationFailed: string;
+  paginationTooDeep: string;
+}
+
+export const DEFAULT_MOBILE_INBOX_ERROR_TEXT: MobileInboxErrorText = {
+  notAuthenticated: "请先登录",
+  validationFailed: "校验失败",
+  paginationTooDeep: "分页过深",
+};
+
 interface MobileInboxGetDependencies {
   requireActiveUserImpl: () => Promise<MobileInboxAuthResult>;
   loadServerInboxData: (input: {
@@ -41,6 +54,8 @@ interface MobileInboxGetDependencies {
     fetchLimit: number;
   }) => Promise<ServerMobileInboxData>;
   maxMergedFetchWindow?: number;
+  errorText?: MobileInboxErrorText;
+  zodErrorMap?: ZodErrorMap;
 }
 
 export const DEFAULT_MAX_MERGED_FETCH_WINDOW = 500;
@@ -74,6 +89,7 @@ export function getMobileInboxTotalPages(total: number, limit: number, maxMerged
 }
 
 export async function handleMobileInboxGet(request: Request, deps: MobileInboxGetDependencies) {
+  const errorText = deps.errorText ?? DEFAULT_MOBILE_INBOX_ERROR_TEXT;
   const authResult = await deps.requireActiveUserImpl();
   if ("response" in authResult && authResult.response) {
     return authResult.response;
@@ -81,25 +97,32 @@ export async function handleMobileInboxGet(request: Request, deps: MobileInboxGe
 
   const userId = authResult.user?.id;
   if (!userId) {
-    return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    return NextResponse.json({ error: errorText.notAuthenticated }, { status: 401 });
   }
 
   const { searchParams } = new URL(request.url);
-  const parsedQuery = queryNotificationsSchema.safeParse({
-    page: searchParams.get("page") ?? undefined,
-    limit: searchParams.get("limit") ?? undefined,
-    unreadOnly: searchParams.get("unreadOnly") ?? undefined,
-  });
+  const parseOptions = deps.zodErrorMap ? { errorMap: deps.zodErrorMap } : undefined;
+  const parsedQuery = queryNotificationsSchema.safeParse(
+    {
+      page: searchParams.get("page") ?? undefined,
+      limit: searchParams.get("limit") ?? undefined,
+      unreadOnly: searchParams.get("unreadOnly") ?? undefined,
+    },
+    parseOptions,
+  );
 
   if (!parsedQuery.success) {
-    return NextResponse.json({ error: "校验失败", details: parsedQuery.error.flatten() }, { status: 400 });
+    return NextResponse.json(
+      { error: errorText.validationFailed, details: parsedQuery.error.flatten() },
+      { status: 400 },
+    );
   }
 
   const { page, limit, unreadOnly } = parsedQuery.data;
   const maxMergedFetchWindow = deps.maxMergedFetchWindow ?? DEFAULT_MAX_MERGED_FETCH_WINDOW;
   const maxSupportedPages = getMaxMobileInboxPages(limit, maxMergedFetchWindow);
   if (page > maxSupportedPages) {
-    return NextResponse.json({ error: "分页过深" }, { status: 400 });
+    return NextResponse.json({ error: errorText.paginationTooDeep }, { status: 400 });
   }
 
   const fetchLimit = page * limit;

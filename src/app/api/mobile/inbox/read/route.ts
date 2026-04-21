@@ -1,13 +1,18 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
+import { getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { buildMobileInboxUnreadSummary } from "@/lib/mobile/inboxFacade";
 import { markNotificationsReadSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -16,9 +21,14 @@ export async function POST(request: Request) {
     const userId = authResult.user.id;
 
     const body = await request.json().catch(() => null);
-    const parsedBody = markNotificationsReadSchema.safeParse(body);
+    const parsedBody = markNotificationsReadSchema.safeParse(body, {
+      errorMap: getZodErrorMap(locale),
+    });
     if (!parsedBody.success) {
-      return NextResponse.json({ error: "校验失败", details: parsedBody.error.flatten() }, { status: 400 });
+      return NextResponse.json(
+        { error: tCommon("validationFailed"), details: parsedBody.error.flatten() },
+        { status: 400 },
+      );
     }
 
     if ("all" in parsedBody.data) {
@@ -53,6 +63,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     logger.error("[api/mobile/inbox/read] Unexpected POST error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

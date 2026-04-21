@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import zhMessages from "../../../messages/zh.json";
 import { buildMobileInboxUnreadSummary, handleMobileInboxGet, mergeInboxItems } from "./inboxFacade";
+
+const zhApiErrors = zhMessages.errors.api;
 
 test("mergeInboxItems sorts notifications newest first", () => {
   const items = mergeInboxItems(
@@ -134,6 +137,6 @@ test("handleMobileInboxGet rejects pages beyond the supported merged fetch windo
   });
 
   assert.equal(response.status, 400);
-  assert.deepEqual(await response.json(), { error: "分页过深" });
+  assert.deepEqual(await response.json(), { error: zhApiErrors.notifications.paginationTooDeep });
   assert.equal(loadInboxDataCalled, false);
 });
