@@ -9,7 +9,31 @@
     "skipToContent": "跳到主要内容",
     "servers": "服务器",
     "changelog": "更新日志",
-    "brandTagline": "Community"
+    "brandTagline": "Community",
+    "auth": {
+      "loading": "加载中...",
+      "login": "登录",
+      "register": "注册",
+      "submitServer": "提交服务器",
+      "myHome": "我的主页",
+      "profileSettings": "资料设置",
+      "console": "控制台",
+      "myFavorites": "我的收藏",
+      "adminPanel": "管理后台",
+      "logout": "退出",
+      "loggingOut": "退出中...",
+      "displayNameFallback": "已登录用户",
+      "notificationsLabel": "通知"
+    },
+    "mobile": {
+      "openMenu": "打开菜单",
+      "closeMenu": "关闭菜单",
+      "sectionNavigation": "导航",
+      "sectionPersonal": "个人",
+      "sectionAdmin": "管理",
+      "guestHint": "登录后可提交服务器、收藏内容并管理你的服务。",
+      "notifications": "通知中心"
+    }
   },
   "footer": {
     "copyright": "© {year}"
@@ -155,6 +179,31 @@
         "replyTargetInvalid": "回复目标不存在或不属于当前服务器",
         "replyDepthExceeded": "仅支持两层评论，不能回复子回复",
         "contentModerated": "评论包含违规内容，请修改后重试"
+      },
+      "users": {
+        "invalidIdFormat": "无效的用户 ID 格式",
+        "notFound": "用户不存在",
+        "avatarInvalid": "头像文件格式或大小无效",
+        "avatarModerated": "头像包含违规内容，请更换图片",
+        "avatarUploadFailed": "头像上传失败，请稍后重试",
+        "profileModerated": "用户名或简介包含违规内容",
+        "usernameFieldLabel": "用户名",
+        "bioFieldLabel": "简介"
+      },
+      "notifications": {
+        "paginationTooDeep": "分页过深"
+      },
+      "reports": {
+        "targetServerNotFound": "举报的服务器不存在",
+        "targetCommentNotFound": "举报的评论不存在",
+        "targetUserNotFound": "举报的用户不存在",
+        "cannotReportSelf": "不能举报自己",
+        "cannotReportSelfServer": "不能举报自己的服务器",
+        "cannotReportSelfComment": "不能举报自己的评论",
+        "dailyLimit": "今日举报次数已达上限，请明天再试",
+        "duplicate": "你已经举报过该内容，无需重复提交",
+        "invalidRequest": "请求参数错误",
+        "submitSuccess": "举报已提交，感谢你的反馈"
       },
       "admin": {
         "notAdmin": "无管理员权限",
@@ -802,12 +851,121 @@
       "removeAria": "取消收藏",
       "addTitle": "收藏",
       "removeTitle": "已收藏"
+    },
+    "page": {
+      "metaTitle": "我的收藏",
+      "heading": "我的收藏",
+      "subtitle": "收藏的服务器都在这里",
+      "emptyTitle": "暂无收藏的服务器",
+      "emptyDescription": "浏览服务器列表，点击星标收藏",
+      "emptyCtaLabel": "去发现服务器",
+      "bannedTitle": "账号已被封禁",
+      "bannedDescription": "你的账号当前无法查看收藏的服务器"
     }
   },
   "user": {
     "avatar": {
       "alt": "{name} 的头像",
       "fallbackName": "用户"
+    },
+    "profile": {
+      "metaTitleFallback": "用户主页",
+      "metaDisplayNameFallback": "用户",
+      "metaDescription": "{name} 的 PudCraft 主页",
+      "displayNameFallback": "用户",
+      "uidLabel": "UID",
+      "bioEmpty": "这个用户还没有填写个人简介。",
+      "registeredAt": "注册于 {time}",
+      "editProfile": "编辑资料",
+      "serversHeading": "提交的服务器",
+      "serversEmptyTitle": "暂无服务器",
+      "serversEmptyDescription": "该用户还没有提交服务器"
+    },
+    "settings": {
+      "metaTitle": "个人资料设置",
+      "heading": "个人资料设置",
+      "subtitle": "设置头像、昵称和一句话简介。",
+      "loadingText": "资料加载中...",
+      "redirectingToLogin": "正在跳转到登录页...",
+      "avatarLabel": "头像",
+      "nameLabel": "昵称",
+      "namePlaceholder": "输入昵称（2-20 字）",
+      "emailLabel": "邮箱（不可修改）",
+      "bioLabel": "个人简介",
+      "bioPlaceholder": "一句话介绍自己...",
+      "bioCounter": "{count}/200",
+      "save": "保存修改",
+      "saving": "保存中...",
+      "nameRange": "昵称长度需在 2-20 个字符之间",
+      "bioMax": "简介最多 200 字",
+      "loadFailed": "资料加载失败",
+      "networkLoadFailed": "网络异常，资料加载失败",
+      "saveFailed": "保存失败，请稍后重试",
+      "saveSuccess": "资料已更新",
+      "networkSaveFailed": "网络异常，保存失败"
+    }
+  },
+  "notifications": {
+    "bell": {
+      "triggerLabel": "通知",
+      "headerTitle": "服务器通知",
+      "headerDescription": "最近与你的服务器、收藏和审核状态相关的提醒",
+      "markAllRead": "全部标记已读",
+      "marking": "处理中...",
+      "loading": "加载中...",
+      "empty": "暂无通知",
+      "viewAll": "查看全部通知 →"
+    },
+    "page": {
+      "metaTitle": "通知中心",
+      "heading": "通知中心",
+      "summary": "共 {total} 条通知，未读 {unread} 条",
+      "markAllRead": "全部标记已读",
+      "marking": "处理中...",
+      "loadingAuth": "正在加载登录状态...",
+      "redirectingToLogin": "正在跳转到登录页...",
+      "loadFailed": "通知加载失败",
+      "markFailed": "通知状态更新失败",
+      "markAllSuccess": "已全部标记为已读",
+      "actionFailed": "操作失败",
+      "emptyTitle": "暂无通知",
+      "emptyDescription": "当你的服务器状态变化、审核有结果或收藏的服务器重新上线时，会显示在这里",
+      "loadMore": "加载更多",
+      "loadingMore": "加载中..."
+    },
+    "system": {
+      "commentReplyTitle": "新的评论回复",
+      "commentReplyBody": "{actor} 回复了你的评论",
+      "newCommentTitle": "新的服务器评论",
+      "newCommentBody": "{actor} 评论了「{serverName}」",
+      "serverApprovedTitle": "服务器审核通过",
+      "serverApprovedBody": "你的服务器「{serverName}」已通过审核，现在所有人都可以看到了",
+      "serverRejectedTitle": "服务器审核未通过",
+      "serverRejectedBody": "你的服务器「{serverName}」未通过审核：{reason}",
+      "serverRejectedBodyFallbackReason": "请联系管理员了解详情",
+      "serverOnlineTitle": "服务器已上线",
+      "serverOnlineBody": "你收藏的「{serverName}」已上线",
+      "applicationApprovedTitle": "入服申请已通过",
+      "applicationApprovedBody": "你的「{serverName}」入服申请已通过",
+      "applicationRejectedTitle": "入服申请未通过",
+      "applicationRejectedBody": "你的「{serverName}」入服申请未通过",
+      "applicationRejectedBodyWithReason": "你的「{serverName}」入服申请未通过：{reason}",
+      "memberRemovedTitle": "你已被移出服务器",
+      "memberRemovedBody": "你已被移出「{serverName}」的成员列表",
+      "reportDismissedTitle": "举报已驳回",
+      "reportDismissedBody": "你提交的举报经审核后未发现违规行为",
+      "reportResolvedTitle": "举报已处理",
+      "reportResolvedBody": "你提交的举报已被管理员处理，感谢你的反馈",
+      "contentWarningTitle": "内容违规警告",
+      "contentWarningBody": "你发布的内容因被举报并经管理员审核，确认存在违规。请注意遵守社区规范，否则可能被进一步处罚。",
+      "serverTakedownTitle": "服务器已被下架",
+      "serverTakedownBody": "你的服务器「{serverName}」因违规举报已被下架",
+      "commentTakedownTitle": "评论已被删除",
+      "commentTakedownBody": "你发布的评论因违规举报已被管理员删除"
+    },
+    "persisted": {
+      "rejectReasonFromReport": "因举报被下架",
+      "banReasonFromReport": "举报处置"
     }
   },
   "console": {
@@ -1338,6 +1496,54 @@
       "paginationSummary": "共 {total} 条，第 {page}/{totalPages} 页",
       "paginationPrev": "上一页",
       "paginationNext": "下一页"
+    }
+  },
+  "common": {
+    "loading": {
+      "default": "加载中...",
+      "srLabel": "加载中"
+    },
+    "toast": {
+      "closeLabel": "关闭通知"
+    },
+    "confirm": {
+      "defaultConfirm": "确定",
+      "defaultCancel": "取消"
+    },
+    "emptyState": {
+      "defaultTitle": "暂无数据"
+    }
+  },
+  "changelog": {
+    "metaTitle": "更新日志",
+    "metaDescription": "PudCraft Community 平台更新日志，了解最新功能、修复和改进。",
+    "heading": "更新日志",
+    "subtitle": "了解 PudCraft Community 的最新变化",
+    "empty": "暂无更新日志",
+    "typeFeature": "新功能",
+    "typeFix": "修复",
+    "typeImprovement": "优化",
+    "typeOther": "其他",
+    "loadMore": "加载更多",
+    "loadingMore": "加载中..."
+  },
+  "reports": {
+    "dialog": {
+      "titleServer": "举报服务器",
+      "titleComment": "举报评论",
+      "titleUser": "举报用户",
+      "categoryMisinformation": "虚假信息",
+      "categoryPornography": "色情低俗",
+      "categoryHarassment": "骚扰攻击",
+      "categoryFraud": "广告欺诈",
+      "categoryOther": "其他",
+      "descriptionPlaceholder": "补充说明（可选）",
+      "cancel": "取消",
+      "submit": "提交举报",
+      "submitting": "提交中...",
+      "submitSuccess": "举报已提交，感谢反馈",
+      "submitFailed": "举报提交失败，请稍后重试",
+      "networkError": "网络异常，举报提交失败"
     }
   }
 }
