@@ -10,10 +10,30 @@ export interface LocaleSources {
 export function resolveLocaleFrom(sources: LocaleSources): Locale {
   if (isLocale(sources.header)) return sources.header;
   if (isLocale(sources.cookie)) return sources.cookie;
-  const primary = sources.acceptLanguage.split(",")[0]?.trim().toLowerCase() ?? "";
-  if (primary.startsWith("en")) return "en";
-  if (primary.startsWith("zh")) return "zh";
+  const fromAccept = pickFromAcceptLanguage(sources.acceptLanguage);
+  if (fromAccept) return fromAccept;
   return defaultLocale;
+}
+
+/**
+ * Walk every token in an Accept-Language header and pick the first one whose
+ * primary tag matches a supported locale.
+ *
+ * We intentionally ignore `q` weights and rely on the listed order, which is
+ * the default preference order browsers emit. This avoids pulling in a full
+ * language-negotiator dependency while still handling headers like
+ * "fr-FR,en;q=0.9" correctly — the primary tag is unsupported but a later
+ * token resolves to a supported locale.
+ */
+function pickFromAcceptLanguage(acceptLanguage: string): Locale | null {
+  const tokens = acceptLanguage.split(",");
+  for (const raw of tokens) {
+    const tag = raw.split(";")[0]?.trim().toLowerCase() ?? "";
+    if (!tag) continue;
+    if (tag.startsWith("en")) return "en";
+    if (tag.startsWith("zh")) return "zh";
+  }
+  return null;
 }
 
 export async function getRequestLocale(request?: Request): Promise<Locale> {
