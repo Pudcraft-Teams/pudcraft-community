@@ -786,5 +786,11 @@
       "alt": "{name} 的头像",
       "fallbackName": "用户"
     }
+  },
+  "console": {
+    "stats": {
+      "peakTime": "{time}",
+      "peakTimeEmpty": "暂无数据"
+    }
   }
 }

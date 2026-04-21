@@ -44,7 +44,9 @@ interface StatsDataPoint {
 interface StatsSummary {
   avgPlayers: number;
   peakPlayers: number;
-  peakTime: string;
+  // Raw peak-hour label (e.g. "14:00") or null when there is no data.
+  // The client translates the label via the `console.stats.peakTime*` keys.
+  peakTime: string | null;
   uptimePercent: number;
   totalChecks: number;
   onlineChecks: number;
@@ -191,7 +193,7 @@ function buildSummary(dataPoints: StatsDataPoint[], statuses: StatusRecord[]): S
     return {
       avgPlayers: 0,
       peakPlayers: 0,
-      peakTime: "暂无数据",
+      peakTime: null,
       uptimePercent: 0,
       totalChecks,
       onlineChecks,

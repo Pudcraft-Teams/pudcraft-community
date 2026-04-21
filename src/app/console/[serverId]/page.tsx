@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiKeyManager } from "@/components/console/ApiKeyManager";
 import { ApplicationList } from "@/components/console/ApplicationList";
@@ -68,7 +69,7 @@ function isStatsSummary(value: unknown): value is ConsoleStatsSummary {
   return (
     typeof value.avgPlayers === "number" &&
     typeof value.peakPlayers === "number" &&
-    typeof value.peakTime === "string" &&
+    (typeof value.peakTime === "string" || value.peakTime === null) &&
     typeof value.uptimePercent === "number" &&
     typeof value.totalChecks === "number" &&
     typeof value.onlineChecks === "number"
@@ -126,6 +127,7 @@ export default function ConsoleServerPage() {
   const params = useParams<{ serverId: string }>();
   const router = useRouter();
   const { data: session, status } = useSession();
+  const tStats = useTranslations("console.stats");
   const [period, setPeriod] = useState<StatsPeriod>("24h");
   const [server, setServer] = useState<ServerDetail | null>(null);
   const [stats, setStats] = useState<ConsoleStatsResponse | null>(null);
@@ -254,7 +256,7 @@ export default function ConsoleServerPage() {
       stats?.summary ?? {
         avgPlayers: 0,
         peakPlayers: 0,
-        peakTime: "暂无数据",
+        peakTime: null,
         uptimePercent: 0,
         totalChecks: 0,
         onlineChecks: 0,
@@ -383,7 +385,11 @@ export default function ConsoleServerPage() {
         <StatCard
           label="峰值在线"
           value={`${summary.peakPlayers}`}
-          subtext={`峰值时段 ${summary.peakTime}`}
+          subtext={`峰值时段 ${
+            summary.peakTime === null
+              ? tStats("peakTimeEmpty")
+              : tStats("peakTime", { time: summary.peakTime })
+          }`}
           trend="up"
         />
         <StatCard
