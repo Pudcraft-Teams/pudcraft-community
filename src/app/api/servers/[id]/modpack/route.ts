@@ -2,10 +2,13 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
+import { getTranslations } from "next-intl/server";
 import { ZodError } from "zod";
+import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import {
   getFallbackModpackName,
@@ -42,17 +45,20 @@ function resolveErrorMessage(error: unknown, fallback: string): string {
  * GET /api/servers/:id/modpack — 获取服务器整合包版本列表（新到旧）。
  * 公开访问仅允许已通过审核服务器，owner / admin 例外。
  */
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
   try {
     const { id } = await params;
     const parsedId = serverLookupIdSchema.safeParse(id);
     if (!parsedId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const resolvedServerId = await resolveServerCuid(parsedId.data);
     if (!resolvedServerId) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const server = await prisma.server.findUnique({
@@ -66,7 +72,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     });
 
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const session = await auth();
@@ -78,7 +84,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     });
     if (!canAccessCurrentServer) {
       return NextResponse.json(
-        { error: "服务器未通过审核，整合包暂不可公开访问" },
+        { error: tServers("modpackNotFoundForServer") },
         { status: 403 },
       );
     }
@@ -91,7 +97,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     );
     if (!canView) {
       return NextResponse.json(
-        { error: "你不是该服务器成员，无法查看整合包信息" },
+        { error: tServers("modpackMemberOnly") },
         { status: 403 },
       );
     }
@@ -123,7 +129,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     });
   } catch (error) {
     logger.error("[api/servers/[id]/modpack] Unexpected GET error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
 
@@ -131,6 +137,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
  * POST /api/servers/:id/modpack — 上传 Modrinth .mrpack（仅 owner）。
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const locale = await getRequestLocale(request);
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
+  const tAuth = await getTranslations({ locale, namespace: "errors.api.auth" });
   let uploadedFileKey: string | null = null;
 
   try {
@@ -143,12 +152,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const { id } = await params;
     const parsedId = serverLookupIdSchema.safeParse(id);
     if (!parsedId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const resolvedServerId = await resolveServerCuid(parsedId.data);
     if (!resolvedServerId) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const server = await prisma.server.findUnique({
@@ -161,28 +170,28 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     });
 
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     if (!server.ownerId || server.ownerId !== userId) {
-      return NextResponse.json({ error: "无权限" }, { status: 403 });
+      return NextResponse.json({ error: tAuth("forbidden") }, { status: 403 });
     }
 
     if (!server.isVerified) {
-      return NextResponse.json({ error: "请先完成服务器认领认证，再上传整合包" }, { status: 403 });
+      return NextResponse.json({ error: tServers("modpackRequireVerified") }, { status: 403 });
     }
 
     const formData = await request.formData();
     const fileField = formData.get("file");
     if (!(fileField instanceof File) || fileField.size <= 0) {
-      return NextResponse.json({ error: "请选择要上传的 .mrpack 文件" }, { status: 400 });
+      return NextResponse.json({ error: tServers("modpackFileRequired") }, { status: 400 });
     }
 
     try {
       validateMrpackFile(fileField.name, fileField.size);
     } catch (error) {
       return NextResponse.json(
-        { error: resolveErrorMessage(error, "整合包文件校验失败") },
+        { error: resolveErrorMessage(error, tServers("modpackFileCheckFailed")) },
         { status: 400 },
       );
     }
@@ -191,10 +200,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       version: extractTextField(formData, "version"),
       loader: extractTextField(formData, "loader"),
       gameVersion: extractTextField(formData, "gameVersion"),
+    }, {
+      errorMap: getZodErrorMap(locale),
     });
     if (!parsedMeta.success) {
       return NextResponse.json(
-        { error: "参数校验失败", details: parsedMeta.error.flatten() },
+        { error: tServers("modpackParamInvalid"), details: parsedMeta.error.flatten() },
         { status: 400 },
       );
     }
@@ -206,7 +217,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       parsedPack = await parseMrpackFile(fileBuffer);
     } catch (error) {
       return NextResponse.json(
-        { error: resolveErrorMessage(error, "整合包结构不合法") },
+        { error: resolveErrorMessage(error, tServers("modpackStructureInvalid")) },
         { status: 400 },
       );
     }
@@ -223,7 +234,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     );
     if (!modResult.passed) {
       return NextResponse.json(
-        { error: "内容包含违规信息", details: modResult.reason },
+        { error: tServers("modpackContentModerated"), details: modResult.reason },
         { status: 422 },
       );
     }
@@ -282,6 +293,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     logger.error("[api/servers/[id]/modpack] Unexpected POST error", error);
-    return NextResponse.json({ error: "整合包上传失败，请稍后重试" }, { status: 500 });
+    return NextResponse.json({ error: tServers("modpackUploadFailed") }, { status: 500 });
   }
 }

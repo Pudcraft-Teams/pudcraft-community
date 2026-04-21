@@ -1,9 +1,12 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { isPrivateServersEnabled } from "@/lib/features";
+import { getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { resolveServerCuid } from "@/lib/lookup";
 import {
@@ -22,9 +25,12 @@ interface RouteContext {
  * 通过邀请码加入服务器。
  */
 export async function POST(request: Request, { params }: RouteContext) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
   try {
     if (!isPrivateServersEnabled()) {
-      return NextResponse.json({ error: "该功能未启用" }, { status: 404 });
+      return NextResponse.json({ error: tServers("privateNotEnabled") }, { status: 404 });
     }
 
     const authResult = await requireActiveUser();
@@ -36,19 +42,21 @@ export async function POST(request: Request, { params }: RouteContext) {
     const { id, code } = await params;
     const parsedId = serverLookupIdSchema.safeParse(id);
     if (!parsedId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const cuid = await resolveServerCuid(parsedId.data);
     if (!cuid) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const body: unknown = await request.json();
-    const parsed = joinByInviteSchema.safeParse(body);
+    const parsed = joinByInviteSchema.safeParse(body, {
+      errorMap: getZodErrorMap(locale),
+    });
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: parsed.error.flatten() },
         { status: 400 },
       );
     }
@@ -61,11 +69,11 @@ export async function POST(request: Request, { params }: RouteContext) {
     });
 
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     if (!canJoinServerViaInvite(server.joinMode)) {
-      return NextResponse.json({ error: "当前加入模式不支持邀请码" }, { status: 400 });
+      return NextResponse.json({ error: tServers("inviteNotSupported") }, { status: 400 });
     }
 
     // 在事务中完成所有检查和写操作，避免竞态条件
@@ -76,17 +84,17 @@ export async function POST(request: Request, { params }: RouteContext) {
       });
 
       if (!invite) {
-        return { error: "邀请码无效", status: 404 } as const;
+        return { error: tServers("inviteInvalid"), status: 404 } as const;
       }
 
       // 检查是否过期
       if (invite.expiresAt && invite.expiresAt <= new Date()) {
-        return { error: "邀请码已过期", status: 410 } as const;
+        return { error: tServers("inviteExpired"), status: 410 } as const;
       }
 
       // 检查使用次数
       if (invite.maxUses && invite.usedCount >= invite.maxUses) {
-        return { error: "邀请码已达使用上限", status: 410 } as const;
+        return { error: tServers("inviteMaxUsesReached"), status: 410 } as const;
       }
 
       // 检查是否已是成员
@@ -101,7 +109,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       });
 
       if (existingMember) {
-        return { error: "你已经是该服务器成员", status: 409 } as const;
+        return { error: tServers("inviteAlreadyMember"), status: 409 } as const;
       }
 
       const existingApplication = await tx.serverApplication.findUnique({
@@ -167,6 +175,6 @@ export async function POST(request: Request, { params }: RouteContext) {
     });
   } catch (error) {
     logger.error("[api/servers/[id]/join/[code]] Unexpected POST error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

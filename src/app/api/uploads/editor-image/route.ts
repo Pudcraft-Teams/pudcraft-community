@@ -1,6 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { logger } from "@/lib/logger";
 import { getClientIp } from "@/lib/request-ip";
@@ -18,6 +20,9 @@ import {
  * 上传编辑器图片，返回可插入 Markdown 的 URL。
  */
 export async function POST(request: Request) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tUploads = await getTranslations({ locale, namespace: "errors.api.uploads" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -28,11 +33,11 @@ export async function POST(request: Request) {
     const imageField = formData.get("image");
 
     if (!(imageField instanceof File) || imageField.size <= 0) {
-      return NextResponse.json({ error: "请选择图片文件" }, { status: 400 });
+      return NextResponse.json({ error: tUploads("imageRequired") }, { status: 400 });
     }
 
     if (imageField.size > imageUploadConstraints.maxFileSizeBytes) {
-      return NextResponse.json({ error: "图片大小不能超过 5MB" }, { status: 413 });
+      return NextResponse.json({ error: tUploads("imageTooLarge") }, { status: 413 });
     }
 
     const imageBuffer = Buffer.from(await imageField.arrayBuffer());
@@ -45,7 +50,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: error.message }, { status: error.status });
       }
 
-      return NextResponse.json({ error: "图片格式或大小无效" }, { status: 400 });
+      return NextResponse.json({ error: tUploads("imageInvalid") }, { status: 400 });
     }
 
     let imageKey: string;
@@ -60,7 +65,7 @@ export async function POST(request: Request) {
       }
       if (error instanceof ImageModerationError) {
         return NextResponse.json(
-          { error: "图片包含违规内容，请更换图片", details: error.message },
+          { error: tUploads("imageModerated"), details: error.message },
           { status: error.status },
         );
       }
@@ -68,12 +73,12 @@ export async function POST(request: Request) {
         userId: authResult.user.id,
         reason: error instanceof Error ? error.message : "unknown",
       });
-      return NextResponse.json({ error: "图片上传失败，请稍后重试" }, { status: 500 });
+      return NextResponse.json({ error: tUploads("imageUploadFailed") }, { status: 500 });
     }
 
     return NextResponse.json({ data: { url: getPublicUrl(imageKey) } });
   } catch (error) {
     logger.error("[api/uploads/editor-image] Unexpected POST error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

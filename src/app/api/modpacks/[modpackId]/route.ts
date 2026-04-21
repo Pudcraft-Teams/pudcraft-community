@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -9,9 +11,13 @@ import { modpackIdSchema } from "@/lib/validation";
  * DELETE /api/modpacks/:modpackId — 删除整合包（仅服务器 owner）。
  */
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ modpackId: string }> },
 ) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tModpacks = await getTranslations({ locale, namespace: "errors.api.modpacks" });
+  const tAuth = await getTranslations({ locale, namespace: "errors.api.auth" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -22,7 +28,7 @@ export async function DELETE(
     const { modpackId } = await params;
     const parsedId = modpackIdSchema.safeParse(modpackId);
     if (!parsedId.success) {
-      return NextResponse.json({ error: "无效的整合包 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tModpacks("invalidIdFormat") }, { status: 400 });
     }
 
     const modpack = await prisma.modpack.findUnique({
@@ -39,11 +45,11 @@ export async function DELETE(
     });
 
     if (!modpack) {
-      return NextResponse.json({ error: "整合包不存在或已删除" }, { status: 404 });
+      return NextResponse.json({ error: tModpacks("notFound") }, { status: 404 });
     }
 
     if (!modpack.server.ownerId || modpack.server.ownerId !== userId) {
-      return NextResponse.json({ error: "无权限" }, { status: 403 });
+      return NextResponse.json({ error: tAuth("forbidden") }, { status: 403 });
     }
 
     await deleteObject(modpack.fileKey);
@@ -54,10 +60,10 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: "整合包已删除",
+      message: tModpacks("deleted"),
     });
   } catch (error) {
     logger.error("[api/modpacks/[modpackId]] Unexpected DELETE error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
