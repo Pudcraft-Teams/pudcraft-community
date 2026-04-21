@@ -1,58 +1,58 @@
-# VPS 部署初始化指南
+# VPS deployment setup
 
-本文档记录在 VPS 上首次部署 Pudcraft Community 所需的手动步骤。
+This document records the manual steps needed to deploy Pudcraft Community on a VPS for the first time.
 
-## 前置要求
+## Prerequisites
 
-- VPS 已安装 Docker 和 Docker Compose
-- 已安装 1Panel（可选，用于管理容器）
-- GitHub 仓库已配置 Actions Secrets
+- Docker and Docker Compose installed on the VPS
+- 1Panel (optional, for container management)
+- GitHub repository Actions secrets configured
 
 ---
 
-## 1. 生成 SSH 部署密钥
+## 1. Generate an SSH deploy key
 
-在本地机器上执行：
+On your local machine:
 
 ```bash
 ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/deploy_key
 ssh-copy-id -i ~/.ssh/deploy_key.pub root@VPS_IP
-cat ~/.ssh/deploy_key  # 复制内容填到 GitHub Secrets → VPS_SSH_KEY
+cat ~/.ssh/deploy_key  # copy this value into GitHub Secrets → VPS_SSH_KEY
 ```
 
-## 2. 配置 GitHub Secrets
+## 2. Configure GitHub secrets
 
-进入仓库 Settings → Secrets and variables → Actions，添加：
+In the repository, open Settings → Secrets and variables → Actions and add:
 
-| Secret 名称 | 说明 |
+| Secret | Description |
 |---|---|
-| `VPS_HOST` | VPS 公网 IP |
-| `VPS_USER` | SSH 用户名（如 `root`） |
-| `VPS_SSH_KEY` | 上一步生成的 SSH 私钥内容 |
+| `VPS_HOST` | Public IP of the VPS |
+| `VPS_USER` | SSH username (e.g. `root`) |
+| `VPS_SSH_KEY` | The private SSH key generated in the previous step |
 
-> 注：GHCR 登录使用内置 `GITHUB_TOKEN`，无需额外配置。
+> Note: GHCR login uses the built-in `GITHUB_TOKEN`, no extra configuration required.
 
-## 3. VPS 上配置 GHCR 登录
+## 3. Configure GHCR login on the VPS
 
-在 GitHub 生成 Personal Access Token（PAT）：
-Settings → Developer settings → Personal access tokens → Fine-grained tokens，
-权限勾选：`read:packages`
+Create a Personal Access Token (PAT) on GitHub:
+Settings → Developer settings → Personal access tokens → Fine-grained tokens,
+with the `read:packages` permission.
 
-然后在 VPS 上执行：
+Then on the VPS:
 
 ```bash
-echo "你的PAT" | docker login ghcr.io -u 你的GitHub用户名 --password-stdin
+echo "YOUR_PAT" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
 ```
 
-登录后凭据缓存在 `~/.docker/config.json`，之后 `docker compose pull` 可正常拉取。
+Credentials are cached in `~/.docker/config.json` and `docker compose pull` will work afterwards.
 
-## 4. 创建部署目录和配置文件
+## 4. Create the deploy directory and config files
 
 ```bash
 mkdir -p /opt/pudcraft
 ```
 
-### 4.1 部署脚本 `/opt/pudcraft/deploy.sh`
+### 4.1 Deploy script `/opt/pudcraft/deploy.sh`
 
 ```bash
 cat > /opt/pudcraft/deploy.sh << 'SCRIPT'
@@ -62,44 +62,44 @@ cd /opt/pudcraft
 docker compose pull
 docker compose up -d --remove-orphans
 docker image prune -f
-echo "✅ Deployed at $(date)"
+echo "Deployed at $(date)"
 SCRIPT
 chmod +x /opt/pudcraft/deploy.sh
 ```
 
 ### 4.2 Docker Compose `/opt/pudcraft/docker-compose.yml`
 
-将 `IMAGE` 替换为实际镜像地址（如 `ghcr.io/pudcraft-teams/pudcraft-community:latest`）。
+Set `IMAGE` to the real image address (e.g. `ghcr.io/pudcraft-teams/pudcraft-community:latest`).
 
-项目根目录已包含 `docker-compose.yml`，直接复制到 VPS 即可：
+The repo ships a `docker-compose.yml`; copy it to the VPS directly:
 
 ```bash
 scp docker-compose.yml root@VPS_IP:/opt/pudcraft/
 ```
 
-如需自定义镜像地址，设置 `IMAGE` 环境变量：
+To override the image address, set the `IMAGE` env var:
 
 ```bash
-IMAGE=ghcr.io/你的用户名/pudcraft-community docker compose up -d
+IMAGE=ghcr.io/your-user/pudcraft-community docker compose up -d
 ```
 
-> 配置包含 3 个应用服务：`web`（Next.js，端口 3000）、`worker`（BullMQ 队列）、`ws`（WebSocket 白名单同步，端口 3001）。
+> The compose file defines three application services: `web` (Next.js, port 3000), `worker` (BullMQ queue), and `ws` (WebSocket whitelist sync, port 3001).
 
-### 4.3 环境变量 `/opt/pudcraft/.env.production`
+### 4.3 Environment variables `/opt/pudcraft/.env.production`
 
 ```bash
-# 数据库（容器内网络，host 用服务名）
-DATABASE_URL="postgresql://postgres:你的密码@postgres:5432/pudcraft"
+# Database (container network; use service name as host)
+DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@postgres:5432/pudcraft"
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=你的密码
+POSTGRES_PASSWORD=YOUR_PASSWORD
 
 # Redis
 REDIS_URL="redis://redis:6379"
 
 # NextAuth
-NEXTAUTH_SECRET="用 openssl rand -base64 32 生成"
+NEXTAUTH_SECRET="generate with: openssl rand -base64 32"
 
-# 对象存储（按实际填写）
+# Object storage (fill in with real values)
 STORAGE_DRIVER=s3
 S3_BUCKET=
 S3_REGION=
@@ -108,66 +108,66 @@ S3_ACCESS_KEY_ID=
 S3_SECRET_ACCESS_KEY=
 S3_PUBLIC_URL=
 
-# 飞书邮件 SMTP
+# Feishu email SMTP
 SMTP_HOST=
 SMTP_PORT=
 SMTP_USER=
 SMTP_PASS=
 SMTP_FROM=
 
-# WebSocket（插件白名单同步）
-WS_PUBLIC_URL=wss://你的域名
+# WebSocket (plugin whitelist sync)
+WS_PUBLIC_URL=wss://your-domain
 ```
 
-## 5. 首次部署
+## 5. First deploy
 
 ```bash
 cd /opt/pudcraft
 
-# 拉取镜像并启动
+# Pull images and start
 docker compose pull
 docker compose up -d
 
-# 执行数据库迁移
+# Run database migrations
 docker compose exec web npx prisma migrate deploy
 
-# 检查服务状态
+# Check service status
 docker compose ps
 curl http://localhost:3000/api/health
 ```
 
-## 6. 数据库迁移说明
+## 6. Database migrations
 
-Prisma 迁移**不会**在每次部署时自动执行。如果有 schema 变更：
+Prisma migrations **do not** run automatically on every deploy. When the schema changes:
 
 ```bash
-# SSH 进 VPS 后手动执行
+# SSH into the VPS and run manually
 docker compose exec web npx prisma migrate deploy
 ```
 
-如需自动迁移，可在 `deploy.sh` 的 `docker compose up` 之前添加：
+To auto-run migrations, add this before `docker compose up` in `deploy.sh`:
 
 ```bash
 docker compose run --rm web npx prisma migrate deploy
 ```
 
-> 注意：自动迁移有风险，建议重大变更前先在测试环境验证。
+> Note: automatic migrations carry risk; validate significant changes in a staging environment first.
 
-## 7. 常用运维命令
+## 7. Operational commands
 
 ```bash
-# 查看日志
+# Tail logs
 docker compose logs -f web
 docker compose logs -f worker
 docker compose logs -f ws
 
-# 重启单个服务
+# Restart a single service
 docker compose restart web
 
-# 回滚到指定版本（使用 commit SHA tag）
-# 修改 docker-compose.yml 中 image tag 为具体 SHA，然后：
+# Roll back to a specific version (using commit SHA tag)
+# Edit the image tag in docker-compose.yml to the desired SHA, then:
 docker compose pull && docker compose up -d
 
-# 进入容器调试
+# Shell into a container
 docker compose exec web sh
 ```
