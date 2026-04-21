@@ -2,20 +2,23 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
+
+type AdminNavItemKey = "overview" | "servers" | "users" | "moderation" | "reports" | "changelog";
 
 interface AdminNavItem {
   href: string;
-  label: string;
+  labelKey: AdminNavItemKey;
   match: string;
 }
 
 const ADMIN_ITEMS: AdminNavItem[] = [
-  { href: "/admin", label: "概览", match: "/admin" },
-  { href: "/admin/servers", label: "服务器", match: "/admin/servers" },
-  { href: "/admin/users", label: "用户", match: "/admin/users" },
-  { href: "/admin/moderation", label: "审查", match: "/admin/moderation" },
-  { href: "/admin/reports", label: "举报", match: "/admin/reports" },
-  { href: "/admin/changelog", label: "日志", match: "/admin/changelog" },
+  { href: "/admin", labelKey: "overview", match: "/admin" },
+  { href: "/admin/servers", labelKey: "servers", match: "/admin/servers" },
+  { href: "/admin/users", labelKey: "users", match: "/admin/users" },
+  { href: "/admin/moderation", labelKey: "moderation", match: "/admin/moderation" },
+  { href: "/admin/reports", labelKey: "reports", match: "/admin/reports" },
+  { href: "/admin/changelog", labelKey: "changelog", match: "/admin/changelog" },
 ];
 
 function isActivePath(pathname: string, match: string): boolean {
@@ -28,13 +31,15 @@ function isActivePath(pathname: string, match: string): boolean {
 
 export function AdminNav() {
   const pathname = usePathname();
+  const t = useTranslations("admin.nav");
+  const tItems = useTranslations("admin.nav.items");
 
   return (
     <>
       <aside className="hidden w-48 shrink-0 md:block">
         <nav className="m3-surface sticky top-24 space-y-1 p-3">
           <h2 className="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-warm-400">
-            管理后台
+            {t("heading")}
           </h2>
           {ADMIN_ITEMS.map((item) => {
             const active = isActivePath(pathname, item.match);
@@ -50,14 +55,14 @@ export function AdminNav() {
                     : "text-warm-700 hover:bg-warm-100"
                 }`}
               >
-                {item.label}
+                {tItems(item.labelKey)}
               </Link>
             );
           })}
         </nav>
       </aside>
 
-      <nav className="m3-mobile-rail md:hidden" aria-label="管理后台导航">
+      <nav className="m3-mobile-rail md:hidden" aria-label={t("mobileLabel")}>
         {ADMIN_ITEMS.map((item) => {
           const active = isActivePath(pathname, item.match);
 
@@ -68,7 +73,7 @@ export function AdminNav() {
               aria-current={active ? "page" : undefined}
               className={`m3-mobile-rail-card ${active ? "m3-mobile-rail-card-active" : ""}`}
             >
-              {item.label}
+              {tItems(item.labelKey)}
             </Link>
           );
         })}

@@ -1,45 +1,49 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useToast } from "@/hooks/useToast";
 import { timeAgo } from "@/lib/time";
 import { PageLoading } from "@/components/PageLoading";
 
-const STATUS_TABS = [
-  { key: "pending", label: "待处理" },
-  { key: "resolved", label: "已处理" },
-  { key: "dismissed", label: "已驳回" },
-  { key: "all", label: "全部" },
-] as const;
-
-const TYPE_TABS = [
-  { key: "all", label: "全部" },
-  { key: "server", label: "服务器" },
-  { key: "comment", label: "评论" },
-  { key: "user", label: "用户" },
-] as const;
-
-const CATEGORY_LABELS: Record<string, string> = {
-  misinformation: "虚假信息",
-  pornography: "色情低俗",
-  harassment: "骚扰攻击",
-  fraud: "广告欺诈",
-  other: "其他",
-};
-
-const TARGET_TYPE_LABELS: Record<string, string> = {
-  server: "服务器",
-  comment: "评论",
-  user: "用户",
-};
-
-const ACTION_OPTIONS = [
-  { key: "warn", label: "警告" },
-  { key: "takedown", label: "下架" },
-  { key: "ban_user", label: "封禁用户" },
-] as const;
-
+type StatusKey = "pending" | "resolved" | "dismissed" | "all";
+type TargetTypeKey = "all" | "server" | "comment" | "user";
+type CategoryKey = "misinformation" | "pornography" | "harassment" | "fraud" | "other";
 type ActionKey = "warn" | "takedown" | "ban_user";
+
+const STATUS_TABS: { key: StatusKey; labelKey: string }[] = [
+  { key: "pending", labelKey: "statusPendingLabel" },
+  { key: "resolved", labelKey: "statusResolvedLabel" },
+  { key: "dismissed", labelKey: "statusDismissedLabel" },
+  { key: "all", labelKey: "statusAllLabel" },
+];
+
+const TYPE_TABS: { key: TargetTypeKey; labelKey: string }[] = [
+  { key: "all", labelKey: "typeAll" },
+  { key: "server", labelKey: "typeServer" },
+  { key: "comment", labelKey: "typeComment" },
+  { key: "user", labelKey: "typeUser" },
+];
+
+const CATEGORY_LABEL_KEYS: Record<CategoryKey, string> = {
+  misinformation: "categoryMisinformation",
+  pornography: "categoryPornography",
+  harassment: "categoryHarassment",
+  fraud: "categoryFraud",
+  other: "categoryOther",
+};
+
+const TARGET_TYPE_LABEL_KEYS: Record<Exclude<TargetTypeKey, "all">, string> = {
+  server: "typeServer",
+  comment: "typeComment",
+  user: "typeUser",
+};
+
+const ACTION_OPTIONS: { key: ActionKey; labelKey: string }[] = [
+  { key: "warn", labelKey: "actionWarn" },
+  { key: "takedown", labelKey: "actionTakedown" },
+  { key: "ban_user", labelKey: "actionBanUser" },
+];
 
 interface ReportReporter {
   id: string;
@@ -65,14 +69,15 @@ interface ReportItem {
 
 
 export default function AdminReportsPage() {
+  const t = useTranslations("admin.reports");
   const { toast } = useToast();
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
-  const [status, setStatus] = useState("pending");
-  const [targetType, setTargetType] = useState("all");
+  const [status, setStatus] = useState<StatusKey>("pending");
+  const [targetType, setTargetType] = useState<TargetTypeKey>("all");
   const [page, setPage] = useState(1);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   // Process dialog state
@@ -90,7 +95,7 @@ export default function AdminReportsPage() {
       params.set("targetType", targetType);
 
       const res = await fetch(`/api/admin/reports?${params.toString()}`);
-      if (!res.ok) throw new Error("加载失败");
+      if (!res.ok) throw new Error(t("loadFailed"));
 
       const json = (await res.json()) as {
         reports: ReportItem[];
@@ -104,11 +109,11 @@ export default function AdminReportsPage() {
       setPendingCount(json.pendingCount);
       setTotalPages(json.totalPages);
     } catch {
-      toast.error("加载举报列表失败");
+      toast.error(t("loadListFailed"));
     } finally {
       setIsLoading(false);
     }
-  }, [page, status, targetType, toast]);
+  }, [page, status, targetType, toast, t]);
 
   useEffect(() => {
     fetchReports();
@@ -124,12 +129,12 @@ export default function AdminReportsPage() {
       });
       if (!res.ok) {
         const json = (await res.json()) as { error?: string };
-        throw new Error(json.error ?? "操作失败");
+        throw new Error(json.error ?? t("actionFailed"));
       }
-      toast.success("已驳回");
+      toast.success(t("dismissSuccess"));
       await fetchReports();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "操作失败");
+      toast.error(err instanceof Error ? err.message : t("actionFailed"));
     } finally {
       setActionLoading(null);
     }
@@ -150,13 +155,13 @@ export default function AdminReportsPage() {
       });
       if (!res.ok) {
         const json = (await res.json()) as { error?: string };
-        throw new Error(json.error ?? "操作失败");
+        throw new Error(json.error ?? t("actionFailed"));
       }
-      toast.success("已处理");
+      toast.success(t("resolveSuccess"));
       closeProcessDialog();
       await fetchReports();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "操作失败");
+      toast.error(err instanceof Error ? err.message : t("actionFailed"));
     } finally {
       setActionLoading(null);
     }
@@ -182,21 +187,21 @@ export default function AdminReportsPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold tracking-tight text-warm-700">举报管理</h1>
+      <h1 className="mb-6 text-2xl font-bold tracking-tight text-warm-700">{t("heading")}</h1>
 
-      {/* 统计卡片 */}
+      {/* Stats cards */}
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-2">
         <div className="m3-surface p-4">
-          <p className="text-sm text-warm-500">待处理举报</p>
+          <p className="text-sm text-warm-500">{t("statsPending")}</p>
           <p className="mt-1 text-3xl font-bold text-coral">{pendingCount}</p>
         </div>
         <div className="m3-surface p-4">
-          <p className="text-sm text-warm-500">当前筛选结果</p>
+          <p className="text-sm text-warm-500">{t("statsCurrent")}</p>
           <p className="mt-1 text-3xl font-bold text-warm-800">{totalCount}</p>
         </div>
       </div>
 
-      {/* 状态筛选 */}
+      {/* Status filter */}
       <div className="mb-3 flex flex-wrap gap-2">
         {STATUS_TABS.map((tab) => (
           <button
@@ -208,12 +213,12 @@ export default function AdminReportsPage() {
             }}
             className={`m3-chip text-sm ${status === tab.key ? "m3-chip-active" : ""}`}
           >
-            {tab.label}
+            {t(tab.labelKey)}
           </button>
         ))}
       </div>
 
-      {/* 类型筛选 */}
+      {/* Type filter */}
       <div className="mb-6 flex flex-wrap gap-2">
         {TYPE_TABS.map((tab) => (
           <button
@@ -229,7 +234,7 @@ export default function AdminReportsPage() {
                 : "bg-warm-100 text-warm-600 hover:bg-warm-200"
             }`}
           >
-            {tab.label}
+            {t(tab.labelKey)}
           </button>
         ))}
       </div>
@@ -237,21 +242,25 @@ export default function AdminReportsPage() {
       {isLoading ? (
         <PageLoading />
       ) : reports.length === 0 ? (
-        <div className="py-12 text-center text-sm text-warm-500">暂无举报记录</div>
+        <div className="py-12 text-center text-sm text-warm-500">{t("empty")}</div>
       ) : (
         <>
-          {/* 举报表格 */}
+          {/* Report table */}
           <div className="m3-surface overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-warm-200 text-xs text-warm-500">
-                  <th className="px-4 py-3 font-medium">时间</th>
-                  <th className="px-4 py-3 font-medium">类型</th>
-                  <th className="px-4 py-3 font-medium">分类</th>
-                  <th className="hidden px-4 py-3 font-medium sm:table-cell">描述</th>
-                  <th className="hidden px-4 py-3 font-medium md:table-cell">举报人</th>
-                  <th className="px-4 py-3 font-medium">状态</th>
-                  <th className="px-4 py-3 font-medium">操作</th>
+                  <th className="px-4 py-3 font-medium">{t("colTime")}</th>
+                  <th className="px-4 py-3 font-medium">{t("colType")}</th>
+                  <th className="px-4 py-3 font-medium">{t("colCategory")}</th>
+                  <th className="hidden px-4 py-3 font-medium sm:table-cell">
+                    {t("colDescription")}
+                  </th>
+                  <th className="hidden px-4 py-3 font-medium md:table-cell">
+                    {t("colReporter")}
+                  </th>
+                  <th className="px-4 py-3 font-medium">{t("colStatus")}</th>
+                  <th className="px-4 py-3 font-medium">{t("colActions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -267,12 +276,20 @@ export default function AdminReportsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span className="inline-block rounded-md bg-warm-100 px-2 py-0.5 text-xs font-medium text-warm-700">
-                        {TARGET_TYPE_LABELS[report.targetType] ?? report.targetType}
+                        {report.targetType in TARGET_TYPE_LABEL_KEYS
+                          ? t(
+                              TARGET_TYPE_LABEL_KEYS[
+                                report.targetType as Exclude<TargetTypeKey, "all">
+                              ],
+                            )
+                          : report.targetType}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <span className="inline-block rounded-md bg-warm-100 px-2 py-0.5 text-xs font-medium text-warm-700">
-                        {CATEGORY_LABELS[report.category] ?? report.category}
+                        {report.category in CATEGORY_LABEL_KEYS
+                          ? t(CATEGORY_LABEL_KEYS[report.category as CategoryKey])
+                          : report.category}
                       </span>
                     </td>
                     <td className="hidden max-w-48 truncate px-4 py-3 text-xs text-warm-700 sm:table-cell">
@@ -284,15 +301,15 @@ export default function AdminReportsPage() {
                     <td className="px-4 py-3">
                       {report.status === "pending" ? (
                         <span className="inline-block rounded-full bg-coral-light px-2 py-0.5 text-xs font-medium text-coral-hover ring-1 ring-coral-hover/20">
-                          待处理
+                          {t("statusPendingLabel")}
                         </span>
                       ) : report.status === "resolved" ? (
                         <span className="inline-block rounded-full bg-forest-light px-2 py-0.5 text-xs font-medium text-forest-dark ring-1 ring-forest-light">
-                          已处理
+                          {t("statusResolvedLabel")}
                         </span>
                       ) : (
                         <span className="inline-block rounded-full bg-warm-100 px-2 py-0.5 text-xs font-medium text-warm-500 ring-1 ring-warm-200">
-                          已驳回
+                          {t("statusDismissedLabel")}
                         </span>
                       )}
                     </td>
@@ -305,7 +322,7 @@ export default function AdminReportsPage() {
                             onClick={() => dismissReport(report.id)}
                             className="rounded bg-warm-100 px-2 py-1 text-xs font-medium text-warm-600 transition-colors hover:bg-warm-200 disabled:opacity-50"
                           >
-                            驳回
+                            {t("actionDismiss")}
                           </button>
                           <button
                             type="button"
@@ -313,12 +330,14 @@ export default function AdminReportsPage() {
                             onClick={() => openProcessDialog(report.id)}
                             className="rounded bg-coral-light px-2 py-1 text-xs font-medium text-coral transition-colors hover:bg-coral-light/80 disabled:opacity-50"
                           >
-                            处置
+                            {t("actionResolve")}
                           </button>
                         </div>
                       ) : (
                         <span className="text-xs text-warm-400">
-                          {report.status === "resolved" ? "已处理" : "已驳回"}
+                          {report.status === "resolved"
+                            ? t("statusResolvedLabel")
+                            : t("statusDismissedLabel")}
                         </span>
                       )}
                     </td>
@@ -328,11 +347,11 @@ export default function AdminReportsPage() {
             </table>
           </div>
 
-          {/* 分页 */}
+          {/* Pagination */}
           {totalPages > 1 && (
             <div className="mt-4 flex items-center justify-between text-sm text-warm-500">
               <span>
-                共 {totalCount} 条，第 {page}/{totalPages} 页
+                {t("paginationSummary", { total: totalCount, page, totalPages })}
               </span>
               <div className="flex gap-2">
                 <button
@@ -341,7 +360,7 @@ export default function AdminReportsPage() {
                   onClick={() => setPage((p) => p - 1)}
                   className="m3-btn m3-btn-tonal px-3 py-1 text-xs disabled:opacity-50"
                 >
-                  上一页
+                  {t("paginationPrev")}
                 </button>
                 <button
                   type="button"
@@ -349,7 +368,7 @@ export default function AdminReportsPage() {
                   onClick={() => setPage((p) => p + 1)}
                   className="m3-btn m3-btn-tonal px-3 py-1 text-xs disabled:opacity-50"
                 >
-                  下一页
+                  {t("paginationNext")}
                 </button>
               </div>
             </div>
@@ -357,14 +376,16 @@ export default function AdminReportsPage() {
         </>
       )}
 
-      {/* 处置对话框 */}
+      {/* Processing dialog */}
       {processingId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="m3-surface mx-4 w-full max-w-md p-6">
-            <h3 className="mb-4 text-lg font-semibold text-warm-700">处置举报</h3>
+            <h3 className="mb-4 text-lg font-semibold text-warm-700">{t("dialogTitle")}</h3>
 
             <div className="mb-4">
-              <p className="mb-2 text-sm font-medium text-warm-600">执行操作</p>
+              <p className="mb-2 text-sm font-medium text-warm-600">
+                {t("dialogActionsHeading")}
+              </p>
               <div className="flex flex-wrap gap-2">
                 {ACTION_OPTIONS.map((opt) => (
                   <button
@@ -377,7 +398,7 @@ export default function AdminReportsPage() {
                         : "bg-warm-100 text-warm-600 hover:bg-warm-200"
                     }`}
                   >
-                    {opt.label}
+                    {t(opt.labelKey)}
                   </button>
                 ))}
               </div>
@@ -385,7 +406,7 @@ export default function AdminReportsPage() {
 
             <div className="mb-4">
               <label htmlFor="admin-note" className="mb-1 block text-sm font-medium text-warm-600">
-                管理员备注（可选）
+                {t("dialogNoteLabel")}
               </label>
               <textarea
                 id="admin-note"
@@ -394,7 +415,7 @@ export default function AdminReportsPage() {
                 maxLength={500}
                 rows={3}
                 className="w-full rounded-lg border border-warm-200 bg-white px-3 py-2 text-sm text-warm-700 outline-none transition-colors focus:border-coral focus:ring-1 focus:ring-coral"
-                placeholder="备注处置原因..."
+                placeholder={t("dialogNotePlaceholder")}
               />
             </div>
 
@@ -404,7 +425,7 @@ export default function AdminReportsPage() {
                 onClick={closeProcessDialog}
                 className="rounded-lg px-4 py-2 text-sm text-warm-600 transition-colors hover:bg-warm-100"
               >
-                取消
+                {t("dialogCancel")}
               </button>
               <button
                 type="button"
@@ -412,7 +433,7 @@ export default function AdminReportsPage() {
                 onClick={resolveReport}
                 className="rounded-lg bg-coral px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-coral-hover disabled:opacity-50"
               >
-                确认处置
+                {t("dialogConfirm")}
               </button>
             </div>
           </div>

@@ -1,12 +1,16 @@
+import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { requireAdmin, isAdminError } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = {
-  title: "管理后台 | PudCraft Community",
-};
+export async function generateMetadata() {
+  const t = await getTranslations("admin.nav");
+  return {
+    title: t("metaTitle"),
+  };
+}
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const result = await requireAdmin();
