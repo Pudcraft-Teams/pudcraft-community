@@ -52,9 +52,12 @@ export const authConfig: NextAuthConfig = {
   session: { strategy: "jwt" },
   providers: [
     Credentials({
+      // Labels here only surface in NextAuth's auto-generated sign-in
+      // fallback page. The real login UI is /login, which uses translated
+      // copy via `useTranslations`. Keep these English.
       credentials: {
-        email: { label: "邮箱", type: "email" },
-        password: { label: "密码", type: "password" },
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
       },
       authorize: async (credentials, request) => {
         const clientIp = getClientIp(request);

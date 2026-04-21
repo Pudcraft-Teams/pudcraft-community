@@ -8,6 +8,7 @@ import { getRequestLocale } from "@/i18n/locale";
 import { auth } from "@/lib/auth";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
+import { translateImageValidationError } from "@/lib/i18nImage";
 import { flattenZodErrorWithLocale } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { generateAndReservePsid } from "@/lib/numeric-id";
@@ -238,6 +239,7 @@ export async function POST(request: Request) {
   const locale = await getRequestLocale(request);
   const tCommon = await getTranslations({ locale, namespace: "errors.api" });
   const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
+  const tUploads = await getTranslations({ locale, namespace: "errors.api.uploads" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -332,7 +334,10 @@ export async function POST(request: Request) {
         validateImageFile(iconBuffer, iconMimeType);
       } catch (error) {
         if (error instanceof ImageValidationError) {
-          return NextResponse.json({ error: error.message }, { status: error.status });
+          return NextResponse.json(
+            { error: translateImageValidationError(error, tUploads) },
+            { status: error.status },
+          );
         }
 
         return NextResponse.json({ error: tServers("iconInvalid") }, { status: 400 });
@@ -408,7 +413,7 @@ export async function POST(request: Request) {
         });
       } catch (error) {
         if (error instanceof ImageValidationError) {
-          iconWarning = error.message;
+          iconWarning = translateImageValidationError(error, tUploads);
           logger.info("[api/servers] Server icon failed validation", {
             serverId: server.id,
             reason: error.message,

@@ -285,12 +285,24 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       });
     }
 
+    const verifyReasonKeyMap: Record<string, string> = {
+      serverNotFound: "verifyReasonServerNotFound",
+      tokenUpdated: "verifyReasonTokenUpdated",
+      tokenMissingClaimer: "verifyReasonTokenMissingClaimer",
+      tokenExpired: "verifyReasonTokenExpired",
+      serverOffline: "verifyReasonServerOffline",
+      tokenNotInMotd: "verifyReasonNoToken",
+    };
+    const translatedReason = result.reasonKey
+      ? tServers(verifyReasonKeyMap[result.reasonKey] as never)
+      : (result.reason ?? tServers("verifyReasonNoToken"));
+
     return NextResponse.json(
       {
         success: false,
         verified: false,
         message: tServers("verifyFailedGeneric"),
-        reason: result.reason ?? tServers("verifyReasonNoToken"),
+        reason: translatedReason,
       },
       { status: 400 },
     );

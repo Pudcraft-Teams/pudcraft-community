@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const redisEnvSchema = z.object({
-  REDIS_URL: z.string().trim().url("REDIS_URL 必须是合法的 Redis URL").optional(),
+  REDIS_URL: z.string().trim().url("REDIS_URL must be a valid Redis URL").optional(),
   REDIS_HOST: z.string().trim().min(1).optional(),
   REDIS_PORT: z.coerce.number().int().min(1).max(65535).optional(),
   REDIS_PASSWORD: z.string().optional(),

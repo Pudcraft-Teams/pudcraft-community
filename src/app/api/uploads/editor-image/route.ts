@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
+import { translateImageValidationError } from "@/lib/i18nImage";
 import { logger } from "@/lib/logger";
 import { getClientIp } from "@/lib/request-ip";
 import {
@@ -17,7 +18,7 @@ import {
 
 /**
  * POST /api/uploads/editor-image
- * 上传编辑器图片，返回可插入 Markdown 的 URL。
+ * Uploads an image for the Markdown editor and returns an embeddable URL.
  */
 export async function POST(request: Request) {
   const locale = await getRequestLocale(request);
@@ -47,7 +48,10 @@ export async function POST(request: Request) {
       validateImageFile(imageBuffer, imageMimeType);
     } catch (error) {
       if (error instanceof ImageValidationError) {
-        return NextResponse.json({ error: error.message }, { status: error.status });
+        return NextResponse.json(
+          { error: translateImageValidationError(error, tUploads) },
+          { status: error.status },
+        );
       }
 
       return NextResponse.json({ error: tUploads("imageInvalid") }, { status: 400 });
@@ -61,11 +65,14 @@ export async function POST(request: Request) {
       });
     } catch (error) {
       if (error instanceof ImageValidationError) {
-        return NextResponse.json({ error: error.message }, { status: error.status });
+        return NextResponse.json(
+          { error: translateImageValidationError(error, tUploads) },
+          { status: error.status },
+        );
       }
       if (error instanceof ImageModerationError) {
         return NextResponse.json(
-          { error: tUploads("imageModerated"), details: error.message },
+          { error: tUploads("imageModerated"), details: error.category ?? null },
           { status: error.status },
         );
       }

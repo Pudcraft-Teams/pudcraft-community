@@ -6,6 +6,7 @@ import { getTranslations } from "next-intl/server";
 import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
+import { translateImageValidationError } from "@/lib/i18nImage";
 import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { moderateFields } from "@/lib/moderation";
@@ -93,6 +94,7 @@ export async function PATCH(request: Request) {
   const locale = await getRequestLocale(request);
   const tCommon = await getTranslations({ locale, namespace: "errors.api" });
   const tUsers = await getTranslations({ locale, namespace: "errors.api.users" });
+  const tUploads = await getTranslations({ locale, namespace: "errors.api.uploads" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -176,7 +178,10 @@ export async function PATCH(request: Request) {
             code: error.code,
             claimedType: avatarMimeType,
           });
-          return NextResponse.json({ error: error.message }, { status: error.status });
+          return NextResponse.json(
+            { error: translateImageValidationError(error, tUploads) },
+            { status: error.status },
+          );
         }
 
         return NextResponse.json({ error: tUsers("avatarInvalid") }, { status: 400 });
@@ -203,11 +208,14 @@ export async function PATCH(request: Request) {
         data.image = nextImageKey;
       } catch (error) {
         if (error instanceof ImageValidationError) {
-          return NextResponse.json({ error: error.message }, { status: error.status });
+          return NextResponse.json(
+            { error: translateImageValidationError(error, tUploads) },
+            { status: error.status },
+          );
         }
         if (error instanceof ImageModerationError) {
           return NextResponse.json(
-            { error: tUsers("avatarModerated"), details: error.message },
+            { error: tUsers("avatarModerated"), details: error.category ?? null },
             { status: error.status },
           );
         }

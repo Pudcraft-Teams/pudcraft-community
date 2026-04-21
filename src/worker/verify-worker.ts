@@ -82,28 +82,28 @@ export const verifyWorker = new Worker<VerifyJobData, VerifyJobResult>(
     });
 
     if (!server) {
-      return { success: false, reason: "服务器不存在" };
+      return { success: false, reasonKey: "serverNotFound" };
     }
 
     if (!server.verifyToken || server.verifyToken !== token) {
-      return { success: false, reason: "验证码已更新，请重新获取后再验证" };
+      return { success: false, reasonKey: "tokenUpdated" };
     }
 
     if (!server.verifyUserId) {
-      return { success: false, reason: "当前验证码缺少认领者，请重新获取" };
+      return { success: false, reasonKey: "tokenMissingClaimer" };
     }
 
     if (!server.verifyExpiresAt || server.verifyExpiresAt.getTime() <= Date.now()) {
-      return { success: false, reason: "验证码已过期，请重新生成" };
+      return { success: false, reasonKey: "tokenExpired" };
     }
 
     const result = await pingServer(address, port);
     if (!result.isOnline) {
-      return { success: false, reason: "服务器离线，无法验证" };
+      return { success: false, reasonKey: "serverOffline" };
     }
 
     if (!motdContainsToken(result.motd, token)) {
-      return { success: false, reason: "MOTD 中未找到验证码" };
+      return { success: false, reasonKey: "tokenNotInMotd" };
     }
 
     const now = new Date();
@@ -142,7 +142,7 @@ export const verifyWorker = new Worker<VerifyJobData, VerifyJobResult>(
         return { success: true };
       }
 
-      return { success: false, reason: "验证码已更新，请重新获取后再验证" };
+      return { success: false, reasonKey: "tokenUpdated" };
     }
 
     return { success: true };

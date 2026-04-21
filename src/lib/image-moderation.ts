@@ -22,6 +22,11 @@ export type { ModerationOptions, ModerationResult };
 
 export type ImageModerationContext = "avatar" | "server-icon" | "editor-image";
 
+// LABEL_NAMES are human-readable renderings of the Alibaba Cloud image
+// moderation labels. Like src/lib/moderation.ts LABEL_NAMES, these are
+// audit metadata persisted to moderation logs and shown verbatim in the
+// admin moderation console — moderators depend on the exact wording, so
+// they are intentionally left as Chinese.
 const LABEL_NAMES: Record<string, string> = {
   porn: "色情",
   terrorism: "暴恐",
@@ -33,7 +38,7 @@ const LABEL_NAMES: Record<string, string> = {
   others: "其他违规",
 };
 
-// ─── 审查日志（异步写入，不阻塞主流程） ──────────────
+// Moderation log (async write — must not block the main flow).
 
 function writeImageModerationLog(
   context: ImageModerationContext,
