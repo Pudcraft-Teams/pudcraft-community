@@ -1,44 +1,55 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { prisma } from "@/lib/db";
+import { getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
-import { requireAdmin, isAdminError } from "@/lib/admin";
+import { requireAdmin, isAdminError, translateAdminError } from "@/lib/admin";
 import { adminReportActionSchema } from "@/lib/validation";
 import { createNotification } from "@/lib/notification";
 
 /**
- * PATCH /api/admin/reports/:id — 处置举报（驳回/解决）。
+ * PATCH /api/admin/reports/:id — dispose of a report (dismiss / resolve).
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tAdmin = await getTranslations({ locale, namespace: "errors.api.admin" });
   try {
     const adminResult = await requireAdmin();
     if (isAdminError(adminResult)) {
-      return NextResponse.json({ error: adminResult.error }, { status: adminResult.status });
+      return NextResponse.json(
+        { error: translateAdminError(locale, adminResult.errorKey) },
+        { status: adminResult.status },
+      );
     }
 
     const { id } = await params;
 
     const report = await prisma.report.findUnique({ where: { id } });
     if (!report) {
-      return NextResponse.json({ error: "举报未找到" }, { status: 404 });
+      return NextResponse.json({ error: tAdmin("reportNotFound") }, { status: 404 });
     }
 
     if (report.status !== "pending") {
-      return NextResponse.json({ error: "该举报已被处理" }, { status: 400 });
+      return NextResponse.json({ error: tAdmin("reportAlreadyResolved") }, { status: 400 });
     }
 
     let body: unknown;
     try {
       body = await request.json();
     } catch {
-      return NextResponse.json({ error: "请求体必须是合法 JSON" }, { status: 400 });
+      return NextResponse.json({ error: tCommon("invalidJson") }, { status: 400 });
     }
 
-    const parsed = adminReportActionSchema.safeParse(body);
+    const parsed = adminReportActionSchema.safeParse(body, {
+      errorMap: getZodErrorMap(locale),
+    });
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: parsed.error.flatten() },
         { status: 400 },
       );
     }
@@ -78,10 +89,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       logger.error("[api/admin/reports/[id]] Failed to notify reporter", error);
     }
 
-    return NextResponse.json({ success: true, message: action === "dismiss" ? "已驳回" : "已处理" });
+    return NextResponse.json({
+      success: true,
+      message: action === "dismiss" ? tAdmin("reportDismissed") : tAdmin("reportResolved"),
+    });
   } catch (err) {
     logger.error("[api/admin/reports/[id]] Unexpected PATCH error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
 

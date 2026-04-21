@@ -1,33 +1,44 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { prisma } from "@/lib/db";
+import { getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
-import { requireAdmin, isAdminError } from "@/lib/admin";
+import { requireAdmin, isAdminError, translateAdminError } from "@/lib/admin";
 import { adminQueryChangelogsSchema, createChangelogSchema } from "@/lib/validation";
 import type { AdminChangelogItem } from "@/lib/types";
 import type { Prisma } from "@prisma/client";
 
 /**
- * GET /api/admin/changelog — 管理员获取更新日志列表（含草稿）。
+ * GET /api/admin/changelog — admin-only changelog listing (includes drafts).
  */
 export async function GET(request: Request) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
   try {
     const adminResult = await requireAdmin();
     if (isAdminError(adminResult)) {
-      return NextResponse.json({ error: adminResult.error }, { status: adminResult.status });
+      return NextResponse.json(
+        { error: translateAdminError(locale, adminResult.errorKey) },
+        { status: adminResult.status },
+      );
     }
 
     const { searchParams } = new URL(request.url);
-    const parsed = adminQueryChangelogsSchema.safeParse({
-      page: searchParams.get("page") ?? undefined,
-      limit: searchParams.get("limit") ?? undefined,
-      published: searchParams.get("published") ?? undefined,
-    });
+    const parsed = adminQueryChangelogsSchema.safeParse(
+      {
+        page: searchParams.get("page") ?? undefined,
+        limit: searchParams.get("limit") ?? undefined,
+        published: searchParams.get("published") ?? undefined,
+      },
+      { errorMap: getZodErrorMap(locale) },
+    );
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: parsed.error.flatten() },
         { status: 400 },
       );
     }
@@ -75,26 +86,38 @@ export async function GET(request: Request) {
     });
   } catch (err) {
     logger.error("[api/admin/changelog] GET error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
 
 /**
- * POST /api/admin/changelog — 创建更新日志。
+ * POST /api/admin/changelog — create a changelog entry.
  */
 export async function POST(request: Request) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
   try {
     const adminResult = await requireAdmin();
     if (isAdminError(adminResult)) {
-      return NextResponse.json({ error: adminResult.error }, { status: adminResult.status });
+      return NextResponse.json(
+        { error: translateAdminError(locale, adminResult.errorKey) },
+        { status: adminResult.status },
+      );
     }
 
-    const body: unknown = await request.json();
-    const parsed = createChangelogSchema.safeParse(body);
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: tCommon("invalidJson") }, { status: 400 });
+    }
+    const parsed = createChangelogSchema.safeParse(body, {
+      errorMap: getZodErrorMap(locale),
+    });
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: parsed.error.flatten() },
         { status: 400 },
       );
     }
@@ -115,6 +138,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: { id: changelog.id } }, { status: 201 });
   } catch (err) {
     logger.error("[api/admin/changelog] POST error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

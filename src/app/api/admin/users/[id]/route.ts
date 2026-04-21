@@ -1,41 +1,54 @@
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { prisma } from "@/lib/db";
+import { getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { resolveUserCuid } from "@/lib/lookup";
-import { requireAdmin, isAdminError } from "@/lib/admin";
+import { requireAdmin, isAdminError, translateAdminError } from "@/lib/admin";
 import { userLookupIdSchema, adminUserActionSchema } from "@/lib/validation";
 
 /**
- * PATCH /api/admin/users/:id — 封禁/解封用户。
+ * PATCH /api/admin/users/:id — ban / unban a user.
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tAdmin = await getTranslations({ locale, namespace: "errors.api.admin" });
   try {
     const adminResult = await requireAdmin();
     if (isAdminError(adminResult)) {
-      return NextResponse.json({ error: adminResult.error }, { status: adminResult.status });
+      return NextResponse.json(
+        { error: translateAdminError(locale, adminResult.errorKey) },
+        { status: adminResult.status },
+      );
     }
 
     const { id } = await params;
-    const parsedId = userLookupIdSchema.safeParse(id);
+    const parsedId = userLookupIdSchema.safeParse(id, {
+      errorMap: getZodErrorMap(locale),
+    });
     if (!parsedId.success) {
-      return NextResponse.json({ error: "无效的用户 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tAdmin("invalidUserIdFormat") }, { status: 400 });
     }
 
     const resolvedId = await resolveUserCuid(parsedId.data);
     if (!resolvedId) {
-      return NextResponse.json({ error: "用户未找到" }, { status: 404 });
+      return NextResponse.json({ error: tAdmin("userNotFound") }, { status: 404 });
     }
 
     let body: unknown;
     try {
       body = await request.json();
     } catch {
-      return NextResponse.json({ error: "请求体必须是合法 JSON" }, { status: 400 });
+      return NextResponse.json({ error: tCommon("invalidJson") }, { status: 400 });
     }
-    const parsed = adminUserActionSchema.safeParse(body);
+    const parsed = adminUserActionSchema.safeParse(body, {
+      errorMap: getZodErrorMap(locale),
+    });
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: parsed.error.flatten() },
         { status: 400 },
       );
     }
@@ -48,17 +61,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     });
 
     if (!user) {
-      return NextResponse.json({ error: "用户未找到" }, { status: 404 });
+      return NextResponse.json({ error: tAdmin("userNotFound") }, { status: 404 });
     }
 
-    // 不能封禁管理员
+    // Cannot ban admins
     if (action === "ban" && user.role === "admin") {
-      return NextResponse.json({ error: "不能封禁管理员" }, { status: 400 });
+      return NextResponse.json({ error: tAdmin("cannotBanAdmin") }, { status: 400 });
     }
 
     if (action === "ban") {
       if (!reason) {
-        return NextResponse.json({ error: "封禁时必须填写原因" }, { status: 400 });
+        return NextResponse.json({ error: tAdmin("banReasonRequired") }, { status: 400 });
       }
 
       await prisma.user.update({
@@ -70,7 +83,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         },
       });
 
-      return NextResponse.json({ success: true, message: "用户已封禁" });
+      return NextResponse.json({ success: true, message: tAdmin("userBanned") });
     }
 
     if (action === "unban") {
@@ -83,12 +96,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         },
       });
 
-      return NextResponse.json({ success: true, message: "用户已解封" });
+      return NextResponse.json({ success: true, message: tAdmin("userUnbanned") });
     }
 
-    return NextResponse.json({ error: "未知操作" }, { status: 400 });
+    return NextResponse.json({ error: tAdmin("unknownAction") }, { status: 400 });
   } catch (err) {
     logger.error("[api/admin/users/[id]] Unexpected PATCH error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

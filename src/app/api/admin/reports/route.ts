@@ -1,33 +1,44 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { prisma } from "@/lib/db";
+import { getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
-import { requireAdmin, isAdminError } from "@/lib/admin";
+import { requireAdmin, isAdminError, translateAdminError } from "@/lib/admin";
 import { adminQueryReportsSchema } from "@/lib/validation";
 import type { Prisma } from "@prisma/client";
 
 /**
- * GET /api/admin/reports — 管理员获取举报列表。
+ * GET /api/admin/reports — admin-only report listing.
  */
 export async function GET(request: Request) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
   try {
     const adminResult = await requireAdmin();
     if (isAdminError(adminResult)) {
-      return NextResponse.json({ error: adminResult.error }, { status: adminResult.status });
+      return NextResponse.json(
+        { error: translateAdminError(locale, adminResult.errorKey) },
+        { status: adminResult.status },
+      );
     }
 
     const { searchParams } = new URL(request.url);
-    const parsed = adminQueryReportsSchema.safeParse({
-      page: searchParams.get("page") ?? undefined,
-      limit: searchParams.get("limit") ?? undefined,
-      status: searchParams.get("status") ?? undefined,
-      targetType: searchParams.get("targetType") ?? undefined,
-    });
+    const parsed = adminQueryReportsSchema.safeParse(
+      {
+        page: searchParams.get("page") ?? undefined,
+        limit: searchParams.get("limit") ?? undefined,
+        status: searchParams.get("status") ?? undefined,
+        targetType: searchParams.get("targetType") ?? undefined,
+      },
+      { errorMap: getZodErrorMap(locale) },
+    );
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: parsed.error.flatten() },
         { status: 400 },
       );
     }
@@ -71,6 +82,6 @@ export async function GET(request: Request) {
     });
   } catch (err) {
     logger.error("[api/admin/reports] Unexpected error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
