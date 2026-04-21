@@ -1,5 +1,8 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
 import { buildStorageImageRemotePatterns } from "./src/lib/storage-image-policy";
+
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 function firstNonEmptyEnv(...values: Array<string | undefined>): string | undefined {
   for (const value of values) {
@@ -54,4 +57,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

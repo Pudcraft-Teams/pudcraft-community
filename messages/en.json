@@ -1,0 +1,30 @@
+{
+  "metadata": {
+    "siteName": "PudCraft Community",
+    "title": "PudCraft Community - Minecraft Servers & Community",
+    "description": "Discover great Minecraft servers. Submit, claim, comment, and favorite — all in one place for owners and players.",
+    "keywords": ["Minecraft", "MC server", "server list", "community", "multiplayer"]
+  },
+  "nav": {
+    "skipToContent": "Skip to main content",
+    "servers": "Servers",
+    "changelog": "Changelog",
+    "brandTagline": "Community"
+  },
+  "footer": {
+    "copyright": "© {year}"
+  },
+  "errors": {
+    "page": {
+      "title": "Something went wrong",
+      "description": "Please try again. If the problem persists, head back to the homepage and try once more.",
+      "retry": "Retry"
+    },
+    "notFound": {
+      "code": "404",
+      "title": "Page not found",
+      "description": "The link may have expired or the page has been moved.",
+      "backHome": "Back to home"
+    }
+  }
+}

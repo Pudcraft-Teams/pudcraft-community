@@ -1,22 +1,22 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 interface ErrorPageProps {
   error: Error & { digest?: string };
   reset: () => void;
 }
 
-/**
- * 全局错误边界页面。
- */
 export default function ErrorPage({ error: _error, reset }: ErrorPageProps) {
   void _error;
+  const t = useTranslations("errors.page");
 
   return (
     <div className="mx-auto flex min-h-[50vh] max-w-xl flex-col items-center justify-center px-4 text-center">
-      <h1 className="text-2xl font-semibold text-warm-800">出了点问题</h1>
-      <p className="mt-3 text-sm text-warm-600">请稍后重试，若问题持续可返回首页后再试。</p>
+      <h1 className="text-2xl font-semibold text-warm-800">{t("title")}</h1>
+      <p className="mt-3 text-sm text-warm-600">{t("description")}</p>
       <button type="button" onClick={reset} className="m3-btn m3-btn-primary mt-6">
-        重试
+        {t("retry")}
       </button>
     </div>
   );

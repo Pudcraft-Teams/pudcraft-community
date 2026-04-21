@@ -1,0 +1,30 @@
+{
+  "metadata": {
+    "siteName": "PudCraft Community",
+    "title": "PudCraft Community - Minecraft 服务器与社区广场",
+    "description": "发现优质 Minecraft 服务器，提交、认领、评论与收藏，与服主和玩家一起交流。",
+    "keywords": ["Minecraft", "MC服务器", "我的世界", "服务器列表", "社区", "MC联机"]
+  },
+  "nav": {
+    "skipToContent": "跳到主要内容",
+    "servers": "服务器",
+    "changelog": "更新日志",
+    "brandTagline": "Community"
+  },
+  "footer": {
+    "copyright": "© {year}"
+  },
+  "errors": {
+    "page": {
+      "title": "出了点问题",
+      "description": "请稍后重试，若问题持续可返回首页后再试。",
+      "retry": "重试"
+    },
+    "notFound": {
+      "code": "404",
+      "title": "页面不存在",
+      "description": "你访问的链接可能已失效，或页面已被移动。",
+      "backHome": "返回首页"
+    }
+  }
+}

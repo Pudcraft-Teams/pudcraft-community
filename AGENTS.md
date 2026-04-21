@@ -11,6 +11,7 @@ Pudcraft Community is currently a server-only Minecraft server community platfor
 - When editing spec documents, `AGENTS.md` and `CLAUDE.md` must stay in sync. If one is missing, restore it and align it with the other.
 - `docs/API.md` and `docs/PRD.md` are the live documents. Older design drafts or forum-era planning docs (no longer tracked in this branch; some may exist locally under `docs/plans/` or `docs/superpowers/` but are gitignored) are archival only and do not override current behavior.
 - Dependency upgrade policy is in `docs/dependency-pins.md`. The rule: keep the live runtime stack fresh, retain only the few pins that still have a real migration cost.
+- UI text extraction and translation rules live in `docs/i18n.md`. All user-visible copy goes through `messages/<locale>.json` via `next-intl`; never inline new user-facing strings in a migrated file.
 
 ## Written output language
 
@@ -30,6 +31,15 @@ Exceptions — keep as-is, do not rewrite:
 - User-facing UI strings and API error responses visible to end users (these are product copy; change them only when the task is about copy)
 - Existing quoted content, screenshots, or data samples inside docs
 - Third-party content (upstream changelogs, dependency notes, vendor docs)
+
+## Internationalization (i18n)
+
+- Library: `next-intl`. Messages live in `messages/zh.json` (default) and `messages/en.json`. Config is under `src/i18n/`.
+- Locale is resolved per request from the `NEXT_LOCALE` cookie, then `Accept-Language`, then falls back to `zh`. No URL prefix yet — adding path-based routing (`/en/...`) is a follow-up once English is ready to launch.
+- Every user-visible string in `.tsx` components must resolve through `useTranslations` (client) or `getTranslations` (server). Do not inline new Chinese or English UI copy in migrated files; new components should use translation keys from day one.
+- When adding a key, add it to **both** `messages/zh.json` and `messages/en.json` in the same change. English may be a draft, but the key must exist.
+- Do not extract `logger.*`, thrown `Error` messages, commit messages, code comments, or docs — those stay in English per the Written output language rules.
+- Full convention, namespace table, and rollout plan are in `docs/i18n.md`. Treat it as the single source of truth for i18n questions.
 
 ## Product scope
 
@@ -122,8 +132,10 @@ Commit messages use `<type>: <description>`, e.g. `feat:` / `fix:` / `refactor:`
 | `src/components/console/` | Console-only interactive components | Shared logic beyond console layout |
 | `src/hooks/` | React hooks | Page routing, database access |
 | `src/lib/` | Business logic, data-access wrappers, validation, utilities | React components |
+| `src/i18n/` | `next-intl` config (`config.ts`, `request.ts`) | Message JSON, UI components |
 | `src/worker/` | ping / verify / sync background jobs | API Routes |
 | `src/ws/` | Whitelist-sync WebSocket service | Page components |
+| `messages/` | `next-intl` message bundles, one JSON per locale | Anything other than translation strings |
 | `prisma/` | Schema and migrations | Application UI code |
 | `docs/` | Live documents and archival material | Source implementation |
 
@@ -296,3 +308,4 @@ Record concrete mistakes here so the same one does not happen twice. When a new 
 - **Scope creep through documentation (PRs #55, #56).** Forum / MoltBook features were designed, partially built, and documented as live even after the product decision to stay server-only. A full rollback was required. Next time: if a capability is not in the "Product scope" block above, do not build it, do not wire routes / APIs for it, and do not describe it as current behavior. A scope change must land in `CLAUDE.md` / `AGENTS.md` / `docs/PRD.md` **before** code.
 - **Docs drifting from code.** `docs/API.md`, `docs/PRD.md`, `CLAUDE.md`, and `AGENTS.md` were not updated in the same change as code, so later readers (including Claude itself) treated stale guidance as current and kept building on top of it. Next time: any PR that changes routes / models / APIs / scope must touch these four docs in the same PR, or explicitly call out why it does not.
 - **Letting `CLAUDE.md` and `AGENTS.md` diverge.** One was updated, the other was not, producing contradictory guidance depending on which tool opened the repo. Next time: after editing either file, diff them — everything from `## Read this first` down must match byte-for-byte.
+- **Inlining UI copy after i18n landed.** Once `next-intl` was wired up, follow-up changes kept adding hard-coded Chinese strings in files that had already been migrated, silently breaking the translation contract. Next time: if a file already uses `useTranslations` / `getTranslations`, any new user-visible string goes through a new key in `messages/*.json`, not a string literal.
