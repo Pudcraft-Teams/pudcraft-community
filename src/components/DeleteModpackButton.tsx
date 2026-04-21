@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useConfirm } from "@/components/ConfirmDialog";
@@ -36,6 +37,7 @@ export function DeleteModpackButton({
   onDeleted,
   className = "rounded-lg border border-coral-hover/30 px-3 py-1.5 text-xs font-medium text-coral-hover transition-colors hover:bg-coral-light",
 }: DeleteModpackButtonProps) {
+  const t = useTranslations("modpacks");
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
@@ -48,9 +50,9 @@ export function DeleteModpackButton({
     }
 
     const confirmed = await confirm({
-      title: "删除确认",
-      message: `确定删除整合包「${modpackName}」吗？此操作不可恢复。`,
-      confirmText: "删除",
+      title: t("deleteConfirmTitle"),
+      message: t("deleteConfirmMessage", { name: modpackName }),
+      confirmText: t("deleteConfirmAction"),
       danger: true,
     });
     if (!confirmed) {
@@ -70,15 +72,15 @@ export function DeleteModpackButton({
       }
 
       if (!response.ok) {
-        toast.error(payload.error ?? "删除失败，请稍后重试");
+        toast.error(payload.error ?? t("deleteFailed"));
         return;
       }
 
       onDeleted?.(modpackId);
-      toast.success("整合包已删除");
+      toast.success(t("deleteSuccess"));
       router.refresh();
     } catch {
-      toast.error("网络异常，删除失败");
+      toast.error(t("deleteNetworkError"));
     } finally {
       setIsDeleting(false);
     }
@@ -91,7 +93,7 @@ export function DeleteModpackButton({
       disabled={isDeleting}
       className={`${className} disabled:cursor-not-allowed disabled:opacity-60`}
     >
-      {isDeleting ? "删除中..." : "删除"}
+      {isDeleting ? t("deleting") : t("delete")}
     </button>
   );
 }
