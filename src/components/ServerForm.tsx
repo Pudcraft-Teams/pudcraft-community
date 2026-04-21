@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ImageUpload } from "@/components/ImageUpload";
@@ -8,6 +9,9 @@ import { useToast } from "@/hooks/useToast";
 import { isPrivateServersEnabled } from "@/lib/features";
 import { createServerSchema } from "@/lib/validation";
 
+// NOTE: Tag values are stored verbatim (Chinese) because they are persisted
+// and filtered on by their literal string. The display-only tagNames keys
+// allow future locales to relabel the UI while keeping the storage format.
 const SERVER_TAGS = [
   "生存",
   "创造",
@@ -87,6 +91,8 @@ function normalizeTags(tags: string[] | undefined): string {
  * 统一处理字段输入、客户端校验、图标预览与提交态。
  */
 export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFormProps) {
+  const t = useTranslations("servers.form");
+  const tCommon = useTranslations("servers.common");
   const { toast } = useToast();
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
@@ -277,7 +283,7 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
         maxPlayers: errors.maxPlayers?.[0],
         qqGroup: errors.qqGroup?.[0],
       });
-      toast.error("请检查表单输入");
+      toast.error(t("formInvalid"));
       return;
     }
 
@@ -315,13 +321,13 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
 
       const result = await onSubmit(formData);
       if (!result.success) {
-        toast.error(result.error ?? "提交失败，请稍后重试");
+        toast.error(result.error ?? t("submitGenericFailed"));
         if (result.warning) {
           toast.error(result.warning);
         }
       }
     } catch {
-      toast.error("网络异常，请稍后重试");
+      toast.error(tCommon("networkError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -330,36 +336,36 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
   const submitButtonText =
     mode === "create"
       ? isSubmitting
-        ? "提交中..."
-        : "提交服务器"
+        ? t("submitCreateSubmitting")
+        : t("submitCreate")
       : isSubmitting
-        ? "保存中..."
-        : "保存修改";
+        ? t("submitEditSubmitting")
+        : t("submitEdit");
 
   return (
     <form className="mt-6 space-y-5" onSubmit={handleSubmit} noValidate>
       <fieldset disabled={isSubmitting} className="space-y-5 disabled:opacity-90">
         <label className="block text-sm text-warm-800">
-          服务器名称
+          {t("nameLabel")}
           <input
             type="text"
             value={name}
             onChange={(event) => setName(event.target.value)}
             className="m3-input mt-2 w-full"
-            placeholder="例如：PudCraft 生存服"
+            placeholder={t("namePlaceholder")}
           />
           {fieldErrors.name && <p className="mt-1 text-xs text-accent-hover">{fieldErrors.name}</p>}
         </label>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block text-sm text-warm-800">
-            服务器地址
+            {t("addressLabel")}
             <input
               type="text"
               value={address}
               onChange={(event) => setAddress(event.target.value)}
               className="m3-input mt-2 w-full"
-              placeholder="play.example.com"
+              placeholder={t("addressPlaceholder")}
             />
             {fieldErrors.address && (
               <p className="mt-1 text-xs text-accent-hover">{fieldErrors.address}</p>
@@ -367,7 +373,7 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
           </label>
 
           <label className="block text-sm text-warm-800">
-            端口
+            {t("portLabel")}
             <input
               type="number"
               value={port}
@@ -381,13 +387,13 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
         </div>
 
         <label className="block text-sm text-warm-800">
-          游戏版本
+          {t("versionLabel")}
           <input
             type="text"
             value={version}
             onChange={(event) => setVersion(event.target.value)}
             className="m3-input mt-2 w-full"
-            placeholder="例如：1.20.4"
+            placeholder={t("versionPlaceholder")}
           />
           {fieldErrors.version && (
             <p className="mt-1 text-xs text-accent-hover">{fieldErrors.version}</p>
@@ -395,7 +401,7 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
         </label>
 
         <div>
-          <p className="text-sm text-warm-800">服务器类型</p>
+          <p className="text-sm text-warm-800">{t("serverTypeLabel")}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {availableTags.map((tag) => {
               const active = selectedTags.includes(tag);
@@ -415,22 +421,24 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
         </div>
 
         <label className="block text-sm text-warm-800">
-          简短描述（选填）
+          {t("descriptionLabel")}
           <textarea
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             className="m3-input mt-2 min-h-[88px] w-full"
-            placeholder="显示在卡片中的简介（最多 200 字）"
+            placeholder={t("descriptionPlaceholder")}
             maxLength={200}
           />
-          <p className="mt-1 text-xs text-warm-400">{description.length}/200</p>
+          <p className="mt-1 text-xs text-warm-400">
+            {t("descriptionCounter", { count: description.length })}
+          </p>
           {fieldErrors.description && (
             <p className="mt-1 text-xs text-accent-hover">{fieldErrors.description}</p>
           )}
         </label>
 
         <div>
-          <p className="text-sm text-warm-800">详细介绍（选填，支持 Markdown）</p>
+          <p className="text-sm text-warm-800">{t("contentLabel")}</p>
           <div className="mt-2">
             <MarkdownEditor
               ref={contentEditorRef}
@@ -438,7 +446,7 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
               onChange={setContent}
               onDirtyChange={setIsContentDirty}
               maxLength={10000}
-              placeholder="介绍玩法、规则、加入方式等（最多 10000 字）"
+              placeholder={t("contentPlaceholder")}
               disabled={isSubmitting}
             />
           </div>
@@ -449,7 +457,7 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block text-sm text-warm-800">
-            最大玩家数（选填）
+            {t("maxPlayersLabel")}
             <input
               type="number"
               value={maxPlayers}
@@ -464,13 +472,13 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
           </label>
 
           <label className="block text-sm text-warm-800">
-            QQ 群号（选填）
+            {t("qqGroupLabel")}
             <input
               type="text"
               value={qqGroup}
               onChange={(event) => setQqGroup(event.target.value.replace(/[^\d]/g, ""))}
               className="m3-input mt-2 w-full"
-              placeholder="5-11 位数字"
+              placeholder={t("qqGroupPlaceholder")}
             />
             {fieldErrors.qqGroup && (
               <p className="mt-1 text-xs text-accent-hover">{fieldErrors.qqGroup}</p>
@@ -489,10 +497,10 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
               />
               <div className="min-w-0">
                 <p className="text-sm font-medium text-warm-800">
-                  设为私密服务器
+                  {t("privateServerLabel")}
                 </p>
                 <p className="mt-0.5 text-xs text-warm-500">
-                  开启后服务器不会出现在首页列表，仅通过邀请或申请可加入。你可以稍后在控制台中配置加入方式等详细设置。
+                  {t("privateServerHint")}
                 </p>
               </div>
             </label>
@@ -500,7 +508,7 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
         )}
 
         <div>
-          <p className="text-sm text-warm-800">服务器图标（选填）</p>
+          <p className="text-sm text-warm-800">{t("iconLabel")}</p>
           <div className="mt-2">
             <ImageUpload
               key={`server-icon-upload-${iconUploadResetKey}`}
@@ -519,7 +527,7 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
               placeholder={
                 <div className="flex flex-col items-center gap-1 text-warm-400">
                   <span className="text-lg">+</span>
-                  <span className="text-xs">点击上传服务器图标</span>
+                  <span className="text-xs">{t("iconUploadPlaceholder")}</span>
                 </div>
               }
             />
@@ -536,7 +544,7 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
                 }}
                 className="m3-btn rounded-lg border border-accent-hover/30 bg-surface px-2.5 py-1 text-xs text-accent-hover transition-colors hover:bg-accent-muted"
               >
-                删除当前图标
+                {t("iconRemoveCurrent")}
               </button>
             )}
             {mode === "edit" && removeCurrentIcon && (
@@ -549,7 +557,7 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
                 }}
                 className="m3-btn m3-btn-tonal rounded-lg px-2.5 py-1 text-xs"
               >
-                撤销删除图标
+                {t("iconUndoRemove")}
               </button>
             )}
           </div>
@@ -559,7 +567,7 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
 
         <div className="flex items-center justify-end gap-3">
           <Link href={cancelHref} className="m3-btn m3-btn-tonal">
-            取消
+            {t("cancel")}
           </Link>
           <button
             type="submit"
