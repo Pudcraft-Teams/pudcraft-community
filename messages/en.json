@@ -796,6 +796,18 @@
       "backHome": "返回首页",
       "displayNameFallback": "已登录用户"
     },
+    "sidebar": {
+      "myServers": "我的服务器",
+      "subtitleHasServers": "切换服务器后查看对应控制台数据",
+      "subtitleNoServers": "你还没有可管理的服务器",
+      "submitNew": "提交新服务器",
+      "submitFirst": "去提交",
+      "currentServer": "当前服务器",
+      "verifiedBadge": "已认证",
+      "onlineCount": "在线 {current}/{max}",
+      "emptyHint": "你还没有服务器，去提交一个。",
+      "submitNewAction": "+ 提交新服务器"
+    },
     "entry": {
       "heading": "欢迎使用服主控制台",
       "description": "你目前还没有可管理的服务器。先提交一个服务器，审核通过后即可在控制台查看趋势数据和管理操作。",

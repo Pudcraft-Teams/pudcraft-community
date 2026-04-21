@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 export interface ConsoleSidebarServer {
   id: string;
@@ -37,12 +38,13 @@ function resolveServerAddress(server: ConsoleSidebarServer): string {
 }
 
 /**
- * 控制台侧边栏。
- * 桌面端展示服务器列表，移动端提供下拉选择器。
+ * Console sidebar.
+ * Desktop shows the owned-server list; mobile provides a dropdown selector.
  */
 export function Sidebar({ servers }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const t = useTranslations("console.sidebar");
 
   const hasServers = servers.length > 0;
   const activeServerId = resolveActiveServerId(pathname);
@@ -60,24 +62,24 @@ export function Sidebar({ servers }: SidebarProps) {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wide text-warm-500">
-              我的服务器
+              {t("myServers")}
             </p>
             <p className="text-xs text-warm-400">
-              {hasServers ? "切换服务器后查看对应控制台数据" : "你还没有可管理的服务器"}
+              {hasServers ? t("subtitleHasServers") : t("subtitleNoServers")}
             </p>
           </div>
           <Link
             href="/submit"
             className="m3-btn m3-btn-primary inline-flex w-full items-center justify-center px-3 py-2 text-xs sm:w-auto"
           >
-            {hasServers ? "提交新服务器" : "去提交"}
+            {hasServers ? t("submitNew") : t("submitFirst")}
           </Link>
         </div>
 
         {hasServers ? (
           <div className="space-y-3">
             <label className="block">
-              <span className="mb-1.5 block text-xs font-medium text-warm-600">当前服务器</span>
+              <span className="mb-1.5 block text-xs font-medium text-warm-600">{t("currentServer")}</span>
               <select
                 className="m3-input w-full"
                 value={selectedServerId}
@@ -107,19 +109,22 @@ export function Sidebar({ servers }: SidebarProps) {
                   />
                   <span className="truncate">{selectedServer.name}</span>
                   {selectedServer.isVerified ? (
-                    <span className="text-xs font-semibold text-coral">已认证</span>
+                    <span className="text-xs font-semibold text-coral">{t("verifiedBadge")}</span>
                   ) : null}
                 </div>
                 <p className="mt-1 truncate text-xs text-warm-500">{selectedServerAddress}</p>
                 <p className="mt-1 text-xs text-warm-500">
-                  在线 {selectedServer.playerCount}/{selectedServer.maxPlayers}
+                  {t("onlineCount", {
+                    current: selectedServer.playerCount,
+                    max: selectedServer.maxPlayers,
+                  })}
                 </p>
               </div>
             ) : null}
           </div>
         ) : (
           <div className="rounded-xl border border-dashed border-warm-200 px-3 py-4 text-sm text-warm-500">
-            你还没有服务器，去提交一个。
+            {t("emptyHint")}
           </div>
         )}
       </div>
@@ -127,7 +132,7 @@ export function Sidebar({ servers }: SidebarProps) {
       <aside className="hidden w-64 shrink-0 md:block">
         <div className="m3-surface sticky top-20 flex max-h-[calc(100vh-8rem)] flex-col p-3">
           <h2 className="mb-3 px-2 text-xs font-semibold uppercase tracking-wider text-warm-500">
-            我的服务器
+            {t("myServers")}
           </h2>
 
           {hasServers ? (
@@ -157,7 +162,10 @@ export function Sidebar({ servers }: SidebarProps) {
                     </p>
                     <p className="mt-1 truncate text-xs text-warm-500">{address}</p>
                     <p className="mt-1 text-xs text-warm-500">
-                      在线 {server.playerCount}/{server.maxPlayers}
+                      {t("onlineCount", {
+                        current: server.playerCount,
+                        max: server.maxPlayers,
+                      })}
                     </p>
                   </Link>
                 );
@@ -165,12 +173,12 @@ export function Sidebar({ servers }: SidebarProps) {
             </div>
           ) : (
             <div className="min-h-0 flex-1 rounded-xl border border-dashed border-warm-200 p-3 text-sm text-warm-500">
-              你还没有服务器，去提交一个。
+              {t("emptyHint")}
             </div>
           )}
 
           <Link href="/submit" className="m3-btn m3-btn-primary mt-3 text-center">
-            + 提交新服务器
+            {t("submitNewAction")}
           </Link>
         </div>
       </aside>
