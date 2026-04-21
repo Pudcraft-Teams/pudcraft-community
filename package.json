@@ -19,6 +19,7 @@
     "migrate:uploads": "tsx scripts/migrate-uploads-to-oss.ts",
     "migrate:uploads:dry": "tsx scripts/migrate-uploads-to-oss.ts --dry-run",
     "storage:check": "tsx scripts/verify-storage-behavior.ts",
+    "i18n:check": "tsx scripts/i18n-check.ts",
     "worker": "tsx src/worker/index.ts",
     "worker:dev": "tsx watch src/worker/index.ts",
     "ws": "tsx src/ws/index.ts",
