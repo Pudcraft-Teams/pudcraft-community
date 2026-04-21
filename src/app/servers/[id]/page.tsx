@@ -1,6 +1,6 @@
 import { cache } from "react";
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -11,6 +11,7 @@ import { DeleteModpackButton } from "@/components/DeleteModpackButton";
 import { LiveFavoriteCount } from "@/components/LiveFavoriteCount";
 import { ServerDetailActions } from "@/components/ServerDetailActions";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
+import { defaultLocale, isLocale } from "@/i18n/config";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { isPrivateServersEnabled } from "@/lib/features";
@@ -40,8 +41,9 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat("zh-CN", {
+function formatDate(date: Date, locale: string): string {
+  const intlLocale = locale === "en" ? "en-US" : "zh-CN";
+  return new Intl.DateTimeFormat(intlLocale, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -243,9 +245,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  * 服务器详情页 —— 服务端渲染详情 + 评论首屏预取。
  */
 export default async function ServerDetailPage({ params }: Props) {
-  const [{ id }, session, t] = await Promise.all([
+  const [{ id }, session, locale, t] = await Promise.all([
     params,
     auth(),
+    getLocale(),
     getTranslations("servers.detail"),
   ]);
   const data = await getServerPageData(id);
@@ -255,6 +258,8 @@ export default async function ServerDetailPage({ params }: Props) {
   }
 
   const { server, comments, commentTotal, commentTotalPages } = data;
+  const appLocale = isLocale(locale) ? locale : defaultLocale;
+  const intlLocale = appLocale === "en" ? "en-US" : "zh-CN";
 
   const currentUserId = session?.user?.id ?? null;
   const isOwner = isServerOwner(server.ownerId, currentUserId);
@@ -289,9 +294,11 @@ export default async function ServerDetailPage({ params }: Props) {
       : server.host;
   const canViewModpacks = canSeeAddress;
   const favoriteCount = server.favoriteCount;
-  const lastPingLabel = server.lastPingedAt ? timeAgo(server.lastPingedAt) : t("lastPingUnchecked");
+  const lastPingLabel = server.lastPingedAt
+    ? timeAgo(server.lastPingedAt, appLocale)
+    : t("lastPingUnchecked");
   const verifiedAtLabel = server.verifiedAt
-    ? new Intl.DateTimeFormat("zh-CN", {
+    ? new Intl.DateTimeFormat(intlLocale, {
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
@@ -713,7 +720,7 @@ export default async function ServerDetailPage({ params }: Props) {
                     <span>{t("modpackGameVersion", { value: modpack.gameVersion ?? "--" })}</span>
                     <span>{t("modpackMods", { count: modpack.modsCount })}</span>
                     <span>{t("modpackFileSize", { size: formatFileSize(modpack.fileSize) })}</span>
-                    <span>{t("modpackUploadedAt", { time: formatDate(modpack.createdAt) })}</span>
+                    <span>{t("modpackUploadedAt", { time: formatDate(modpack.createdAt, appLocale) })}</span>
                     <span>
                       {modpack.hasOverrides
                         ? t("modpackWithOverrides")
