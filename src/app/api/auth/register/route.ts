@@ -74,6 +74,7 @@ export async function POST(request: Request) {
             passwordHash,
             emailVerified: new Date(),
             uid,
+            locale,
           },
         });
       });
