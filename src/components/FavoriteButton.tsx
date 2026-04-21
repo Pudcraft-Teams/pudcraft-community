@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 interface FavoriteButtonProps {
@@ -54,6 +55,7 @@ export function FavoriteButton({
   const router = useRouter();
   const pathname = usePathname();
   const { status } = useSession();
+  const t = useTranslations("favorites.button");
 
   const [favorited, setFavorited] = useState<boolean>(initialFavorited ?? false);
   const [isPending, setIsPending] = useState(false);
@@ -152,8 +154,8 @@ export function FavoriteButton({
   return (
     <button
       type="button"
-      aria-label={favorited ? "取消收藏" : "收藏服务器"}
-      title={favorited ? "已收藏" : "收藏"}
+      aria-label={favorited ? t("removeAria") : t("addAria")}
+      title={favorited ? t("removeTitle") : t("addTitle")}
       onClick={handleToggle}
       disabled={isPending}
       className={`inline-flex items-center justify-center rounded-full border border-warm-200 bg-surface transition-transform hover:scale-110 hover:bg-warm-100 ${baseSizeClass} ${colorClass} ${className} disabled:cursor-not-allowed disabled:opacity-60`}

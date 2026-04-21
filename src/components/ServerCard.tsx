@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { isPrivateServersEnabled } from "@/lib/features";
 import type { ServerListItem } from "@/lib/types";
@@ -38,10 +39,15 @@ export function ServerCard({
     iconUrl,
     joinMode,
   } = server;
+  const t = useTranslations("servers.common");
   const privateServersEnabled = isPrivateServersEnabled();
   const isStale = status.isStale;
   const isOnline = status.online;
-  const statusText = isStale ? "未知" : isOnline ? "在线" : "离线";
+  const statusText = isStale
+    ? t("cardStatusUnknown")
+    : isOnline
+      ? t("cardStatusOnline")
+      : t("cardStatusOffline");
   const isAddressHidden = host === "hidden" && port === 0;
   const showApplyBadge =
     privateServersEnabled &&
@@ -62,7 +68,7 @@ export function ServerCard({
             <span className="relative inline-flex h-10 w-10 shrink-0 overflow-hidden rounded-lg">
               <Image
                 src={iconUrl || "/default-server-icon.png"}
-                alt={`${name} 图标`}
+                alt={t("cardIconAlt", { name })}
                 width={40}
                 height={40}
                 className="h-full w-full object-cover"
@@ -75,7 +81,7 @@ export function ServerCard({
               </h3>
               {/* 地址 */}
               {isAddressHidden ? (
-                <p className="mt-0.5 text-xs text-warm-400">地址隐藏</p>
+                <p className="mt-0.5 text-xs text-warm-400">{t("cardAddressHidden")}</p>
               ) : (
                 <p className="mt-0.5 break-all font-mono text-xs text-warm-400">
                   {host}
@@ -109,17 +115,17 @@ export function ServerCard({
               )}
               {isVerified && (
                 <span className="rounded bg-accent-muted px-1.5 py-0.5 text-[11px] font-medium text-accent">
-                  已认领
+                  {t("cardBadgeVerified")}
                 </span>
               )}
               {showApplyBadge && (
                 <span className="rounded bg-warm-100 px-1.5 py-0.5 text-[11px] font-medium text-warm-500">
-                  需申请
+                  {t("cardBadgeApply")}
                 </span>
               )}
               {showInviteBadge && (
                 <span className="rounded bg-warm-100 px-1.5 py-0.5 text-[11px] font-medium text-warm-500">
-                  邀请制
+                  {t("cardBadgeInvite")}
                 </span>
               )}
             </div>
