@@ -1,13 +1,18 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { Sidebar, type ConsoleSidebarServer } from "@/components/console/Sidebar";
 import { UserAvatar } from "@/components/UserAvatar";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
-export const metadata = {
-  title: "服主控制台",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("console.nav");
+  return {
+    title: t("layoutMetaTitle"),
+  };
+}
 
 interface ConsoleLayoutProps {
   children: React.ReactNode;
@@ -42,8 +47,8 @@ async function getOwnedServers(userId: string): Promise<ConsoleSidebarServer[]> 
 }
 
 /**
- * 服主控制台布局。
- * 负责登录保护、侧边栏服务器列表与移动端选择器。
+ * Owner console layout.
+ * Handles login gating, sidebar server list, and mobile selector.
  */
 export default async function ConsoleLayout({ children }: ConsoleLayoutProps) {
   const session = await auth();
@@ -53,16 +58,17 @@ export default async function ConsoleLayout({ children }: ConsoleLayoutProps) {
   }
 
   const servers = await getOwnedServers(userId);
+  const t = await getTranslations("console.nav");
 
   const displayName =
-    session?.user?.name?.trim() || session?.user?.email?.split("@")[0] || "已登录用户";
+    session?.user?.name?.trim() || session?.user?.email?.split("@")[0] || t("displayNameFallback");
 
   return (
     <div className="min-h-[calc(100vh-10rem)]">
       <div className="m3-surface mb-4 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-semibold text-warm-700">PudCraft Community</p>
-          <p className="text-xs text-warm-500">服主控制台</p>
+          <p className="text-sm font-semibold text-warm-700">{t("brandName")}</p>
+          <p className="text-xs text-warm-500">{t("subtitle")}</p>
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
@@ -70,7 +76,7 @@ export default async function ConsoleLayout({ children }: ConsoleLayoutProps) {
             href="/"
             className="m3-btn m3-btn-tonal inline-flex w-full items-center justify-center px-3 py-2 text-xs sm:w-auto"
           >
-            返回首页
+            {t("backHome")}
           </Link>
           <Link
             href={`/u/${session?.user?.uid}`}

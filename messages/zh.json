@@ -788,6 +788,20 @@
     }
   },
   "console": {
+    "nav": {
+      "layoutMetaTitle": "服主控制台",
+      "myServersMetaTitle": "控制台",
+      "brandName": "PudCraft Community",
+      "subtitle": "服主控制台",
+      "backHome": "返回首页",
+      "displayNameFallback": "已登录用户"
+    },
+    "entry": {
+      "heading": "欢迎使用服主控制台",
+      "description": "你目前还没有可管理的服务器。先提交一个服务器，审核通过后即可在控制台查看趋势数据和管理操作。",
+      "submitServer": "提交新服务器",
+      "backHome": "返回首页"
+    },
     "stats": {
       "peakTime": "{time}",
       "peakTimeEmpty": "暂无数据"
