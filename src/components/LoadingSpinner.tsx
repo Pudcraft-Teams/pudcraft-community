@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
 interface LoadingSpinnerProps {
@@ -41,10 +42,12 @@ function renderText(text: string | undefined, size: "sm" | "md" | "lg"): ReactNo
 }
 
 /**
- * 通用加载指示器。
- * 支持尺寸和文案配置，默认 Material 3 浅色风格。
+ * Shared loading spinner.
+ * Supports multiple sizes and an optional label; defaults to the Material 3
+ * light style.
  */
 export function LoadingSpinner({ size = "md", text, className = "" }: LoadingSpinnerProps) {
+  const t = useTranslations("common.loading");
   return (
     <div className={`inline-flex items-center gap-2 ${className}`} role="status">
       <span
@@ -52,7 +55,7 @@ export function LoadingSpinner({ size = "md", text, className = "" }: LoadingSpi
         className={`animate-spin rounded-full border-accent border-t-transparent ${sizeClassMap(size)}`}
       />
       {renderText(text, size)}
-      {!text && <span className="sr-only">加载中</span>}
+      {!text && <span className="sr-only">{t("srLabel")}</span>}
     </div>
   );
 }

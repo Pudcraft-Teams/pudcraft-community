@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   createContext,
   useCallback,
@@ -44,6 +45,7 @@ const DEFAULT_DURATION = 3000;
 export const ToastContext = createContext<ToastContextValue | null>(null);
 
 function Toast({ item, onClose }: ToastProps) {
+  const t = useTranslations("common.toast");
   const colorClass =
     item.type === "success"
       ? "border-forest/30 bg-forest-light text-forest-dark"
@@ -60,7 +62,7 @@ function Toast({ item, onClose }: ToastProps) {
         type="button"
         onClick={() => onClose(item.id)}
         className="rounded-md p-1 text-current transition-colors hover:bg-black/5"
-        aria-label="关闭通知"
+        aria-label={t("closeLabel")}
       >
         ✕
       </button>
