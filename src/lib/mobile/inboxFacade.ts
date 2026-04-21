@@ -40,12 +40,6 @@ export interface MobileInboxErrorText {
   paginationTooDeep: string;
 }
 
-export const DEFAULT_MOBILE_INBOX_ERROR_TEXT: MobileInboxErrorText = {
-  notAuthenticated: "请先登录",
-  validationFailed: "校验失败",
-  paginationTooDeep: "分页过深",
-};
-
 interface MobileInboxGetDependencies {
   requireActiveUserImpl: () => Promise<MobileInboxAuthResult>;
   loadServerInboxData: (input: {
@@ -54,7 +48,11 @@ interface MobileInboxGetDependencies {
     fetchLimit: number;
   }) => Promise<ServerMobileInboxData>;
   maxMergedFetchWindow?: number;
-  errorText?: MobileInboxErrorText;
+  /**
+   * Localized error copy. Callers own translation so this module doesn't
+   * assume a locale (or bake Chinese defaults in).
+   */
+  errorText: MobileInboxErrorText;
   zodErrorMap?: ZodErrorMap;
 }
 
@@ -89,7 +87,7 @@ export function getMobileInboxTotalPages(total: number, limit: number, maxMerged
 }
 
 export async function handleMobileInboxGet(request: Request, deps: MobileInboxGetDependencies) {
-  const errorText = deps.errorText ?? DEFAULT_MOBILE_INBOX_ERROR_TEXT;
+  const { errorText } = deps;
   const authResult = await deps.requireActiveUserImpl();
   if ("response" in authResult && authResult.response) {
     return authResult.response;

@@ -5,6 +5,12 @@ import { buildMobileInboxUnreadSummary, handleMobileInboxGet, mergeInboxItems } 
 
 const zhApiErrors = zhMessages.errors.api;
 
+const testErrorText = {
+  notAuthenticated: zhApiErrors.auth.notAuthenticated,
+  validationFailed: zhApiErrors.validationFailed,
+  paginationTooDeep: zhApiErrors.notifications.paginationTooDeep,
+};
+
 test("mergeInboxItems sorts notifications newest first", () => {
   const items = mergeInboxItems(
     [{
@@ -36,6 +42,7 @@ test("handleMobileInboxGet caps totalPages to the supported merged fetch window"
         id: "user-1",
       },
     }),
+    errorText: testErrorText,
     loadServerInboxData: async () => ({
       serverTotal: 360,
       serverUnread: 7,
@@ -62,6 +69,7 @@ test("handleMobileInboxGet returns only server notifications with a stable unrea
         id: "user-1",
       },
     }),
+    errorText: testErrorText,
     loadServerInboxData: async () => ({
       serverTotal: 2,
       serverUnread: 1,
@@ -126,6 +134,7 @@ test("handleMobileInboxGet rejects pages beyond the supported merged fetch windo
         id: "user-1",
       },
     }),
+    errorText: testErrorText,
     loadServerInboxData: async () => {
       loadInboxDataCalled = true;
       return {
