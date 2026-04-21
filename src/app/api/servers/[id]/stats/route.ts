@@ -1,6 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -232,6 +234,9 @@ function buildHourlyAverages(statuses: StatusRecord[]): HourlyAveragePoint[] {
  * 获取指定服务器在目标周期内的聚合统计，仅服主可访问。
  */
 export async function GET(request: Request, { params }: RouteContext) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -242,12 +247,12 @@ export async function GET(request: Request, { params }: RouteContext) {
     const { id } = await params;
     const parsedServerId = serverLookupIdSchema.safeParse(id);
     if (!parsedServerId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const serverId = await resolveServerCuid(parsedServerId.data);
     if (!serverId) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -256,7 +261,7 @@ export async function GET(request: Request, { params }: RouteContext) {
     });
     if (!parsedQuery.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsedQuery.error.flatten() },
+        { error: tCommon("validationFailed"), details: parsedQuery.error.flatten() },
         { status: 400 },
       );
     }
@@ -270,11 +275,11 @@ export async function GET(request: Request, { params }: RouteContext) {
     });
 
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     if (!server.ownerId || server.ownerId !== userId) {
-      return NextResponse.json({ error: "无权限查看该服务器统计" }, { status: 403 });
+      return NextResponse.json({ error: tServers("statsForbidden") }, { status: 403 });
     }
 
     const period: StatsPeriod = parsedQuery.data.period;
@@ -310,6 +315,6 @@ export async function GET(request: Request, { params }: RouteContext) {
     });
   } catch (error) {
     logger.error("[api/servers/[id]/stats] Unexpected GET error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

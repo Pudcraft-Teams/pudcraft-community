@@ -2,6 +2,8 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -18,7 +20,10 @@ interface RouteContext {
  * GET /api/servers/:id/favorite
  * 查询当前用户是否已收藏该服务器。
  */
-export async function GET(_request: Request, { params }: RouteContext) {
+export async function GET(request: Request, { params }: RouteContext) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -28,18 +33,18 @@ export async function GET(_request: Request, { params }: RouteContext) {
 
     const limitResult = await rateLimit(`favorite:${userId}`, 30, 60);
     if (!limitResult.allowed) {
-      return NextResponse.json({ error: "请求过于频繁，请稍后再试" }, { status: 429 });
+      return NextResponse.json({ error: tCommon("rateLimited") }, { status: 429 });
     }
 
     const { id } = await params;
     const parsedServerId = serverLookupIdSchema.safeParse(id);
     if (!parsedServerId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const serverId = await resolveServerCuid(parsedServerId.data);
     if (!serverId) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const server = await prisma.server.findUnique({
@@ -51,7 +56,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
       },
     });
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const canAccessCurrentServer = canAccessServer({
@@ -61,7 +66,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
       currentUserRole: authResult.user.role,
     });
     if (!canAccessCurrentServer) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const favorite = await prisma.favorite.findUnique({
@@ -77,7 +82,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
     return NextResponse.json({ favorited: !!favorite });
   } catch (error) {
     logger.error("[api/servers/[id]/favorite] Unexpected GET error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
 
@@ -85,7 +90,10 @@ export async function GET(_request: Request, { params }: RouteContext) {
  * POST /api/servers/:id/favorite
  * 收藏服务器（幂等）。
  */
-export async function POST(_request: Request, { params }: RouteContext) {
+export async function POST(request: Request, { params }: RouteContext) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -95,18 +103,18 @@ export async function POST(_request: Request, { params }: RouteContext) {
 
     const limitResult = await rateLimit(`favorite:${userId}`, 30, 60);
     if (!limitResult.allowed) {
-      return NextResponse.json({ error: "请求过于频繁，请稍后再试" }, { status: 429 });
+      return NextResponse.json({ error: tCommon("rateLimited") }, { status: 429 });
     }
 
     const { id } = await params;
     const parsedServerId = serverLookupIdSchema.safeParse(id);
     if (!parsedServerId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const serverId = await resolveServerCuid(parsedServerId.data);
     if (!serverId) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const server = await prisma.server.findUnique({
@@ -119,7 +127,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
       },
     });
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const canAccessCurrentServer = canAccessServer({
@@ -129,7 +137,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
       currentUserRole: authResult.user.role,
     });
     if (!canAccessCurrentServer) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const existingFavorite = await prisma.favorite.findUnique({
@@ -188,7 +196,7 @@ export async function POST(_request: Request, { params }: RouteContext) {
     }
   } catch (error) {
     logger.error("[api/servers/[id]/favorite] Unexpected POST error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
 
@@ -196,7 +204,10 @@ export async function POST(_request: Request, { params }: RouteContext) {
  * DELETE /api/servers/:id/favorite
  * 取消收藏（幂等）。
  */
-export async function DELETE(_request: Request, { params }: RouteContext) {
+export async function DELETE(request: Request, { params }: RouteContext) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -206,18 +217,18 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
 
     const limitResult = await rateLimit(`favorite:${userId}`, 30, 60);
     if (!limitResult.allowed) {
-      return NextResponse.json({ error: "请求过于频繁，请稍后再试" }, { status: 429 });
+      return NextResponse.json({ error: tCommon("rateLimited") }, { status: 429 });
     }
 
     const { id } = await params;
     const parsedServerId = serverLookupIdSchema.safeParse(id);
     if (!parsedServerId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const serverId = await resolveServerCuid(parsedServerId.data);
     if (!serverId) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const server = await prisma.server.findUnique({
@@ -229,7 +240,7 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
       },
     });
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const canAccessCurrentServer = canAccessServer({
@@ -239,7 +250,7 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
       currentUserRole: authResult.user.role,
     });
     if (!canAccessCurrentServer) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -286,6 +297,6 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
     });
   } catch (error) {
     logger.error("[api/servers/[id]/favorite] Unexpected DELETE error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

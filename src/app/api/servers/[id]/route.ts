@@ -2,7 +2,9 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
+import { getTranslations } from "next-intl/server";
 import { ZodError } from "zod";
+import { getRequestLocale } from "@/i18n/locale";
 import { auth } from "@/lib/auth";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
@@ -79,19 +81,22 @@ async function deleteServerAssetIfExists(
  * GET /api/servers/:id — 获取单个服务器详情。
  * 未通过审核的服务器只有 owner 和管理员可访问。
  */
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
   try {
     const { id } = await params;
 
     // ─── Zod 校验（支持 CUID 和 6 位 PSID） ───
     const parsed = serverLookupIdSchema.safeParse(id);
     if (!parsed.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const cuid = await resolveServerCuid(parsed.data);
     if (!cuid) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const server = await prisma.server.findUnique({
@@ -99,7 +104,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     });
 
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const session = await auth();
@@ -128,7 +133,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     };
 
     if (!canViewServerDetails(accessOptions)) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const canSeeAddress = await canSeeServerAddress(
@@ -181,7 +186,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ data });
   } catch (err) {
     logger.error("[api/servers/[id]] Unexpected error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
 
@@ -190,6 +195,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
  * 仅服务器 owner 可编辑，图标上传失败时降级保留原图标。
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tAuth = await getTranslations({ locale, namespace: "errors.api.auth" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -200,12 +209,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const { id } = await params;
     const parsedId = serverLookupIdSchema.safeParse(id);
     if (!parsedId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const cuid = await resolveServerCuid(parsedId.data);
     if (!cuid) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const existing = await prisma.server.findUnique({
@@ -226,11 +235,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     });
 
     if (!existing) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     if (!existing.ownerId || existing.ownerId !== userId) {
-      return NextResponse.json({ error: "无权限" }, { status: 403 });
+      return NextResponse.json({ error: tAuth("forbidden") }, { status: 403 });
     }
 
     const formData = await request.formData();
@@ -258,7 +267,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: parsed.error.flatten() },
         { status: 400 },
       );
     }
@@ -285,7 +294,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       });
       if (!modResult.passed) {
         return NextResponse.json(
-          { error: "内容包含违规信息，请修改后重新提交", details: modResult.reason },
+          { error: tServers("contentModerated"), details: modResult.reason },
           { status: 422 },
         );
       }
@@ -305,7 +314,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           return NextResponse.json({ error: error.message }, { status: error.status });
         }
 
-        return NextResponse.json({ error: "图标文件格式或大小无效" }, { status: 400 });
+        return NextResponse.json({ error: tServers("iconInvalid") }, { status: 400 });
       }
     }
 
@@ -361,11 +370,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         }
         if (error instanceof ImageModerationError) {
           return NextResponse.json(
-            { error: "图标包含违规内容，请更换图片", details: error.message },
+            { error: tServers("iconModeratedRejected"), details: error.message },
             { status: error.status },
           );
         }
-        warning = "图标上传失败，已保留原图标";
+        warning = tServers("iconUploadFailed");
         logger.error("[api/servers/[id]] upload icon failed", {
           serverId: existing.id,
           reason: resolveErrorMessage(error, "unknown"),
@@ -419,7 +428,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         return NextResponse.json(
-          { error: "该服务器地址和端口已存在，请勿重复设置" },
+          { error: tServers("duplicateAddressPort") },
           { status: 409 },
         );
       }
@@ -443,7 +452,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     });
   } catch (err) {
     logger.error("[api/servers/[id]] Unexpected PATCH error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
 
@@ -451,7 +460,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
  * DELETE /api/servers/:id — 删除服务器。
  * 服务器 owner 和管理员可删除。
  */
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tAuth = await getTranslations({ locale, namespace: "errors.api.auth" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -463,12 +476,12 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     const { id } = await params;
     const parsedId = serverLookupIdSchema.safeParse(id);
     if (!parsedId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const deleteCuid = await resolveServerCuid(parsedId.data);
     if (!deleteCuid) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const existing = await prisma.server.findUnique({
@@ -482,12 +495,12 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     });
 
     if (!existing) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const isAdmin = userRole === "admin";
     if (!isAdmin && (!existing.ownerId || existing.ownerId !== userId)) {
-      return NextResponse.json({ error: "无权限" }, { status: 403 });
+      return NextResponse.json({ error: tAuth("forbidden") }, { status: 403 });
     }
 
     const modpackFiles = await prisma.modpack.findMany({
@@ -520,10 +533,10 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
     return NextResponse.json({
       success: true,
-      message: "服务器已删除",
+      message: tServers("deleted"),
     });
   } catch (err) {
     logger.error("[api/servers/[id]] Unexpected DELETE error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
