@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -34,13 +35,6 @@ interface CommentItemProps {
   onReport?: (commentId: string) => void;
 }
 
-function displayAuthorName(author: Pick<CommentAuthor, "name">): string {
-  if (author.name && author.name.trim().length > 0) {
-    return author.name.trim();
-  }
-  return "匿名用户";
-}
-
 export function CommentItem({
   comment,
   serverId,
@@ -53,6 +47,13 @@ export function CommentItem({
 }: CommentItemProps) {
   const { toast } = useToast();
   const confirmAction = useConfirm();
+  const t = useTranslations("comments");
+  const displayAuthorName = (author: Pick<CommentAuthor, "name">): string => {
+    if (author.name && author.name.trim().length > 0) {
+      return author.name.trim();
+    }
+    return t("anonymousName");
+  };
   const [replyContent, setReplyContent] = useState("");
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -60,11 +61,11 @@ export function CommentItem({
   const handleReplySubmit = async () => {
     const content = replyContent.trim();
     if (content.length === 0) {
-      toast.error("回复内容不能为空");
+      toast.error(t("replyEmpty"));
       return;
     }
     if (content.length > 1000) {
-      toast.error("回复内容最多 1000 字");
+      toast.error(t("replyMaxLength"));
       return;
     }
 
@@ -82,7 +83,7 @@ export function CommentItem({
 
       const payload = (await response.json().catch(() => ({}))) as CreateCommentResponse;
       if (!response.ok || !payload.data) {
-        toast.error(payload.error ?? "回复失败，请稍后重试");
+        toast.error(payload.error ?? t("replyFailed"));
         return;
       }
 
@@ -94,9 +95,9 @@ export function CommentItem({
       });
       setReplyContent("");
       onToggleReply();
-      toast.success("回复成功");
+      toast.success(t("replySuccess"));
     } catch {
-      toast.error("网络异常，回复失败");
+      toast.error(t("replyNetworkError"));
     } finally {
       setIsSubmittingReply(false);
     }
@@ -104,9 +105,9 @@ export function CommentItem({
 
   const handleDelete = async (commentId: string, parentId: string | null, confirmText: string) => {
     const ok = await confirmAction({
-      title: "删除确认",
+      title: t("deleteConfirmTitle"),
       message: confirmText,
-      confirmText: "删除",
+      confirmText: t("deleteConfirmAction"),
       danger: true,
     });
     if (!ok) {
@@ -121,14 +122,14 @@ export function CommentItem({
       });
       const payload = (await response.json().catch(() => ({}))) as DeleteCommentResponse;
       if (!response.ok) {
-        toast.error(payload.error ?? "删除失败，请稍后重试");
+        toast.error(payload.error ?? t("deleteFailed"));
         return;
       }
 
       onDeleted(commentId, parentId);
-      toast.success("删除成功");
+      toast.success(t("deleteSuccess"));
     } catch {
-      toast.error("网络异常，删除失败");
+      toast.error(t("deleteNetworkError"));
     } finally {
       setDeletingId(null);
     }
@@ -163,7 +164,7 @@ export function CommentItem({
           }}
           className="text-sm text-warm-500 transition-colors hover:text-warm-700"
         >
-          回复
+          {t("replyAction")}
         </button>
         {currentUserId && currentUserId !== comment.author.id && onReport && (
           <button
@@ -171,19 +172,17 @@ export function CommentItem({
             onClick={() => onReport(comment.id)}
             className="text-sm text-warm-500 transition-colors hover:text-accent"
           >
-            举报
+            {t("reportAction")}
           </button>
         )}
         {currentUserId === comment.author.id && (
           <button
             type="button"
             disabled={deletingId === comment.id}
-            onClick={() =>
-              handleDelete(comment.id, null, "确定删除这条评论吗？删除后其下所有回复也会一起删除。")
-            }
+            onClick={() => handleDelete(comment.id, null, t("deleteCommentConfirm"))}
             className="text-sm text-warm-500 transition-colors hover:text-coral-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {deletingId === comment.id ? "删除中..." : "删除"}
+            {deletingId === comment.id ? t("deleting") : t("deleteAction")}
           </button>
         )}
       </div>
@@ -197,18 +196,20 @@ export function CommentItem({
                 onChange={(event) => setReplyContent(event.target.value)}
                 rows={3}
                 maxLength={1000}
-                placeholder="写下你的回复..."
+                placeholder={t("replyPlaceholder")}
                 className="m3-input w-full"
               />
               <div className="mt-2 flex items-center justify-between">
-                <span className="text-xs text-warm-500">{replyContent.length}/1000</span>
+                <span className="text-xs text-warm-500">
+                  {t("counter", { count: replyContent.length })}
+                </span>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={onToggleReply}
                     className="m3-btn m3-btn-tonal px-3 py-1.5 text-xs"
                   >
-                    取消
+                    {t("replyCancel")}
                   </button>
                   <button
                     type="button"
@@ -216,21 +217,21 @@ export function CommentItem({
                     disabled={isSubmittingReply}
                     className="m3-btn m3-btn-primary px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {isSubmittingReply ? "回复中..." : "回复"}
+                    {isSubmittingReply ? t("replySubmitting") : t("replySubmit")}
                   </button>
                 </div>
               </div>
             </>
           ) : (
             <p className="text-sm text-warm-600">
-              请先
+              {t("replyLoginPromptPrefix")}
               <Link
                 href={`/login?callbackUrl=${encodeURIComponent(`/servers/${serverId}`)}`}
                 className="m3-link mx-1"
               >
-                登录
+                {t("replyLoginLink")}
               </Link>
-              后再回复
+              {t("replyLoginPromptSuffix")}
             </p>
           )}
         </div>
@@ -266,17 +267,17 @@ export function CommentItem({
                       onClick={() => onReport(reply.id)}
                       className="text-sm text-warm-500 transition-colors hover:text-accent"
                     >
-                      举报
+                      {t("reportAction")}
                     </button>
                   )}
                   {currentUserId === reply.author.id && (
                     <button
                       type="button"
                       disabled={deletingId === reply.id}
-                      onClick={() => handleDelete(reply.id, comment.id, "确定删除这条回复吗？")}
+                      onClick={() => handleDelete(reply.id, comment.id, t("deleteReplyConfirm"))}
                       className="text-sm text-warm-500 transition-colors hover:text-coral-hover disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {deletingId === reply.id ? "删除中..." : "删除"}
+                      {deletingId === reply.id ? t("deleting") : t("deleteAction")}
                     </button>
                   )}
                 </div>
