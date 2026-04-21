@@ -1,4 +1,8 @@
-# Pudcraft Community
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## 概览
 
 Pudcraft Community 当前是一个 server-only 的 Minecraft 服务器社区平台。直播的产品面只包含服务器发现、提交、认领、评论、收藏、私有服成员流转、通知、更新日志和管理后台；历史上的论坛 / MoltBook 功能已经从当前分支移除，不应再被当作现网能力开发或文档化。
 
@@ -66,6 +70,14 @@ pnpm build:worker
 ```
 
 日常本地开发至少启动 `pnpm dev` 和 `pnpm worker:dev`；涉及白名单同步或私有服联调时再加 `pnpm ws:dev`。
+
+`pnpm test` 会先 `set -a; . ./.env.example` 注入测试环境变量，再扫 `src` / `prisma` / `scripts` 下的 `*.test.ts(x)` 与 `*.spec.ts(x)` 一起跑。要单独跑某个测试文件，需要自己复制这份 env 加载，例如：
+
+```bash
+sh -c 'set -a; . ./.env.example; set +a; node --import tsx --test src/lib/auth.test.ts'
+```
+
+直接 `tsx --test <file>` 会因为缺 `DATABASE_URL` 等环境变量而失败。
 
 ## 提交前检查
 
