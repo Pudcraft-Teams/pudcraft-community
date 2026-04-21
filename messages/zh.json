@@ -1545,5 +1545,23 @@
       "submitFailed": "举报提交失败，请稍后重试",
       "networkError": "网络异常，举报提交失败"
     }
+  },
+  "email": {
+    "verifyCode": {
+      "subject": "PudCraft 邮箱验证码",
+      "heading": "PudCraft 邮箱验证",
+      "greeting": "你好，你正在进行邮箱验证。",
+      "instruction": "请在页面中输入以下 6 位验证码：",
+      "validity": "验证码 10 分钟内有效，请勿泄露给他人。",
+      "textBody": "你的验证码是 {code}，10 分钟内有效。"
+    },
+    "resetPassword": {
+      "subject": "PudCraft 密码重置验证码",
+      "heading": "PudCraft 密码重置",
+      "greeting": "你正在重置 PudCraft 账号密码。",
+      "instruction": "请在页面中输入以下 6 位验证码：",
+      "validity": "验证码 10 分钟内有效。如果这不是你的操作，请忽略此邮件。",
+      "textBody": "你正在重置 PudCraft 账号密码，验证码为 {code}，10 分钟内有效。如果这不是你的操作，请忽略此邮件。"
+    }
   }
 }

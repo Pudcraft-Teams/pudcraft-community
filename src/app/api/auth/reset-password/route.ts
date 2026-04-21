@@ -70,7 +70,7 @@ export async function POST(request: Request) {
 
     if (user) {
       try {
-        await sendResetPasswordCode(email, code);
+        await sendResetPasswordCode(email, code, locale);
       } catch (error) {
         logger.error("[api/auth/reset-password][POST] send mail failed", error);
       }

@@ -49,7 +49,7 @@ export async function POST(request: Request) {
 
     const code = generateCode();
     await storeCode(email, code);
-    await sendVerificationCode(email, code);
+    await sendVerificationCode(email, code, locale);
     await setSendCooldown(email);
 
     return NextResponse.json({ success: true, message: tAuth("codeSent") });
