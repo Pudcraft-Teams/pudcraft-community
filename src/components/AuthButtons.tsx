@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -10,19 +11,21 @@ import { UserAvatar } from "@/components/UserAvatar";
 const MOBILE_HEADER_OVERLAY_EVENT = "pudcraft-mobile-header-overlay";
 
 const PRIMARY_LINKS = [
-  { href: "/servers", label: "服务器" },
-  { href: "/changelog", label: "更新日志" },
+  { href: "/servers", navKey: "servers" },
+  { href: "/changelog", navKey: "changelog" },
 ] as const;
 
 const MOBILE_MENU_LINK_CLASS =
   "block rounded-lg px-3 py-2.5 text-sm text-warm-800 transition-colors hover:bg-warm-100";
 
 /**
- * 顶部导航认证区。
- * 未登录显示登录/注册；已登录显示头像昵称和用户菜单。
+ * Top navigation authentication area.
+ * Logged-out: shows login + register. Logged-in: shows avatar +
+ * display name with a dropdown menu.
  */
 export function AuthButtons() {
   const { data: session, status, update } = useSession();
+  const t = useTranslations("nav.auth");
   const menuRef = useRef<HTMLDivElement | null>(null);
   const hasRefreshedSessionRef = useRef(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -69,29 +72,29 @@ export function AuthButtons() {
   }, [open]);
 
   if (status === "loading") {
-    return <span className="text-sm text-warm-400">加载中...</span>;
+    return <span className="text-sm text-warm-400">{t("loading")}</span>;
   }
 
   if (!session?.user) {
     return (
       <div className="flex items-center gap-2">
         <Link href="/login" className="m3-btn m3-btn-tonal px-3 py-1.5">
-          登录
+          {t("login")}
         </Link>
         <Link href="/register" className="m3-btn m3-btn-primary px-3 py-1.5">
-          注册
+          {t("register")}
         </Link>
       </div>
     );
   }
 
   const displayName =
-    session.user.name?.trim() || session.user.email?.split("@")[0] || "已登录用户";
+    session.user.name?.trim() || session.user.email?.split("@")[0] || t("displayNameFallback");
 
   return (
     <div ref={menuRef} className="relative flex items-center gap-2">
       <Link href="/submit" className="m3-btn m3-btn-tonal px-3 py-1.5">
-        提交服务器
+        {t("submitServer")}
       </Link>
       <NotificationBell />
 
@@ -118,7 +121,7 @@ export function AuthButtons() {
               className="block rounded-lg px-3 py-2 text-sm text-warm-800 transition-colors hover:bg-warm-100"
               onClick={() => setOpen(false)}
             >
-              我的主页
+              {t("myHome")}
             </Link>
           )}
           <Link
@@ -126,21 +129,21 @@ export function AuthButtons() {
             className="block rounded-lg px-3 py-2 text-sm text-warm-800 transition-colors hover:bg-warm-100"
             onClick={() => setOpen(false)}
           >
-            资料设置
+            {t("profileSettings")}
           </Link>
           <Link
             href="/console"
             className="block rounded-lg px-3 py-2 text-sm text-warm-800 transition-colors hover:bg-warm-100"
             onClick={() => setOpen(false)}
           >
-            控制台
+            {t("console")}
           </Link>
           <Link
             href="/favorites"
             className="block rounded-lg px-3 py-2 text-sm text-warm-800 transition-colors hover:bg-warm-100"
             onClick={() => setOpen(false)}
           >
-            我的收藏
+            {t("myFavorites")}
           </Link>
           {session.user.role === "admin" && (
             <Link
@@ -148,7 +151,7 @@ export function AuthButtons() {
               className="block rounded-lg px-3 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent-muted"
               onClick={() => setOpen(false)}
             >
-              管理后台
+              {t("adminPanel")}
             </Link>
           )}
           <button
@@ -160,7 +163,7 @@ export function AuthButtons() {
             disabled={isSigningOut}
             className="mt-1 block w-full rounded-lg px-3 py-2 text-left text-sm text-accent-hover transition-colors hover:bg-accent-muted disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSigningOut ? "退出中..." : "退出"}
+            {isSigningOut ? t("loggingOut") : t("logout")}
           </button>
         </div>
       )}
@@ -186,17 +189,20 @@ function MobileMenuSection({
 }
 
 /**
- * 移动端导航菜单。
- * 点击汉堡按钮展开，点击遮罩或菜单项后关闭。
+ * Mobile navigation drawer.
+ * Opens on hamburger tap; closes on backdrop click or menu item press.
  */
 export function MobileNavMenu() {
   const pathname = usePathname();
   const { data: session, status } = useSession();
+  const tAuth = useTranslations("nav.auth");
+  const tMobile = useTranslations("nav.mobile");
+  const tNav = useTranslations("nav");
   const [open, setOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   const displayName =
-    session?.user?.name?.trim() || session?.user?.email?.split("@")[0] || "已登录用户";
+    session?.user?.name?.trim() || session?.user?.email?.split("@")[0] || tAuth("displayNameFallback");
 
   useEffect(() => {
     setOpen(false);
@@ -257,7 +263,7 @@ export function MobileNavMenu() {
           }
           setOpen(nextOpen);
         }}
-        aria-label={open ? "关闭菜单" : "打开菜单"}
+        aria-label={open ? tMobile("closeMenu") : tMobile("openMenu")}
         aria-expanded={open}
       >
         <span className="space-y-1">
@@ -273,7 +279,7 @@ export function MobileNavMenu() {
             type="button"
             className="absolute inset-0 bg-warm-900/30 backdrop-blur-[2px]"
             onClick={() => setOpen(false)}
-            aria-label="关闭菜单"
+            aria-label={tMobile("closeMenu")}
           />
 
           <div className="m3-surface absolute inset-x-4 top-3 max-h-[calc(100vh-5.5rem)] overflow-y-auto overscroll-contain p-3">
@@ -293,12 +299,12 @@ export function MobileNavMenu() {
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-warm-500">登录后可提交服务器、收藏内容并管理你的服务。</p>
+                <p className="text-sm text-warm-500">{tMobile("guestHint")}</p>
               )}
             </div>
 
             <nav className="space-y-4">
-              <MobileMenuSection title="导航">
+              <MobileMenuSection title={tMobile("sectionNavigation")}>
                 {PRIMARY_LINKS.map((item) => (
                   <Link
                     key={item.href}
@@ -306,14 +312,14 @@ export function MobileNavMenu() {
                     className={MOBILE_MENU_LINK_CLASS}
                     onClick={() => setOpen(false)}
                   >
-                    {item.label}
+                    {tNav(item.navKey)}
                   </Link>
                 ))}
               </MobileMenuSection>
 
-              <MobileMenuSection title="个人">
+              <MobileMenuSection title={tMobile("sectionPersonal")}>
                 {status === "loading" ? (
-                  <p className="px-3 py-2 text-sm text-warm-400">加载中...</p>
+                  <p className="px-3 py-2 text-sm text-warm-400">{tAuth("loading")}</p>
                 ) : session?.user ? (
                   <>
                     <Link
@@ -321,14 +327,14 @@ export function MobileNavMenu() {
                       className={MOBILE_MENU_LINK_CLASS}
                       onClick={() => setOpen(false)}
                     >
-                      提交服务器
+                      {tAuth("submitServer")}
                     </Link>
                     <Link
                       href="/notifications"
                       className={MOBILE_MENU_LINK_CLASS}
                       onClick={() => setOpen(false)}
                     >
-                      通知中心
+                      {tMobile("notifications")}
                     </Link>
                     {session.user.uid !== undefined && (
                       <Link
@@ -336,7 +342,7 @@ export function MobileNavMenu() {
                         className={MOBILE_MENU_LINK_CLASS}
                         onClick={() => setOpen(false)}
                       >
-                        我的主页
+                        {tAuth("myHome")}
                       </Link>
                     )}
                     <Link
@@ -344,21 +350,21 @@ export function MobileNavMenu() {
                       className={MOBILE_MENU_LINK_CLASS}
                       onClick={() => setOpen(false)}
                     >
-                      资料设置
+                      {tAuth("profileSettings")}
                     </Link>
                     <Link
                       href="/console"
                       className={MOBILE_MENU_LINK_CLASS}
                       onClick={() => setOpen(false)}
                     >
-                      控制台
+                      {tAuth("console")}
                     </Link>
                     <Link
                       href="/favorites"
                       className={MOBILE_MENU_LINK_CLASS}
                       onClick={() => setOpen(false)}
                     >
-                      我的收藏
+                      {tAuth("myFavorites")}
                     </Link>
                     <button
                       type="button"
@@ -369,7 +375,7 @@ export function MobileNavMenu() {
                       disabled={isSigningOut}
                       className="block w-full rounded-lg px-3 py-2.5 text-left text-sm text-accent-hover transition-colors hover:bg-accent-muted disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {isSigningOut ? "退出中..." : "退出"}
+                      {isSigningOut ? tAuth("loggingOut") : tAuth("logout")}
                     </button>
                   </>
                 ) : (
@@ -379,27 +385,27 @@ export function MobileNavMenu() {
                       className={MOBILE_MENU_LINK_CLASS}
                       onClick={() => setOpen(false)}
                     >
-                      登录
+                      {tAuth("login")}
                     </Link>
                     <Link
                       href="/register"
                       className={MOBILE_MENU_LINK_CLASS}
                       onClick={() => setOpen(false)}
                     >
-                      注册
+                      {tAuth("register")}
                     </Link>
                   </>
                 )}
               </MobileMenuSection>
 
               {session?.user?.role === "admin" && (
-                <MobileMenuSection title="管理">
+                <MobileMenuSection title={tMobile("sectionAdmin")}>
                   <Link
                     href="/admin"
                     className="block rounded-lg px-3 py-2.5 text-sm font-medium text-accent transition-colors hover:bg-accent-muted"
                     onClick={() => setOpen(false)}
                   >
-                    管理后台
+                    {tAuth("adminPanel")}
                   </Link>
                 </MobileMenuSection>
               )}

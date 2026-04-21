@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/useToast";
 
@@ -21,18 +22,18 @@ interface ReportApiResponse {
   error?: string;
 }
 
-const REPORT_CATEGORIES: { key: ReportCategory; label: string }[] = [
-  { key: "misinformation", label: "虚假信息" },
-  { key: "pornography", label: "色情低俗" },
-  { key: "harassment", label: "骚扰攻击" },
-  { key: "fraud", label: "广告欺诈" },
-  { key: "other", label: "其他" },
+const REPORT_CATEGORY_KEYS: { key: ReportCategory; labelKey: string }[] = [
+  { key: "misinformation", labelKey: "categoryMisinformation" },
+  { key: "pornography", labelKey: "categoryPornography" },
+  { key: "harassment", labelKey: "categoryHarassment" },
+  { key: "fraud", labelKey: "categoryFraud" },
+  { key: "other", labelKey: "categoryOther" },
 ];
 
-const TARGET_TYPE_LABELS: Record<ReportDialogProps["targetType"], string> = {
-  server: "服务器",
-  comment: "评论",
-  user: "用户",
+const TARGET_TYPE_TITLE_KEYS: Record<ReportDialogProps["targetType"], string> = {
+  server: "titleServer",
+  comment: "titleComment",
+  user: "titleUser",
 };
 
 function toApiPayload(raw: unknown): ReportApiResponse {
@@ -47,8 +48,8 @@ function toApiPayload(raw: unknown): ReportApiResponse {
 }
 
 /**
- * 举报弹窗组件。
- * 支持举报服务器、评论或用户，可选择举报分类并填写补充说明。
+ * Report dialog — lets users report a server, comment, or user,
+ * choose a category, and optionally add a short description.
  */
 export function ReportDialog({
   targetType,
@@ -57,6 +58,7 @@ export function ReportDialog({
   onClose,
 }: ReportDialogProps) {
   const { toast } = useToast();
+  const t = useTranslations("reports.dialog");
   const [category, setCategory] = useState<ReportCategory | null>(null);
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
@@ -111,14 +113,14 @@ export function ReportDialog({
       const payload = toApiPayload(await response.json().catch(() => ({})));
 
       if (!response.ok) {
-        toast.error(payload.error ?? "举报提交失败，请稍后重试");
+        toast.error(payload.error ?? t("submitFailed"));
         return;
       }
 
-      toast.success("举报已提交，感谢反馈");
+      toast.success(t("submitSuccess"));
       onClose();
     } catch {
-      toast.error("网络异常，举报提交失败");
+      toast.error(t("networkError"));
     } finally {
       setLoading(false);
     }
@@ -141,18 +143,18 @@ export function ReportDialog({
           id="report-dialog-title"
           className="mb-4 text-lg font-semibold text-warm-800"
         >
-          举报{TARGET_TYPE_LABELS[targetType]}
+          {t(TARGET_TYPE_TITLE_KEYS[targetType])}
         </h3>
 
         <div className="mb-4 flex flex-wrap gap-2">
-          {REPORT_CATEGORIES.map((cat) => (
+          {REPORT_CATEGORY_KEYS.map((cat) => (
             <button
               key={cat.key}
               type="button"
               onClick={() => setCategory(cat.key)}
               className={`m3-chip text-sm ${category === cat.key ? "m3-chip-active" : ""}`}
             >
-              {cat.label}
+              {t(cat.labelKey)}
             </button>
           ))}
         </div>
@@ -162,7 +164,7 @@ export function ReportDialog({
           onChange={(event) =>
             setDescription(event.target.value.slice(0, 500))
           }
-          placeholder="补充说明（可选）"
+          placeholder={t("descriptionPlaceholder")}
           maxLength={500}
           rows={3}
           className="m3-input mb-4 w-full resize-none"
@@ -174,7 +176,7 @@ export function ReportDialog({
             onClick={onClose}
             className="m3-btn m3-btn-tonal"
           >
-            取消
+            {t("cancel")}
           </button>
           <button
             type="button"
@@ -182,7 +184,7 @@ export function ReportDialog({
             disabled={loading || !category}
             className="m3-btn m3-btn-primary disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? "提交中..." : "提交举报"}
+            {loading ? t("submitting") : t("submit")}
           </button>
         </div>
       </div>
