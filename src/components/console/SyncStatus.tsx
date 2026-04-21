@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { timeAgo } from "@/lib/time";
 
@@ -11,17 +12,31 @@ interface SyncStatusProps {
 
 const POLL_INTERVAL_MS = 15_000;
 
-const STATUS_STYLES: Record<WhitelistSyncItem["status"], { label: string; className: string }> = {
-  pending: { label: "等待中", className: "bg-accent-muted text-accent-hover ring-1 ring-accent-hover/20" },
-  pushed: { label: "已推送", className: "bg-accent-muted text-accent ring-1 ring-accent/20" },
-  acked: { label: "已确认", className: "bg-forest-light text-forest-dark ring-1 ring-forest/20" },
-  failed: { label: "失败", className: "bg-accent-muted text-accent-hover ring-1 ring-accent-hover/20" },
+const STATUS_CLASSNAMES: Record<WhitelistSyncItem["status"], string> = {
+  pending: "bg-accent-muted text-accent-hover ring-1 ring-accent-hover/20",
+  pushed: "bg-accent-muted text-accent ring-1 ring-accent/20",
+  acked: "bg-forest-light text-forest-dark ring-1 ring-forest/20",
+  failed: "bg-accent-muted text-accent-hover ring-1 ring-accent-hover/20",
 };
 
-const ACTION_LABELS: Record<WhitelistSyncItem["action"], string> = {
-  add: "添加",
-  remove: "移除",
-};
+function resolveStatusLabel(
+  status: WhitelistSyncItem["status"],
+  t: ReturnType<typeof useTranslations>,
+): string {
+  if (status === "pending") return t("statusPending");
+  if (status === "pushed") return t("statusPushed");
+  if (status === "acked") return t("statusAcked");
+  return t("statusFailed");
+}
+
+function resolveActionLabel(
+  action: WhitelistSyncItem["action"],
+  t: ReturnType<typeof useTranslations>,
+): string {
+  if (action === "add") return t("actionAdd");
+  if (action === "remove") return t("actionRemove");
+  return action;
+}
 
 function parseSyncOverview(raw: unknown): SyncStatusOverview | null {
   if (typeof raw !== "object" || raw === null) {
@@ -46,10 +61,11 @@ function parseSyncOverview(raw: unknown): SyncStatusOverview | null {
 }
 
 /**
- * 白名单同步状态组件。
- * 展示插件连接状态、同步统计和最近同步记录，每 15 秒自动刷新。
+ * Whitelist-sync status component.
+ * Shows plugin connection state, counters, and recent sync records. Refreshes every 15s.
  */
 export function SyncStatus({ serverId }: SyncStatusProps) {
+  const t = useTranslations("console.sync");
   const [overview, setOverview] = useState<SyncStatusOverview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,19 +86,18 @@ export function SyncStatus({ serverId }: SyncStatusProps) {
         if (!response.ok) {
           const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
           throw new Error(
-            typeof payload.error === "string" ? payload.error : "同步状态加载失败",
+            typeof payload.error === "string" ? payload.error : t("loadFailed"),
           );
         }
 
         const data = parseSyncOverview(await response.json().catch(() => null));
         if (!data) {
-          throw new Error("同步状态数据格式异常");
+          throw new Error(t("formatInvalid"));
         }
 
         setOverview(data);
       } catch (fetchError) {
-        const message =
-          fetchError instanceof Error ? fetchError.message : "同步状态加载失败";
+        const message = fetchError instanceof Error ? fetchError.message : t("loadFailed");
         setError(message);
       } finally {
         if (isInitial) {
@@ -90,7 +105,7 @@ export function SyncStatus({ serverId }: SyncStatusProps) {
         }
       }
     },
-    [serverId],
+    [serverId, t],
   );
 
   useEffect(() => {
@@ -110,8 +125,8 @@ export function SyncStatus({ serverId }: SyncStatusProps) {
   if (isLoading) {
     return (
       <section className="m3-surface p-4 sm:p-5">
-        <h2 className="text-lg font-semibold text-warm-800">白名单同步</h2>
-        <p className="mt-4 text-sm text-warm-500">加载中...</p>
+        <h2 className="text-lg font-semibold text-warm-800">{t("title")}</h2>
+        <p className="mt-4 text-sm text-warm-500">{t("loading")}</p>
       </section>
     );
   }
@@ -119,7 +134,7 @@ export function SyncStatus({ serverId }: SyncStatusProps) {
   if (error && !overview) {
     return (
       <section className="m3-surface p-4 sm:p-5">
-        <h2 className="text-lg font-semibold text-warm-800">白名单同步</h2>
+        <h2 className="text-lg font-semibold text-warm-800">{t("title")}</h2>
         <p className="mt-4 text-sm text-accent-hover">{error}</p>
       </section>
     );
@@ -132,7 +147,7 @@ export function SyncStatus({ serverId }: SyncStatusProps) {
   return (
     <section className="m3-surface p-4 sm:p-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-warm-800">白名单同步</h2>
+        <h2 className="text-lg font-semibold text-warm-800">{t("title")}</h2>
 
         {/* Connection status indicator */}
         <span
@@ -147,7 +162,7 @@ export function SyncStatus({ serverId }: SyncStatusProps) {
               overview.connected ? "bg-forest" : "bg-warm-400"
             }`}
           />
-          {overview.connected ? "插件已连接" : "插件未连接"}
+          {overview.connected ? t("pluginConnected") : t("pluginDisconnected")}
         </span>
       </div>
 
@@ -156,7 +171,7 @@ export function SyncStatus({ serverId }: SyncStatusProps) {
       {/* Stats row */}
       <div className="mt-4 flex flex-wrap gap-4 text-sm">
         <div className="flex items-center gap-2">
-          <span className="text-warm-500">等待同步</span>
+          <span className="text-warm-500">{t("pendingLabel")}</span>
           <span
             className={`font-semibold ${
               overview.pendingCount > 0 ? "text-accent-hover" : "text-warm-800"
@@ -166,7 +181,7 @@ export function SyncStatus({ serverId }: SyncStatusProps) {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-warm-500">同步失败</span>
+          <span className="text-warm-500">{t("failedLabel")}</span>
           <span
             className={`font-semibold ${
               overview.failedCount > 0 ? "text-accent-hover" : "text-warm-800"
@@ -177,7 +192,7 @@ export function SyncStatus({ serverId }: SyncStatusProps) {
         </div>
         {overview.lastAckedAt && (
           <div className="flex items-center gap-2">
-            <span className="text-warm-500">最近确认</span>
+            <span className="text-warm-500">{t("lastAckedLabel")}</span>
             <span className="font-medium text-warm-800">
               {timeAgo(overview.lastAckedAt)}
             </span>
@@ -191,28 +206,28 @@ export function SyncStatus({ serverId }: SyncStatusProps) {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-warm-200 text-xs text-warm-500">
-                <th className="pb-2 pr-4 font-medium">MC 用户名</th>
-                <th className="pb-2 pr-4 font-medium">操作</th>
-                <th className="pb-2 pr-4 font-medium">状态</th>
-                <th className="pb-2 font-medium">时间</th>
+                <th className="pb-2 pr-4 font-medium">{t("tableMcUsername")}</th>
+                <th className="pb-2 pr-4 font-medium">{t("tableAction")}</th>
+                <th className="pb-2 pr-4 font-medium">{t("tableStatus")}</th>
+                <th className="pb-2 font-medium">{t("tableTime")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-warm-100">
               {overview.recentSyncs.map((sync) => {
-                const statusStyle = STATUS_STYLES[sync.status];
+                const statusClassName = STATUS_CLASSNAMES[sync.status];
                 return (
                   <tr key={sync.id}>
                     <td className="py-2.5 pr-4 font-mono text-warm-800">
                       {sync.mcUsername ?? "-"}
                     </td>
                     <td className="py-2.5 pr-4 text-warm-500">
-                      {ACTION_LABELS[sync.action] ?? sync.action}
+                      {resolveActionLabel(sync.action, t)}
                     </td>
                     <td className="py-2.5 pr-4">
                       <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusStyle.className}`}
+                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusClassName}`}
                       >
-                        {statusStyle.label}
+                        {resolveStatusLabel(sync.status, t)}
                       </span>
                     </td>
                     <td className="py-2.5 text-warm-500">
@@ -225,7 +240,7 @@ export function SyncStatus({ serverId }: SyncStatusProps) {
           </table>
         </div>
       ) : (
-        <p className="mt-4 text-sm text-warm-500">暂无同步记录。</p>
+        <p className="mt-4 text-sm text-warm-500">{t("emptyRecords")}</p>
       )}
     </section>
   );
