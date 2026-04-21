@@ -2,9 +2,12 @@ export const dynamic = "force-dynamic";
 
 import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { isPrivateServersEnabled } from "@/lib/features";
+import { getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { resolveServerCuid } from "@/lib/lookup";
 import { serverLookupIdSchema, createInviteSchema } from "@/lib/validation";
@@ -18,10 +21,14 @@ interface RouteContext {
  * GET /api/servers/:id/invites
  * 列出服务器的所有邀请码（仅 owner 可访问）。
  */
-export async function GET(_request: Request, { params }: RouteContext) {
+export async function GET(request: Request, { params }: RouteContext) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
+  const tAuth = await getTranslations({ locale, namespace: "errors.api.auth" });
   try {
     if (!isPrivateServersEnabled()) {
-      return NextResponse.json({ error: "该功能未启用" }, { status: 404 });
+      return NextResponse.json({ error: tServers("privateNotEnabled") }, { status: 404 });
     }
 
     const authResult = await requireActiveUser();
@@ -33,12 +40,12 @@ export async function GET(_request: Request, { params }: RouteContext) {
     const { id } = await params;
     const parsedId = serverLookupIdSchema.safeParse(id);
     if (!parsedId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const cuid = await resolveServerCuid(parsedId.data);
     if (!cuid) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const server = await prisma.server.findUnique({
@@ -47,11 +54,11 @@ export async function GET(_request: Request, { params }: RouteContext) {
     });
 
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     if (!server.ownerId || server.ownerId !== userId) {
-      return NextResponse.json({ error: "无权限" }, { status: 403 });
+      return NextResponse.json({ error: tAuth("forbidden") }, { status: 403 });
     }
 
     const invites = await prisma.serverInvite.findMany({
@@ -77,7 +84,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
     return NextResponse.json({ data });
   } catch (error) {
     logger.error("[api/servers/[id]/invites] Unexpected GET error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
 
@@ -86,9 +93,13 @@ export async function GET(_request: Request, { params }: RouteContext) {
  * 创建邀请码（仅 owner 可操作，需服务器 joinMode 包含 invite）。
  */
 export async function POST(request: Request, { params }: RouteContext) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
+  const tAuth = await getTranslations({ locale, namespace: "errors.api.auth" });
   try {
     if (!isPrivateServersEnabled()) {
-      return NextResponse.json({ error: "该功能未启用" }, { status: 404 });
+      return NextResponse.json({ error: tServers("privateNotEnabled") }, { status: 404 });
     }
 
     const authResult = await requireActiveUser();
@@ -100,12 +111,12 @@ export async function POST(request: Request, { params }: RouteContext) {
     const { id } = await params;
     const parsedId = serverLookupIdSchema.safeParse(id);
     if (!parsedId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const cuid = await resolveServerCuid(parsedId.data);
     if (!cuid) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const server = await prisma.server.findUnique({
@@ -114,26 +125,28 @@ export async function POST(request: Request, { params }: RouteContext) {
     });
 
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     if (!server.ownerId || server.ownerId !== userId) {
-      return NextResponse.json({ error: "无权限" }, { status: 403 });
+      return NextResponse.json({ error: tAuth("forbidden") }, { status: 403 });
     }
 
     // 检查 joinMode 是否包含 invite
     if (server.joinMode !== "invite" && server.joinMode !== "apply_and_invite") {
       return NextResponse.json(
-        { error: "当前加入模式不支持邀请码" },
+        { error: tServers("inviteNotSupported") },
         { status: 400 },
       );
     }
 
     const body: unknown = await request.json();
-    const parsed = createInviteSchema.safeParse(body);
+    const parsed = createInviteSchema.safeParse(body, {
+      errorMap: getZodErrorMap(locale),
+    });
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: parsed.error.flatten() },
         { status: 400 },
       );
     }
@@ -173,6 +186,6 @@ export async function POST(request: Request, { params }: RouteContext) {
     });
   } catch (error) {
     logger.error("[api/servers/[id]/invites] Unexpected POST error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

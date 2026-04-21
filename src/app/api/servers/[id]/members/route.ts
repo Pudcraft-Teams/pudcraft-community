@@ -1,9 +1,12 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { isPrivateServersEnabled } from "@/lib/features";
+import { getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { resolveServerCuid } from "@/lib/lookup";
 import { getPublicUrl } from "@/lib/storage";
@@ -19,9 +22,13 @@ interface RouteContext {
  * 获取服务器成员列表（仅服务器 owner 可查看），支持分页。
  */
 export async function GET(request: Request, { params }: RouteContext) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
+  const tAuth = await getTranslations({ locale, namespace: "errors.api.auth" });
   try {
     if (!isPrivateServersEnabled()) {
-      return NextResponse.json({ error: "该功能未启用" }, { status: 404 });
+      return NextResponse.json({ error: tServers("privateNotEnabled") }, { status: 404 });
     }
 
     const authResult = await requireActiveUser();
@@ -33,12 +40,12 @@ export async function GET(request: Request, { params }: RouteContext) {
     const { id } = await params;
     const parsedId = serverLookupIdSchema.safeParse(id);
     if (!parsedId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const serverId = await resolveServerCuid(parsedId.data);
     if (!serverId) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const server = await prisma.server.findUnique({
@@ -47,21 +54,23 @@ export async function GET(request: Request, { params }: RouteContext) {
     });
 
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     if (!server.ownerId || server.ownerId !== userId) {
-      return NextResponse.json({ error: "无权限" }, { status: 403 });
+      return NextResponse.json({ error: tAuth("forbidden") }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
     const parsedQuery = queryMembersSchema.safeParse({
       page: searchParams.get("page") ?? undefined,
       limit: searchParams.get("limit") ?? undefined,
+    }, {
+      errorMap: getZodErrorMap(locale),
     });
     if (!parsedQuery.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsedQuery.error.flatten() },
+        { error: tCommon("validationFailed"), details: parsedQuery.error.flatten() },
         { status: 400 },
       );
     }
@@ -114,6 +123,6 @@ export async function GET(request: Request, { params }: RouteContext) {
     });
   } catch (error) {
     logger.error("[api/servers/[id]/members] Unexpected GET error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

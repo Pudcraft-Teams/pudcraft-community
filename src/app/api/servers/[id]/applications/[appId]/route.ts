@@ -1,9 +1,12 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { isPrivateServersEnabled } from "@/lib/features";
+import { getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { resolveServerCuid } from "@/lib/lookup";
 import { publishWhitelistChange } from "@/lib/whitelist-pubsub";
@@ -19,9 +22,13 @@ interface RouteContext {
  * Server owner approves or rejects an application.
  */
 export async function PUT(request: Request, { params }: RouteContext) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
+  const tAuth = await getTranslations({ locale, namespace: "errors.api.auth" });
   try {
     if (!isPrivateServersEnabled()) {
-      return NextResponse.json({ error: "该功能未启用" }, { status: 404 });
+      return NextResponse.json({ error: tServers("privateNotEnabled") }, { status: 404 });
     }
 
     const authResult = await requireActiveUser();
@@ -35,17 +42,17 @@ export async function PUT(request: Request, { params }: RouteContext) {
     // Validate server ID and appId
     const parsedId = serverLookupIdSchema.safeParse(id);
     if (!parsedId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const parsedAppId = serverIdSchema.safeParse(appId);
     if (!parsedAppId.success) {
-      return NextResponse.json({ error: "无效的申请 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidApplicationIdFormat") }, { status: 400 });
     }
 
     const cuid = await resolveServerCuid(parsedId.data);
     if (!cuid) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     // Check server ownership
@@ -55,19 +62,21 @@ export async function PUT(request: Request, { params }: RouteContext) {
     });
 
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     if (server.ownerId !== userId) {
-      return NextResponse.json({ error: "无权限" }, { status: 403 });
+      return NextResponse.json({ error: tAuth("forbidden") }, { status: 403 });
     }
 
     // Validate request body
     const body = await request.json().catch(() => null);
-    const parsed = reviewApplicationSchema.safeParse(body);
+    const parsed = reviewApplicationSchema.safeParse(body, {
+      errorMap: getZodErrorMap(locale),
+    });
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: parsed.error.flatten() },
         { status: 400 },
       );
     }
@@ -87,11 +96,11 @@ export async function PUT(request: Request, { params }: RouteContext) {
     });
 
     if (!application || application.serverId !== server.id) {
-      return NextResponse.json({ error: "申请未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("applicationNotFound") }, { status: 404 });
     }
 
     if (application.status !== "pending") {
-      return NextResponse.json({ error: "该申请已被处理" }, { status: 400 });
+      return NextResponse.json({ error: tServers("applicationAlreadyProcessed") }, { status: 400 });
     }
 
     // Extract mcUsername from formData
@@ -222,6 +231,6 @@ export async function PUT(request: Request, { params }: RouteContext) {
     });
   } catch (err) {
     logger.error("[api/servers/[id]/applications/[appId]] Unexpected PUT error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

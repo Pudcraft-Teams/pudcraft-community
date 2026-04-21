@@ -1,6 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { isPrivateServersEnabled } from "@/lib/features";
@@ -19,10 +21,14 @@ interface RouteContext {
  * 移除服务器成员（仅服务器 owner 可操作）。
  * 先发布白名单移除消息（Redis pub/sub），再删除成员记录。
  */
-export async function DELETE(_request: Request, { params }: RouteContext) {
+export async function DELETE(request: Request, { params }: RouteContext) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
+  const tAuth = await getTranslations({ locale, namespace: "errors.api.auth" });
   try {
     if (!isPrivateServersEnabled()) {
-      return NextResponse.json({ error: "该功能未启用" }, { status: 404 });
+      return NextResponse.json({ error: tServers("privateNotEnabled") }, { status: 404 });
     }
 
     const authResult = await requireActiveUser();
@@ -34,17 +40,17 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
     const { id, memberId } = await params;
     const parsedId = serverLookupIdSchema.safeParse(id);
     if (!parsedId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const serverId = await resolveServerCuid(parsedId.data);
     if (!serverId) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const parsedMemberId = serverIdSchema.safeParse(memberId);
     if (!parsedMemberId.success) {
-      return NextResponse.json({ error: "无效的成员 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidMemberIdFormat") }, { status: 400 });
     }
 
     const server = await prisma.server.findUnique({
@@ -53,11 +59,11 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
     });
 
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     if (!server.ownerId || server.ownerId !== userId) {
-      return NextResponse.json({ error: "无权限" }, { status: 403 });
+      return NextResponse.json({ error: tAuth("forbidden") }, { status: 403 });
     }
 
     const member = await prisma.serverMember.findUnique({
@@ -66,7 +72,7 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
     });
 
     if (!member || member.serverId !== serverId) {
-      return NextResponse.json({ error: "成员不存在" }, { status: 404 });
+      return NextResponse.json({ error: tServers("memberNotFound") }, { status: 404 });
     }
 
     // Publish whitelist removal before deleting the member record.
@@ -107,6 +113,6 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
     return NextResponse.json({ success: true });
   } catch (error) {
     logger.error("[api/servers/[id]/members/[memberId]] Unexpected DELETE error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
