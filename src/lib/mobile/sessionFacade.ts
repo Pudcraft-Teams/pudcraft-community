@@ -1,6 +1,11 @@
+import { createTranslator } from "next-intl";
 import { NextResponse } from "next/server";
+import type { Locale } from "@/i18n/config";
+import { getRequestLocale } from "@/i18n/locale";
 import { getForwardedClientIpHeaders } from "@/lib/request-ip";
 import { loginSchema } from "@/lib/validation";
+import enMessages from "../../../messages/en.json";
+import zhMessages from "../../../messages/zh.json";
 
 export interface MobileSessionUser {
   id: string;
@@ -55,6 +60,31 @@ interface MobileSessionGetDependencies {
 }
 
 type MobileLoginFailureReason = "invalid_credentials" | "banned";
+
+type MobileAuthErrorKey =
+  | "notAuthenticated"
+  | "userNotFound"
+  | "banned"
+  | "credentials"
+  | "loginFailed"
+  | "logoutFailed"
+  | "validationFailed";
+
+type MobileAuthTranslator = (key: MobileAuthErrorKey) => string;
+
+const messagesByLocale: Record<Locale, typeof zhMessages> = {
+  zh: zhMessages,
+  en: enMessages,
+};
+
+function getSessionFacadeTranslator(locale: Locale): MobileAuthTranslator {
+  const t = createTranslator({
+    locale,
+    namespace: "errors.api.auth",
+    messages: messagesByLocale[locale],
+  });
+  return (key) => t(key);
+}
 
 export function toMobileSessionUser(user: MobileSessionUserSource): MobileSessionUser {
   return {
@@ -164,15 +194,19 @@ export function resolveAuthJsCredentialsCallback(
   return { kind: "success", url };
 }
 
-export function toMobileLoginError(reason: MobileLoginFailureReason): {
+export function toMobileLoginError(
+  reason: MobileLoginFailureReason,
+  locale: Locale = "zh",
+): {
   status: number;
   body: { error: string; code: "credentials" | "banned" };
 } {
+  const t = getSessionFacadeTranslator(locale);
   if (reason === "banned") {
     return {
       status: 403,
       body: {
-        error: "账号已被封禁",
+        error: t("banned"),
         code: "banned",
       },
     };
@@ -181,7 +215,7 @@ export function toMobileLoginError(reason: MobileLoginFailureReason): {
   return {
     status: 401,
     body: {
-      error: "邮箱或密码错误",
+      error: t("credentials"),
       code: "credentials",
     },
   };
@@ -216,11 +250,16 @@ export function resolveTrustedAuthBaseUrl(
 }
 
 export async function handleMobileLoginPost(request: Request, deps: MobileLoginPostDependencies = {}) {
+  const locale = await getRequestLocale(request);
+  const t = getSessionFacadeTranslator(locale);
   const fetchImpl = deps.fetchImpl ?? fetch;
   const body = await request.json().catch(() => null);
   const parsed = loginSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "校验失败", details: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json(
+      { error: t("validationFailed"), details: parsed.error.flatten() },
+      { status: 400 },
+    );
   }
 
   const authBaseUrl = resolveTrustedAuthBaseUrl(process.env, request);
@@ -262,7 +301,7 @@ export async function handleMobileLoginPost(request: Request, deps: MobileLoginP
   const authResult = resolveAuthJsCredentialsCallback(authResponse.status, authPayload, authBaseUrl);
 
   if (authResult.kind === "auth_error") {
-    const loginError = toMobileLoginError(authResult.reason);
+    const loginError = toMobileLoginError(authResult.reason, locale);
     const response = NextResponse.json(loginError.body, { status: loginError.status });
     appendSetCookieHeaders(response.headers, responseCookies);
     return response;
@@ -273,13 +312,13 @@ export async function handleMobileLoginPost(request: Request, deps: MobileLoginP
     cache: "no-store",
   });
   if (authResult.kind === "error") {
-    const response = NextResponse.json({ error: "登录失败" }, { status: 500 });
+    const response = NextResponse.json({ error: t("loginFailed") }, { status: 500 });
     appendSetCookieHeaders(response.headers, responseCookies);
     return response;
   }
 
   if (sessionResponse.status === 401) {
-    const loginError = toMobileLoginError("invalid_credentials");
+    const loginError = toMobileLoginError("invalid_credentials", locale);
     const response = NextResponse.json(loginError.body, { status: loginError.status });
     appendSetCookieHeaders(response.headers, responseCookies);
     return response;
@@ -296,6 +335,8 @@ export async function handleMobileSessionDelete(
   request: Request,
   deps: MobileSessionDeleteDependencies = {},
 ) {
+  const locale = await getRequestLocale(request);
+  const t = getSessionFacadeTranslator(locale);
   const fetchImpl = deps.fetchImpl ?? fetch;
   const authBaseUrl = resolveTrustedAuthBaseUrl(process.env, request);
   const forwardedIpHeaders = getForwardedClientIpHeaders(request);
@@ -341,27 +382,31 @@ export async function handleMobileSessionDelete(
   const responseCookies = mergeSetCookieHeaders(csrfCookies, signoutCookies);
 
   const response = NextResponse.json(
-    signoutResponse.ok ? { ok: true } : { error: "登出失败" },
+    signoutResponse.ok ? { ok: true } : { error: t("logoutFailed") },
     { status: signoutResponse.ok ? 200 : 500 },
   );
   appendSetCookieHeaders(response.headers, responseCookies);
   return response;
 }
 
-export async function handleMobileSessionGet(deps: MobileSessionGetDependencies) {
+export async function handleMobileSessionGet(
+  deps: MobileSessionGetDependencies,
+  locale: Locale = "zh",
+) {
+  const t = getSessionFacadeTranslator(locale);
   const session = await deps.authImpl();
   const userId = session?.user?.id;
   if (!userId) {
-    return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    return NextResponse.json({ error: t("notAuthenticated") }, { status: 401 });
   }
 
   const user = await deps.loadUserById(userId);
   if (!user) {
-    return NextResponse.json({ error: "用户不存在" }, { status: 401 });
+    return NextResponse.json({ error: t("userNotFound") }, { status: 401 });
   }
 
   if (user.isBanned) {
-    return NextResponse.json({ error: "账号已被封禁" }, { status: 403 });
+    return NextResponse.json({ error: t("banned") }, { status: 403 });
   }
 
   return NextResponse.json({

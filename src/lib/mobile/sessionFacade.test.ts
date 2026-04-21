@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import zhMessages from "../../../messages/zh.json";
 import {
   handleMobileLoginPost,
   handleMobileSessionDelete,
@@ -12,6 +13,8 @@ import {
   toMobileSessionUser,
   toRequestCookieHeader,
 } from "./sessionFacade";
+
+const zhAuthErrors = zhMessages.errors.api.auth;
 
 function readRequestHeaders(init?: RequestInit): Headers {
   return new Headers(init?.headers);
@@ -162,7 +165,7 @@ test("toMobileLoginError returns structured banned and invalid credential respon
   assert.deepEqual(toMobileLoginError("invalid_credentials"), {
     status: 401,
     body: {
-      error: "邮箱或密码错误",
+      error: zhAuthErrors.credentials,
       code: "credentials",
     },
   });
@@ -170,7 +173,7 @@ test("toMobileLoginError returns structured banned and invalid credential respon
   assert.deepEqual(toMobileLoginError("banned"), {
     status: 403,
     body: {
-      error: "账号已被封禁",
+      error: zhAuthErrors.banned,
       code: "banned",
     },
   });
@@ -509,7 +512,7 @@ test("handleMobileSessionGet rejects stale JWTs for deleted users", async () => 
   });
 
   assert.equal(response.status, 401);
-  assert.deepEqual(await response.json(), { error: "用户不存在" });
+  assert.deepEqual(await response.json(), { error: zhAuthErrors.userNotFound });
 });
 
 test("handleMobileSessionGet rejects stale JWTs for banned users", async () => {
@@ -531,5 +534,5 @@ test("handleMobileSessionGet rejects stale JWTs for banned users", async () => {
   });
 
   assert.equal(response.status, 403);
-  assert.deepEqual(await response.json(), { error: "账号已被封禁" });
+  assert.deepEqual(await response.json(), { error: zhAuthErrors.banned });
 });
