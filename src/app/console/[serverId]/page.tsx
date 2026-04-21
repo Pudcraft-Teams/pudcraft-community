@@ -120,14 +120,15 @@ function resolveServerAddress(server: ServerDetail): string {
 }
 
 /**
- * 服务器控制面板。
- * 聚合展示服主的趋势统计、高峰分析、评论摘要与管理操作。
+ * Server control panel.
+ * Aggregates trend stats, peak analysis, comment highlights, and management actions.
  */
 export default function ConsoleServerPage() {
   const params = useParams<{ serverId: string }>();
   const router = useRouter();
   const { data: session, status } = useSession();
   const tStats = useTranslations("console.stats");
+  const tPage = useTranslations("console.page");
   const [period, setPeriod] = useState<StatsPeriod>("24h");
   const [server, setServer] = useState<ServerDetail | null>(null);
   const [stats, setStats] = useState<ConsoleStatsResponse | null>(null);
@@ -154,23 +155,23 @@ export default function ConsoleServerPage() {
       const payload = parseServerPayload(await response.json().catch(() => ({})));
 
       if (!response.ok || !payload.data) {
-        throw new Error(payload.error ?? "服务器加载失败");
+        throw new Error(payload.error ?? tPage("serverLoadFailed"));
       }
 
       const currentUserId = session?.user?.id;
       if (!currentUserId || payload.data.ownerId !== currentUserId) {
-        throw new Error("无权限访问该服务器控制台");
+        throw new Error(tPage("forbidden"));
       }
 
       setServer(payload.data);
     } catch (fetchError) {
-      const message = fetchError instanceof Error ? fetchError.message : "服务器加载失败";
+      const message = fetchError instanceof Error ? fetchError.message : tPage("serverLoadFailed");
       setError(message);
       setServer(null);
     } finally {
       setIsServerLoading(false);
     }
-  }, [serverId, session?.user?.id]);
+  }, [serverId, session?.user?.id, tPage]);
 
   const fetchStats = useCallback(
     async (targetPeriod: StatsPeriod) => {
@@ -183,11 +184,11 @@ export default function ConsoleServerPage() {
         const payload = parseStatsPayload(await response.json().catch(() => ({})));
 
         if (!response.ok) {
-          throw new Error(payload.error ?? "统计数据加载失败");
+          throw new Error(payload.error ?? tPage("statsLoadFailed"));
         }
 
         if (!payload.period || !payload.dataPoints || !payload.summary || !payload.hourlyAverages) {
-          throw new Error("统计数据格式异常");
+          throw new Error(tPage("statsFormatInvalid"));
         }
 
         setStats({
@@ -197,14 +198,14 @@ export default function ConsoleServerPage() {
           hourlyAverages: payload.hourlyAverages,
         });
       } catch (fetchError) {
-        const message = fetchError instanceof Error ? fetchError.message : "统计数据加载失败";
+        const message = fetchError instanceof Error ? fetchError.message : tPage("statsLoadFailed");
         setError(message);
         setStats(null);
       } finally {
         setIsStatsLoading(false);
       }
     },
-    [serverId],
+    [serverId, tPage],
   );
 
   const fetchPeakHours = useCallback(async () => {
@@ -217,22 +218,22 @@ export default function ConsoleServerPage() {
       const payload = parseStatsPayload(await response.json().catch(() => ({})));
 
       if (!response.ok) {
-        throw new Error(payload.error ?? "高峰分析加载失败");
+        throw new Error(payload.error ?? tPage("peakLoadFailed"));
       }
 
       if (!payload.hourlyAverages) {
-        throw new Error("高峰分析数据格式异常");
+        throw new Error(tPage("peakFormatInvalid"));
       }
 
       setPeakHourly(payload.hourlyAverages);
     } catch (fetchError) {
-      const message = fetchError instanceof Error ? fetchError.message : "高峰分析加载失败";
+      const message = fetchError instanceof Error ? fetchError.message : tPage("peakLoadFailed");
       setError(message);
       setPeakHourly([]);
     } finally {
       setIsPeakLoading(false);
     }
-  }, [serverId]);
+  }, [serverId, tPage]);
 
   useEffect(() => {
     if (status !== "authenticated") {
@@ -280,11 +281,11 @@ export default function ConsoleServerPage() {
   }, [server, summary.avgPlayers]);
 
   if (status === "loading" || isServerLoading) {
-    return <PageLoading text="正在加载控制台..." />;
+    return <PageLoading text={tPage("loading")} />;
   }
 
   if (status === "unauthenticated") {
-    return <p className="py-10 text-center text-sm text-warm-500">正在跳转到登录页...</p>;
+    return <p className="py-10 text-center text-sm text-warm-500">{tPage("redirectingToLogin")}</p>;
   }
 
   if (error && !server) {
@@ -292,13 +293,17 @@ export default function ConsoleServerPage() {
   }
 
   if (!server) {
-    return <div className="m3-alert-error p-4">服务器不存在或你无权访问该控制台。</div>;
+    return <div className="m3-alert-error p-4">{tPage("serverNotFoundOrForbidden")}</div>;
   }
 
   const serverAddress = resolveServerAddress(server);
   const currentPlayers = server.status.playerCount ?? 0;
   const maxPlayers = server.status.maxPlayers ?? 0;
   const reviewStatus = server.reviewStatus ?? "approved";
+  const peakTimeLabel =
+    summary.peakTime === null
+      ? tStats("peakTimeEmpty")
+      : tStats("peakTime", { time: summary.peakTime });
 
   return (
     <div className="space-y-4 pb-4">
@@ -324,7 +329,7 @@ export default function ConsoleServerPage() {
                   server.status.online ? "bg-forest" : "bg-warm-400"
                 }`}
               />
-              {server.status.online ? "在线" : "离线"}
+              {server.status.online ? tPage("badgeOnline") : tPage("badgeOffline")}
             </span>
             <span
               className={`inline-flex items-center rounded-full px-2.5 py-1 font-medium ${
@@ -333,7 +338,7 @@ export default function ConsoleServerPage() {
                   : "bg-coral-amber/10 text-coral-amber ring-1 ring-coral-amber/20"
               }`}
             >
-              {server.isVerified ? "✓ 已认领" : "未认领"}
+              {server.isVerified ? tPage("badgeVerified") : tPage("badgeUnverified")}
             </span>
             <span
               className={`inline-flex items-center rounded-full px-2.5 py-1 font-medium ${
@@ -345,10 +350,10 @@ export default function ConsoleServerPage() {
               }`}
             >
               {reviewStatus === "approved"
-                ? "审核已通过"
+                ? tPage("reviewApproved")
                 : reviewStatus === "pending"
-                  ? "审核中"
-                  : "审核未通过"}
+                  ? tPage("reviewPending")
+                  : tPage("reviewRejected")}
             </span>
           </div>
         </div>
@@ -356,46 +361,50 @@ export default function ConsoleServerPage() {
 
       {reviewStatus === "pending" && (
         <section className="rounded-xl border border-coral-amber/20 bg-coral-amber/10 px-4 py-3 text-sm text-coral-amber">
-          当前服务器正在审核中，暂时不会出现在公开列表。
+          {tPage("reviewPendingNotice")}
         </section>
       )}
 
       {reviewStatus === "rejected" && (
         <section className="rounded-xl border border-coral-hover/20 bg-coral-light px-4 py-3 text-sm text-coral-hover">
-          <p className="font-medium">审核未通过</p>
+          <p className="font-medium">{tPage("reviewRejectedTitle")}</p>
           <p className="mt-1 text-xs">
-            原因：{server.rejectReason?.trim() || "管理员未填写具体原因，请修改后重新提交。"}
+            {tPage("reviewRejectReason", {
+              reason: server.rejectReason?.trim() || tPage("reviewRejectReasonMissing"),
+            })}
           </p>
           <Link
             href={`/servers/${server.psid}/edit`}
             className="mt-2 inline-flex text-xs underline underline-offset-4"
           >
-            去编辑并重新提交
+            {tPage("reviewRejectEditLink")}
           </Link>
         </section>
       )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
-          label="当前在线"
+          label={tStats("currentOnlineLabel")}
           value={`${currentPlayers}/${maxPlayers}`}
-          subtext={`近 ${stats?.period ?? period} 平均 ${summary.avgPlayers} 人`}
+          subtext={tStats("currentOnlineSubtext", {
+            period: stats?.period ?? period,
+            avg: summary.avgPlayers,
+          })}
           trend={playerTrend}
         />
         <StatCard
-          label="峰值在线"
+          label={tStats("peakPlayersLabel")}
           value={`${summary.peakPlayers}`}
-          subtext={`峰值时段 ${
-            summary.peakTime === null
-              ? tStats("peakTimeEmpty")
-              : tStats("peakTime", { time: summary.peakTime })
-          }`}
+          subtext={tStats("peakPlayersSubtext", { label: peakTimeLabel })}
           trend="up"
         />
         <StatCard
-          label="在线率"
+          label={tStats("uptimeLabel")}
           value={`${summary.uptimePercent.toFixed(1)}%`}
-          subtext={`在线 ${summary.onlineChecks}/${summary.totalChecks} 次`}
+          subtext={tStats("uptimeSubtext", {
+            online: summary.onlineChecks,
+            total: summary.totalChecks,
+          })}
           trend={summary.uptimePercent >= 90 ? "up" : "down"}
         />
       </div>
