@@ -45,6 +45,139 @@
       "invalidUrl": "链接格式不正确",
       "invalidEnum": "取值不在允许范围内",
       "custom": "校验失败"
+    },
+    "api": {
+      "auth": {
+        "notAuthenticated": "请先登录",
+        "userNotFound": "用户不存在",
+        "banned": "账号已被封禁",
+        "credentials": "邮箱或密码错误",
+        "loginFailed": "登录失败",
+        "logoutFailed": "登出失败",
+        "invalidJson": "请求体必须是合法 JSON",
+        "validationFailed": "校验失败",
+        "internal": "服务器内部错误",
+        "registerRateLimited": "今日注册请求次数已达上限，请明天再试",
+        "registerConflict": "注册失败，请重试",
+        "codeTooManyAttempts": "验证码错误次数过多，请稍后再试",
+        "codeInvalidOrExpired": "验证码错误或已过期",
+        "registerSuccess": "注册成功",
+        "sendCooldown": "发送过于频繁，请 60 秒后再试",
+        "ipDailyLimit": "当前 IP 今日发送次数已达上限",
+        "resetMailSent": "如果该邮箱已注册，你将收到重置邮件",
+        "resetFailed": "重置失败，请重试",
+        "resetSuccess": "密码已重置",
+        "codeSent": "验证码已发送"
+      }
+    }
+  },
+  "auth": {
+    "login": {
+      "metaTitle": "登录",
+      "title": "登录 PudCraft",
+      "subtitle": "使用邮箱和密码登录你的账号",
+      "emailLabel": "邮箱",
+      "emailPlaceholder": "you@example.com",
+      "passwordLabel": "密码",
+      "showPassword": "显示",
+      "hidePassword": "隐藏",
+      "forgotLink": "忘记密码？",
+      "submit": "登录",
+      "submitting": "登录中...",
+      "noAccount": "没有账号？",
+      "registerLink": "去注册",
+      "errors": {
+        "invalidEmail": "请输入有效邮箱",
+        "passwordRequired": "请输入密码",
+        "formInvalid": "请检查邮箱和密码格式",
+        "banned": "账号已被封禁",
+        "credentials": "邮箱或密码错误",
+        "generic": "登录失败，请稍后重试"
+      },
+      "toasts": {
+        "registered": "注册成功，请登录",
+        "reset": "密码已重置，请用新密码登录"
+      }
+    },
+    "register": {
+      "metaTitle": "注册",
+      "title": "注册 PudCraft 账号",
+      "subtitleStepOne": "填写邮箱和密码后获取验证码",
+      "subtitleStepTwo": "输入邮箱验证码完成注册",
+      "emailLabel": "邮箱",
+      "emailPlaceholder": "you@example.com",
+      "passwordLabel": "密码",
+      "passwordPlaceholder": "至少 8 位",
+      "confirmPasswordLabel": "确认密码",
+      "confirmPasswordPlaceholder": "再次输入密码",
+      "showPassword": "显示",
+      "hidePassword": "隐藏",
+      "sendCode": "发送验证码",
+      "sendingCode": "发送中...",
+      "codeSentTo": "验证码已发送到",
+      "codeLabel": "验证码",
+      "codePlaceholder": "请输入 6 位数字验证码",
+      "submit": "注册",
+      "submitting": "注册中...",
+      "resend": "重新发送",
+      "resendIn": "重新发送 ({cooldown}s)",
+      "haveAccount": "已有账号？",
+      "loginLink": "去登录",
+      "errors": {
+        "invalidEmail": "请输入有效邮箱",
+        "passwordMin": "密码至少 8 位",
+        "confirmPasswordRequired": "请再次输入密码",
+        "passwordMismatch": "两次输入的密码不一致",
+        "codeFormat": "验证码必须是 6 位数字",
+        "stepOneInvalid": "请检查邮箱和密码输入",
+        "codeInvalid": "验证码格式不正确",
+        "sendFailed": "验证码发送失败，请稍后再试",
+        "submitFailed": "注册失败，请稍后再试",
+        "network": "网络异常，请稍后重试"
+      },
+      "toasts": {
+        "codeSent": "验证码已发送，请查收邮箱",
+        "codeResent": "验证码已重新发送，请查收邮箱"
+      }
+    },
+    "forgot": {
+      "metaTitle": "找回密码",
+      "titleStepOne": "找回密码",
+      "titleStepTwo": "重置密码",
+      "subtitleStepOne": "请输入你的注册邮箱，我们会发送验证码帮你重置密码。",
+      "subtitleStepTwo": "验证码已发送到 {email}",
+      "emailLabel": "邮箱",
+      "emailPlaceholder": "you@example.com",
+      "codeLabel": "验证码",
+      "codePlaceholder": "请输入 6 位数字验证码",
+      "newPasswordLabel": "新密码",
+      "newPasswordPlaceholder": "至少 8 位",
+      "confirmPasswordLabel": "确认密码",
+      "confirmPasswordPlaceholder": "再次输入新密码",
+      "showPassword": "显示",
+      "hidePassword": "隐藏",
+      "sendCode": "发送验证码",
+      "sendingCode": "发送中...",
+      "resend": "重新发送",
+      "resendIn": "重新发送 ({cooldown}s)",
+      "submit": "重置密码",
+      "submitting": "重置中...",
+      "rememberPrompt": "想起密码了？",
+      "loginLink": "去登录",
+      "errors": {
+        "invalidEmail": "请输入有效邮箱",
+        "codeFormat": "验证码必须是 6 位数字",
+        "passwordMin": "密码至少 8 位",
+        "confirmPasswordRequired": "请再次输入密码",
+        "passwordMismatch": "两次输入的密码不一致",
+        "resetFormInvalid": "请检查验证码和密码输入",
+        "sendFailed": "验证码发送失败，请稍后再试",
+        "submitFailed": "密码重置失败，请稍后重试",
+        "network": "网络异常，请稍后重试"
+      },
+      "toasts": {
+        "codeSentIfRegistered": "如果该邮箱已注册，验证码已发送"
+      }
     }
   }
 }

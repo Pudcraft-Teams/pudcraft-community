@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 
-export const metadata: Metadata = {
-  title: "登录",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("auth.login");
+  return {
+    title: t("metaTitle"),
+  };
+}
 
 export default function LoginLayout({ children }: { children: ReactNode }) {
   return children;
