@@ -1,7 +1,10 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { prisma } from "@/lib/db";
+import { getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { authenticatePlugin } from "@/lib/plugin-auth";
 import { getRedisConnection } from "@/lib/redis";
@@ -18,32 +21,37 @@ const PLUGIN_CONNECTED_TTL = 60;
  * Auth via API key (Bearer token).
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
   try {
     const { id } = await params;
     const parsedId = serverLookupIdSchema.safeParse(id);
     if (!parsedId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const cuid = await resolveServerCuid(parsedId.data);
     if (!cuid) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const authenticated = await authenticatePlugin(request, cuid);
     if (!authenticated) {
-      return NextResponse.json({ error: "未授权" }, { status: 401 });
+      return NextResponse.json({ error: tServers("unauthorized") }, { status: 401 });
     }
 
     const body: unknown = await request.json().catch(() => null);
-    const parsed = statusReportSchema.safeParse(body);
+    const parsed = statusReportSchema.safeParse(body, {
+      errorMap: getZodErrorMap(locale),
+    });
     if (!parsed.success) {
       logger.warn("[api/servers/[id]/status/report] Validation failed", {
         body,
         errors: parsed.error.flatten(),
       });
       return NextResponse.json(
-        { error: "校验失败", details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: parsed.error.flatten() },
         { status: 400 },
       );
     }
@@ -104,7 +112,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ success: true });
   } catch (err) {
     logger.error("[api/servers/[id]/status/report] Unexpected POST error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
 

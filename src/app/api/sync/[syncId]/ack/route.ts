@@ -1,6 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { prisma } from "@/lib/db";
 import { isPrivateServersEnabled } from "@/lib/features";
 import { logger } from "@/lib/logger";
@@ -13,16 +15,19 @@ import { serverIdSchema } from "@/lib/validation";
  * Auth via API key — extract serverId from the sync record, then validate.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ syncId: string }> }) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
   try {
     if (!isPrivateServersEnabled()) {
-      return NextResponse.json({ error: "该功能未启用" }, { status: 404 });
+      return NextResponse.json({ error: tServers("privateNotEnabled") }, { status: 404 });
     }
 
     const { syncId } = await params;
 
     const parsedSyncId = serverIdSchema.safeParse(syncId);
     if (!parsedSyncId.success) {
-      return NextResponse.json({ error: "无效的同步记录 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidSyncIdFormat") }, { status: 400 });
     }
 
     // Find the sync record to get the serverId
@@ -32,13 +37,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ syn
     });
 
     if (!sync) {
-      return NextResponse.json({ error: "同步记录未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("syncRecordNotFound") }, { status: 404 });
     }
 
     // Authenticate via API key against the server
     const authHeader = request.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "未授权" }, { status: 401 });
+      return NextResponse.json({ error: tServers("unauthorized") }, { status: 401 });
     }
 
     const raw = authHeader.slice(7);
@@ -50,7 +55,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ syn
     });
 
     if (!server?.apiKeyHash || server.apiKeyHash !== hash) {
-      return NextResponse.json({ error: "未授权" }, { status: 401 });
+      return NextResponse.json({ error: tServers("unauthorized") }, { status: 401 });
     }
 
     // Update the sync record
@@ -65,6 +70,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ syn
     return NextResponse.json({ success: true });
   } catch (err) {
     logger.error("[api/sync/[syncId]/ack] Unexpected POST error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

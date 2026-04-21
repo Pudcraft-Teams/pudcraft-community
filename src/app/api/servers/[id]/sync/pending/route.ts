@@ -1,6 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { prisma } from "@/lib/db";
 import { isPrivateServersEnabled } from "@/lib/features";
 import { logger } from "@/lib/logger";
@@ -16,25 +18,28 @@ import type { WhitelistSyncItem } from "@/lib/types";
  * Auth via API key (Bearer token).
  */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
   try {
     if (!isPrivateServersEnabled()) {
-      return NextResponse.json({ error: "该功能未启用" }, { status: 404 });
+      return NextResponse.json({ error: tServers("privateNotEnabled") }, { status: 404 });
     }
 
     const { id } = await params;
     const parsedId = serverLookupIdSchema.safeParse(id);
     if (!parsedId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const cuid = await resolveServerCuid(parsedId.data);
     if (!cuid) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const authenticated = await authenticatePlugin(request, cuid);
     if (!authenticated) {
-      return NextResponse.json({ error: "未授权" }, { status: 401 });
+      return NextResponse.json({ error: tServers("unauthorized") }, { status: 401 });
     }
 
     const pendingSyncs = await prisma.whitelistSync.findMany({
@@ -63,6 +68,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ pendingSyncs: syncItems });
   } catch (err) {
     logger.error("[api/servers/[id]/sync/pending] Unexpected GET error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
