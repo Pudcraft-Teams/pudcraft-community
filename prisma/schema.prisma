@@ -22,6 +22,7 @@ model User {
   passwordHash  String    @map("password_hash")
   image         String?
   bio           String?   @db.Text
+  locale        String    @default("zh")
   role          String    @default("user") // user | admin | moderator
   isBanned      Boolean   @default(false) @map("is_banned")
   banReason     String?   @map("ban_reason")
