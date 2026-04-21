@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { isPrivateServersEnabled } from "@/lib/features";
 import type {
@@ -10,28 +11,13 @@ import type {
 
 // ─── Constants ───────────────────────────────────
 
-const VISIBILITY_OPTIONS: { value: ServerVisibility; label: string; description: string }[] = [
-  { value: "public", label: "完全公开", description: "所有人可见" },
-  { value: "private", label: "私有", description: "不对外展示，仅通过邀请可访问" },
-  { value: "unlisted", label: "半公开", description: "列表可见但隐藏地址，需申请或邀请加入" },
-];
-
-const JOIN_MODE_OPTIONS: { value: ServerJoinMode; label: string; description: string }[] = [
-  { value: "open", label: "开放加入", description: "无需审核" },
-  { value: "apply", label: "申请制", description: "玩家提交申请后审核" },
-  { value: "invite", label: "邀请制", description: "仅通过邀请码加入" },
-  {
-    value: "apply_and_invite",
-    label: "申请 + 邀请",
-    description: "两种方式并行",
-  },
-];
-
-const FIELD_TYPE_OPTIONS: { value: ApplicationFormField["type"]; label: string }[] = [
-  { value: "text", label: "单行文本" },
-  { value: "textarea", label: "多行文本" },
-  { value: "select", label: "单选" },
-  { value: "multiselect", label: "多选" },
+const VISIBILITY_OPTION_KEYS: ServerVisibility[] = ["public", "private", "unlisted"];
+const JOIN_MODE_OPTION_KEYS: ServerJoinMode[] = ["open", "apply", "invite", "apply_and_invite"];
+const FIELD_TYPE_OPTION_KEYS: ApplicationFormField["type"][] = [
+  "text",
+  "textarea",
+  "select",
+  "multiselect",
 ];
 
 const MAX_FORM_FIELDS = 10;
@@ -79,11 +65,53 @@ function joinModeIncludesApply(joinMode: ServerJoinMode): boolean {
   return joinMode === "apply" || joinMode === "apply_and_invite";
 }
 
+function resolveVisibilityCopy(
+  value: ServerVisibility,
+  t: ReturnType<typeof useTranslations>,
+): { label: string; description: string } {
+  if (value === "public") {
+    return { label: t("visibilityPublicLabel"), description: t("visibilityPublicDescription") };
+  }
+  if (value === "private") {
+    return { label: t("visibilityPrivateLabel"), description: t("visibilityPrivateDescription") };
+  }
+  return { label: t("visibilityUnlistedLabel"), description: t("visibilityUnlistedDescription") };
+}
+
+function resolveJoinModeCopy(
+  value: ServerJoinMode,
+  t: ReturnType<typeof useTranslations>,
+): { label: string; description: string } {
+  if (value === "open") {
+    return { label: t("joinModeOpenLabel"), description: t("joinModeOpenDescription") };
+  }
+  if (value === "apply") {
+    return { label: t("joinModeApplyLabel"), description: t("joinModeApplyDescription") };
+  }
+  if (value === "invite") {
+    return { label: t("joinModeInviteLabel"), description: t("joinModeInviteDescription") };
+  }
+  return {
+    label: t("joinModeApplyInviteLabel"),
+    description: t("joinModeApplyInviteDescription"),
+  };
+}
+
+function resolveFieldTypeLabel(
+  value: ApplicationFormField["type"],
+  t: ReturnType<typeof useTranslations>,
+): string {
+  if (value === "text") return t("fieldTypeText");
+  if (value === "textarea") return t("fieldTypeTextarea");
+  if (value === "select") return t("fieldTypeSelect");
+  return t("fieldTypeMultiselect");
+}
+
 // ─── Component ───────────────────────────────────
 
 /**
- * 服务器隐私与加入设置面板。
- * 允许服主配置可见性、加入模式和申请表单。
+ * Privacy and join-flow settings panel.
+ * Allows owners to configure visibility, join mode, and application form fields.
  */
 export function ServerSettings({
   serverId,
@@ -93,6 +121,7 @@ export function ServerSettings({
   initialApplicationForm,
   onSaved,
 }: ServerSettingsProps) {
+  const t = useTranslations("console.settings");
   const [visibility, setVisibility] = useState<ServerVisibility>(
     isValidVisibility(initialVisibility) ? initialVisibility : "public",
   );
@@ -212,14 +241,14 @@ export function ServerSettings({
       if (showApplicationForm) {
         const emptyLabel = formFields.find((f) => !f.label.trim());
         if (emptyLabel) {
-          throw new Error("表单字段名称不能为空");
+          throw new Error(t("emptyLabelError"));
         }
 
         const selectWithoutOptions = formFields.find(
           (f) => (f.type === "select" || f.type === "multiselect") && (!f.options || f.options.length === 0),
         );
         if (selectWithoutOptions) {
-          throw new Error(`字段「${selectWithoutOptions.label}」为选择类型，必须填写选项`);
+          throw new Error(t("selectOptionsRequired", { label: selectWithoutOptions.label }));
         }
       }
 
@@ -240,19 +269,19 @@ export function ServerSettings({
       const payload = typeof result === "object" && result !== null ? (result as Record<string, unknown>) : {};
 
       if (!response.ok) {
-        const errorMessage = typeof payload.error === "string" ? payload.error : "保存失败";
+        const errorMessage = typeof payload.error === "string" ? payload.error : t("saveFailed");
         throw new Error(errorMessage);
       }
 
       setSaveSuccess(true);
       onSaved?.();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "保存失败";
+      const message = err instanceof Error ? err.message : t("saveFailed");
       setSaveError(message);
     } finally {
       setIsSaving(false);
     }
-  }, [visibility, discoverable, joinMode, formFields, serverId, showJoinModeSelector, showApplicationForm, onSaved]);
+  }, [visibility, discoverable, joinMode, formFields, serverId, showJoinModeSelector, showApplicationForm, onSaved, t]);
 
   if (!privateServersEnabled) {
     return null;
@@ -260,43 +289,46 @@ export function ServerSettings({
 
   return (
     <section className="m3-surface p-4 sm:p-5">
-      <h2 className="text-lg font-semibold text-warm-800">隐私与加入设置</h2>
+      <h2 className="text-lg font-semibold text-warm-800">{t("title")}</h2>
 
       {/* ─── Visibility selector ─── */}
       <div className="mt-5">
-        <h3 className="text-sm font-semibold text-warm-800">服务器可见性</h3>
+        <h3 className="text-sm font-semibold text-warm-800">{t("visibilityHeading")}</h3>
         <div className="mt-3 space-y-2">
-          {VISIBILITY_OPTIONS.map((option) => (
-            <label
-              key={option.value}
-              className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
-                visibility === option.value
-                  ? "border-accent/30 bg-accent-muted/50"
-                  : "border-warm-200 bg-surface hover:border-warm-300"
-              }`}
-            >
-              <input
-                type="radio"
-                name="visibility"
-                value={option.value}
-                checked={visibility === option.value}
-                onChange={() => {
-                  setVisibility(option.value);
-                }}
-                className="mt-0.5 h-4 w-4 border-warm-300 text-accent focus:ring-accent-hover"
-              />
-              <div className="min-w-0">
-                <p
-                  className={`text-sm font-medium ${
-                    visibility === option.value ? "text-accent" : "text-warm-800"
-                  }`}
-                >
-                  {option.label}
-                </p>
-                <p className="mt-0.5 text-xs text-warm-500">{option.description}</p>
-              </div>
-            </label>
-          ))}
+          {VISIBILITY_OPTION_KEYS.map((optionKey) => {
+            const copy = resolveVisibilityCopy(optionKey, t);
+            return (
+              <label
+                key={optionKey}
+                className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
+                  visibility === optionKey
+                    ? "border-accent/30 bg-accent-muted/50"
+                    : "border-warm-200 bg-surface hover:border-warm-300"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="visibility"
+                  value={optionKey}
+                  checked={visibility === optionKey}
+                  onChange={() => {
+                    setVisibility(optionKey);
+                  }}
+                  className="mt-0.5 h-4 w-4 border-warm-300 text-accent focus:ring-accent-hover"
+                />
+                <div className="min-w-0">
+                  <p
+                    className={`text-sm font-medium ${
+                      visibility === optionKey ? "text-accent" : "text-warm-800"
+                    }`}
+                  >
+                    {copy.label}
+                  </p>
+                  <p className="mt-0.5 text-xs text-warm-500">{copy.description}</p>
+                </div>
+              </label>
+            );
+          })}
         </div>
       </div>
 
@@ -313,12 +345,8 @@ export function ServerSettings({
               className="mt-0.5 h-4 w-4 rounded border-warm-300 text-accent focus:ring-accent-hover"
             />
             <div className="min-w-0">
-              <p className="text-sm font-medium text-warm-800">
-                在首页发现中展示
-              </p>
-              <p className="mt-0.5 text-xs text-warm-500">
-                开启后，服务器会出现在首页列表中（地址仍然对非成员隐藏）。关闭则仅通过邀请链接或直接访问可见。
-              </p>
+              <p className="text-sm font-medium text-warm-800">{t("discoverableTitle")}</p>
+              <p className="mt-0.5 text-xs text-warm-500">{t("discoverableDescription")}</p>
             </div>
           </label>
         </div>
@@ -327,39 +355,42 @@ export function ServerSettings({
       {/* ─── Join mode selector ─── */}
       {showJoinModeSelector && (
         <div className="mt-6">
-          <h3 className="text-sm font-semibold text-warm-800">加入方式</h3>
+          <h3 className="text-sm font-semibold text-warm-800">{t("joinModeHeading")}</h3>
           <div className="mt-3 space-y-2">
-            {JOIN_MODE_OPTIONS.map((option) => (
-              <label
-                key={option.value}
-                className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
-                  joinMode === option.value
-                    ? "border-accent/30 bg-accent-muted/50"
-                    : "border-warm-200 bg-surface hover:border-warm-300"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="joinMode"
-                  value={option.value}
-                  checked={joinMode === option.value}
-                  onChange={() => {
-                    setJoinMode(option.value);
-                  }}
-                  className="mt-0.5 h-4 w-4 border-warm-300 text-accent focus:ring-accent-hover"
-                />
-                <div className="min-w-0">
-                  <p
-                    className={`text-sm font-medium ${
-                      joinMode === option.value ? "text-accent" : "text-warm-800"
-                    }`}
-                  >
-                    {option.label}
-                  </p>
-                  <p className="mt-0.5 text-xs text-warm-500">{option.description}</p>
-                </div>
-              </label>
-            ))}
+            {JOIN_MODE_OPTION_KEYS.map((optionKey) => {
+              const copy = resolveJoinModeCopy(optionKey, t);
+              return (
+                <label
+                  key={optionKey}
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
+                    joinMode === optionKey
+                      ? "border-accent/30 bg-accent-muted/50"
+                      : "border-warm-200 bg-surface hover:border-warm-300"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="joinMode"
+                    value={optionKey}
+                    checked={joinMode === optionKey}
+                    onChange={() => {
+                      setJoinMode(optionKey);
+                    }}
+                    className="mt-0.5 h-4 w-4 border-warm-300 text-accent focus:ring-accent-hover"
+                  />
+                  <div className="min-w-0">
+                    <p
+                      className={`text-sm font-medium ${
+                        joinMode === optionKey ? "text-accent" : "text-warm-800"
+                      }`}
+                    >
+                      {copy.label}
+                    </p>
+                    <p className="mt-0.5 text-xs text-warm-500">{copy.description}</p>
+                  </div>
+                </label>
+              );
+            })}
           </div>
         </div>
       )}
@@ -368,14 +399,12 @@ export function ServerSettings({
       {showApplicationForm && (
         <div className="mt-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-warm-800">申请表单</h3>
+            <h3 className="text-sm font-semibold text-warm-800">{t("formHeading")}</h3>
             <span className="text-xs text-warm-500">
-              {formFields.length}/{MAX_FORM_FIELDS} 个字段
+              {t("formCounter", { count: formFields.length, max: MAX_FORM_FIELDS })}
             </span>
           </div>
-          <p className="mt-1 text-xs text-warm-500">
-            配置玩家提交申请时需要填写的表单字段。
-          </p>
+          <p className="mt-1 text-xs text-warm-500">{t("formHint")}</p>
 
           {formFields.length > 0 && (
             <div className="mt-4 space-y-3">
@@ -386,7 +415,7 @@ export function ServerSettings({
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-medium text-warm-500">
-                      字段 {index + 1}
+                      {t("fieldLabel", { index: index + 1 })}
                     </span>
                     <button
                       type="button"
@@ -395,7 +424,7 @@ export function ServerSettings({
                       }}
                       className="text-xs text-accent-hover transition-colors hover:text-accent-dark"
                     >
-                      移除
+                      {t("fieldRemove")}
                     </button>
                   </div>
 
@@ -403,7 +432,7 @@ export function ServerSettings({
                     {/* Label */}
                     <div>
                       <label className="text-xs font-medium text-warm-500">
-                        字段名称
+                        {t("fieldNameLabel")}
                       </label>
                       <input
                         type="text"
@@ -411,7 +440,7 @@ export function ServerSettings({
                         onChange={(e) => {
                           handleFieldChange(field.key, { label: e.target.value });
                         }}
-                        placeholder="例如：游戏 ID"
+                        placeholder={t("fieldNamePlaceholder")}
                         maxLength={100}
                         className="mt-1 w-full rounded-lg border border-warm-200 bg-surface px-3 py-2 text-sm text-warm-800 placeholder:text-warm-400 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                       />
@@ -420,7 +449,7 @@ export function ServerSettings({
                     {/* Type */}
                     <div>
                       <label className="text-xs font-medium text-warm-500">
-                        字段类型
+                        {t("fieldTypeLabel")}
                       </label>
                       <select
                         value={field.type}
@@ -430,9 +459,9 @@ export function ServerSettings({
                         }}
                         className="mt-1 w-full rounded-lg border border-warm-200 bg-surface px-3 py-2 text-sm text-warm-800 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                       >
-                        {FIELD_TYPE_OPTIONS.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
+                        {FIELD_TYPE_OPTION_KEYS.map((optionKey) => (
+                          <option key={optionKey} value={optionKey}>
+                            {resolveFieldTypeLabel(optionKey, t)}
                           </option>
                         ))}
                       </select>
@@ -443,7 +472,7 @@ export function ServerSettings({
                   {(field.type === "select" || field.type === "multiselect") && (
                     <div className="mt-3">
                       <label className="text-xs font-medium text-warm-500">
-                        选项（用逗号分隔）
+                        {t("fieldOptionsLabel")}
                       </label>
                       <input
                         type="text"
@@ -451,7 +480,7 @@ export function ServerSettings({
                         onChange={(e) => {
                           handleOptionsChange(field.key, e.target.value);
                         }}
-                        placeholder="例如：选项一, 选项二, 选项三"
+                        placeholder={t("fieldOptionsPlaceholder")}
                         className="mt-1 w-full rounded-lg border border-warm-200 bg-surface px-3 py-2 text-sm text-warm-800 placeholder:text-warm-400 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                       />
                     </div>
@@ -467,7 +496,7 @@ export function ServerSettings({
                       }}
                       className="h-4 w-4 rounded border-warm-300 text-accent focus:ring-accent-hover"
                     />
-                    <span className="text-xs text-warm-500">必填</span>
+                    <span className="text-xs text-warm-500">{t("fieldRequired")}</span>
                   </label>
                 </div>
               ))}
@@ -480,14 +509,12 @@ export function ServerSettings({
               onClick={handleAddField}
               className="mt-3 w-full rounded-xl border border-dashed border-warm-300 px-4 py-2.5 text-sm text-warm-500 transition-colors hover:border-accent hover:text-accent"
             >
-              + 添加字段
+              {t("addField")}
             </button>
           )}
 
           {formFields.length === 0 && (
-            <p className="mt-3 text-xs text-warm-400">
-              尚未添加任何字段。点击上方按钮添加申请表单字段。
-            </p>
+            <p className="mt-3 text-xs text-warm-400">{t("emptyFieldsHint")}</p>
           )}
         </div>
       )}
@@ -502,11 +529,11 @@ export function ServerSettings({
           disabled={isSaving || !hasChanges}
           className="m3-btn m3-btn-primary disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isSaving ? "保存中..." : "保存设置"}
+          {isSaving ? t("saving") : t("save")}
         </button>
 
         {saveSuccess && (
-          <span className="text-sm text-forest">设置已保存</span>
+          <span className="text-sm text-forest">{t("saved")}</span>
         )}
 
         {saveError && (
