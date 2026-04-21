@@ -25,6 +25,17 @@
       "title": "Page not found",
       "description": "The link may have expired or the page has been moved.",
       "backHome": "Back to home"
+    },
+    "validation": {
+      "required": "不能为空",
+      "invalidType": "类型不正确",
+      "tooSmall": "长度不能少于 {min}",
+      "tooBig": "长度不能超过 {max}",
+      "invalidString": "格式不正确",
+      "invalidEmail": "邮箱格式不正确",
+      "invalidUrl": "链接格式不正确",
+      "invalidEnum": "取值不在允许范围内",
+      "custom": "校验失败"
     }
   }
 }

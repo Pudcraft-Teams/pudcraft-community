@@ -25,6 +25,17 @@
       "title": "页面不存在",
       "description": "你访问的链接可能已失效，或页面已被移动。",
       "backHome": "返回首页"
+    },
+    "validation": {
+      "required": "不能为空",
+      "invalidType": "类型不正确",
+      "tooSmall": "长度不能少于 {min}",
+      "tooBig": "长度不能超过 {max}",
+      "invalidString": "格式不正确",
+      "invalidEmail": "邮箱格式不正确",
+      "invalidUrl": "链接格式不正确",
+      "invalidEnum": "取值不在允许范围内",
+      "custom": "校验失败"
     }
   }
 }
