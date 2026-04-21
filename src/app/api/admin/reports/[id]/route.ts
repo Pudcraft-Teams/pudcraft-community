@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getRequestLocale } from "@/i18n/locale";
+import type { Locale } from "@/i18n/config";
 import { prisma } from "@/lib/db";
 import { getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
@@ -71,7 +72,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
     // Execute enforcement actions when resolving
     if (action === "resolve" && actions && actions.length > 0) {
-      await executeActions(report.targetType, report.targetId, actions, adminNote);
+      await executeActions(report.targetType, report.targetId, actions, adminNote, locale);
     }
 
     // Notify reporter (non-blocking)
@@ -107,13 +108,23 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
 /**
  * Execute enforcement actions on the reported target.
+ *
+ * `locale` is the acting admin's resolved locale. Persisted audit strings
+ * (`rejectReason`, default `banReason`) are rendered in that locale. They
+ * are not re-rendered at read time, so changing the admin's locale after
+ * the fact does not retroactively translate existing rows.
  */
 async function executeActions(
   targetType: string,
   targetId: string,
   actions: ("warn" | "takedown" | "ban_user")[],
-  adminNote?: string | null,
+  adminNote: string | null | undefined,
+  locale: Locale,
 ): Promise<void> {
+  const tPersisted = await getTranslations({
+    locale,
+    namespace: "notifications.persisted",
+  });
   // Resolve the target owner
   const ownerId = await resolveTargetOwner(targetType, targetId);
 
@@ -139,7 +150,7 @@ async function executeActions(
             if (server) {
               await prisma.server.update({
                 where: { id: server.id },
-                data: { status: "rejected", rejectReason: "因举报被下架" },
+                data: { status: "rejected", rejectReason: tPersisted("rejectReasonFromReport") },
               });
               if (server.ownerId) {
                 try {
@@ -183,7 +194,11 @@ async function executeActions(
           if (!ownerId) break;
           await prisma.user.update({
             where: { id: ownerId },
-            data: { bannedAt: new Date(), isBanned: true, banReason: adminNote ?? "举报处置" },
+            data: {
+              bannedAt: new Date(),
+              isBanned: true,
+              banReason: adminNote ?? tPersisted("banReasonFromReport"),
+            },
           });
           break;
         }
