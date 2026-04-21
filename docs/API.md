@@ -69,6 +69,14 @@ Some endpoints accept either of two identifiers:
 
 In this document both are written as `{id}`.
 
+### Response localization
+
+- API error responses (`{ error, details }`) honor the caller's locale. Resolution order: `x-locale` header → `NEXT_LOCALE` cookie → `Accept-Language` → `zh` default.
+- Zod validation failures returned as `details.fieldErrors` are already localized per field — the server translates the `errors.validation.<area>.<key>` paths before serialization.
+- Email subjects / bodies (`sendVerificationCode`, `sendResetPasswordCode`) resolve the recipient's locale from `User.locale`, with an explicit `localeOverride` honored first (unauthenticated flows pass the request locale so the response and the email match).
+- Successful response bodies may still contain locale-specific strings (server-name, comment body, user-provided content). Clients should not depend on any non-machine-readable value being English.
+- New client code should use `apiFetch` from `@/lib/apiFetch` to inject `x-locale` explicitly.
+
 ## Authentication endpoints
 
 | Method | Path | Auth | Notes |
