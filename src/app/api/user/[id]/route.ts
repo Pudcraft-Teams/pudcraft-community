@@ -1,6 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -17,19 +19,22 @@ interface RouteContext {
 
 /**
  * GET /api/user/:id
- * 获取用户公开资料与其提交的服务器列表（不返回邮箱）。
+ * Returns the user's public profile and submitted servers (email excluded).
  */
-export async function GET(_request: Request, { params }: RouteContext) {
+export async function GET(request: Request, { params }: RouteContext) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tUsers = await getTranslations({ locale, namespace: "errors.api.users" });
   try {
     const { id } = await params;
     const parsedUserId = userLookupIdSchema.safeParse(id);
     if (!parsedUserId.success) {
-      return NextResponse.json({ error: "无效的用户 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tUsers("invalidIdFormat") }, { status: 400 });
     }
 
     const resolvedId = await resolveUserCuid(parsedUserId.data);
     if (!resolvedId) {
-      return NextResponse.json({ error: "用户不存在" }, { status: 404 });
+      return NextResponse.json({ error: tUsers("notFound") }, { status: 404 });
     }
 
     const session = await auth();
@@ -56,7 +61,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
     });
 
     if (!user) {
-      return NextResponse.json({ error: "用户不存在" }, { status: 404 });
+      return NextResponse.json({ error: tUsers("notFound") }, { status: 404 });
     }
 
     const servers: ServerListItem[] = user.servers.map((server) => ({
@@ -87,6 +92,6 @@ export async function GET(_request: Request, { params }: RouteContext) {
     });
   } catch (error) {
     logger.error("[api/user/[id]] Unexpected GET error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
