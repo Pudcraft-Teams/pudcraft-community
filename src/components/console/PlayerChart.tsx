@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   Area,
   AreaChart,
@@ -35,48 +36,56 @@ interface ChartPoint extends ConsoleStatsDataPoint {
   offlinePlayerCount: number | null;
 }
 
-const PERIOD_OPTIONS: Array<{ key: StatsPeriod; label: string }> = [
-  { key: "24h", label: "24小时" },
-  { key: "7d", label: "7天" },
-  { key: "30d", label: "30天" },
-];
+const PERIOD_OPTION_KEYS = ["24h", "7d", "30d"] as const;
 
-function renderTooltip(
-  { active, label, payload }: TooltipContentProps<
-    number | string | ReadonlyArray<number | string>,
-    number | string
-  >,
-) {
-  if (!active || !payload || payload.length === 0) {
-    return null;
-  }
+type PeriodTranslate = (
+  key: "trendPeriod24h" | "trendPeriod7d" | "trendPeriod30d",
+) => string;
 
-  const maybePoint = payload[0]?.payload;
-  if (typeof maybePoint !== "object" || maybePoint === null) {
-    return null;
-  }
+function resolvePeriodLabel(period: StatsPeriod, t: PeriodTranslate): string {
+  if (period === "24h") return t("trendPeriod24h");
+  if (period === "7d") return t("trendPeriod7d");
+  return t("trendPeriod30d");
+}
 
-  const rawPoint = maybePoint as Partial<ChartPoint>;
-  const playerCount = typeof rawPoint.playerCount === "number" ? rawPoint.playerCount : 0;
-  const maxPlayers = typeof rawPoint.maxPlayers === "number" ? rawPoint.maxPlayers : 0;
-  const isOnline = rawPoint.isOnline === true;
-  const labelText = typeof label === "string" || typeof label === "number" ? String(label) : "--";
+function createTooltipRenderer(t: ReturnType<typeof useTranslations>) {
+  return function renderTooltip(
+    { active, label, payload }: TooltipContentProps<
+      number | string | ReadonlyArray<number | string>,
+      number | string
+    >,
+  ) {
+    if (!active || !payload || payload.length === 0) {
+      return null;
+    }
 
-  return (
-    <div className="rounded-xl border border-warm-200 bg-surface px-3 py-2 text-xs text-warm-800 shadow-lg">
-      <p className="font-medium text-warm-800">{labelText}</p>
-      <p className="mt-1">在线人数：{playerCount}</p>
-      <p>最大容量：{maxPlayers}</p>
-      <p className={isOnline ? "text-forest" : "text-warm-500"}>
-        状态：{isOnline ? "在线" : "离线"}
-      </p>
-    </div>
-  );
+    const maybePoint = payload[0]?.payload;
+    if (typeof maybePoint !== "object" || maybePoint === null) {
+      return null;
+    }
+
+    const rawPoint = maybePoint as Partial<ChartPoint>;
+    const playerCount = typeof rawPoint.playerCount === "number" ? rawPoint.playerCount : 0;
+    const maxPlayers = typeof rawPoint.maxPlayers === "number" ? rawPoint.maxPlayers : 0;
+    const isOnline = rawPoint.isOnline === true;
+    const labelText = typeof label === "string" || typeof label === "number" ? String(label) : "--";
+
+    return (
+      <div className="rounded-xl border border-warm-200 bg-surface px-3 py-2 text-xs text-warm-800 shadow-lg">
+        <p className="font-medium text-warm-800">{labelText}</p>
+        <p className="mt-1">{t("trendTooltipPlayers", { count: playerCount })}</p>
+        <p>{t("trendTooltipMax", { count: maxPlayers })}</p>
+        <p className={isOnline ? "text-forest" : "text-warm-500"}>
+          {isOnline ? t("trendTooltipStatusOnline") : t("trendTooltipStatusOffline")}
+        </p>
+      </div>
+    );
+  };
 }
 
 /**
- * 在线人数趋势图。
- * 支持 24h/7d/30d 切换，并对离线时段使用灰色虚线展示。
+ * Online-player trend chart.
+ * Supports 24h/7d/30d switching; offline slots render as a grey dashed line.
  */
 export function PlayerChart({
   dataPoints,
@@ -85,6 +94,8 @@ export function PlayerChart({
   isLoading = false,
   onPeriodChange,
 }: PlayerChartProps) {
+  const t = useTranslations("console.stats");
+  const renderTooltip = createTooltipRenderer(t);
   const chartData: ChartPoint[] = dataPoints.map((point) => ({
     ...point,
     onlinePlayerCount: point.isOnline ? point.playerCount : null,
@@ -96,21 +107,21 @@ export function PlayerChart({
   return (
     <section className="m3-surface p-4 sm:p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-warm-800">在线人数趋势</h2>
+        <h2 className="text-lg font-semibold text-warm-800">{t("trendChartTitle")}</h2>
         <div className="flex items-center gap-2">
-          {PERIOD_OPTIONS.map((option) => (
+          {PERIOD_OPTION_KEYS.map((optionKey) => (
             <button
-              key={option.key}
+              key={optionKey}
               type="button"
               className={`m3-btn px-3 py-1.5 text-xs ${
-                period === option.key ? "m3-btn-primary" : "m3-btn-tonal"
+                period === optionKey ? "m3-btn-primary" : "m3-btn-tonal"
               }`}
               onClick={() => {
-                onPeriodChange(option.key);
+                onPeriodChange(optionKey);
               }}
               disabled={isLoading}
             >
-              {option.label}
+              {resolvePeriodLabel(optionKey, t)}
             </button>
           ))}
         </div>
@@ -118,11 +129,11 @@ export function PlayerChart({
 
       {isLoading ? (
         <div className="flex h-[300px] items-center justify-center text-sm text-warm-500">
-          加载统计中...
+          {t("trendChartLoading")}
         </div>
       ) : noData ? (
         <div className="flex h-[300px] items-center justify-center text-sm text-warm-500">
-          数据收集中，稍后再来查看趋势。
+          {t("trendChartEmpty")}
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={300}>
