@@ -28,19 +28,20 @@ const RESET_ATTEMPTS_PREFIX = "reset-attempts";
  */
 export async function POST(request: Request) {
   const locale = await getRequestLocale(request);
-  const t = await getTranslations({ locale, namespace: "errors.api.auth" });
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tAuth = await getTranslations({ locale, namespace: "errors.api.auth" });
   try {
     let rawBody: unknown;
     try {
       rawBody = await request.json();
     } catch {
-      return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
+      return NextResponse.json({ error: tCommon("invalidJson") }, { status: 400 });
     }
 
     const parsed = sendResetCodeSchema.safeParse(rawBody);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: t("validationFailed"), details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: parsed.error.flatten() },
         { status: 400 },
       );
     }
@@ -49,13 +50,13 @@ export async function POST(request: Request) {
 
     const sendAllowed = await canSendCode(email, RESET_CODE_PREFIX);
     if (!sendAllowed) {
-      return NextResponse.json({ error: t("sendCooldown") }, { status: 429 });
+      return NextResponse.json({ error: tAuth("sendCooldown") }, { status: 429 });
     }
 
     const ip = getClientIp(request);
     const ipAllowed = await checkIpLimit(ip);
     if (!ipAllowed) {
-      return NextResponse.json({ error: t("ipDailyLimit") }, { status: 429 });
+      return NextResponse.json({ error: tAuth("ipDailyLimit") }, { status: 429 });
     }
 
     const code = generateCode();
@@ -77,11 +78,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: t("resetMailSent"),
+      message: tAuth("resetMailSent"),
     });
   } catch (err) {
     logger.error("[api/auth/reset-password][POST] Unexpected error", err);
-    return NextResponse.json({ error: t("internal") }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
 
@@ -91,19 +92,20 @@ export async function POST(request: Request) {
  */
 export async function PATCH(request: Request) {
   const locale = await getRequestLocale(request);
-  const t = await getTranslations({ locale, namespace: "errors.api.auth" });
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tAuth = await getTranslations({ locale, namespace: "errors.api.auth" });
   try {
     let rawBody: unknown;
     try {
       rawBody = await request.json();
     } catch {
-      return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
+      return NextResponse.json({ error: tCommon("invalidJson") }, { status: 400 });
     }
 
     const parsed = resetPasswordSchema.safeParse(rawBody);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: t("validationFailed"), details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: parsed.error.flatten() },
         { status: 400 },
       );
     }
@@ -112,12 +114,12 @@ export async function PATCH(request: Request) {
 
     const locked = await isLocked(email, RESET_ATTEMPTS_PREFIX);
     if (locked) {
-      return NextResponse.json({ error: t("codeTooManyAttempts") }, { status: 429 });
+      return NextResponse.json({ error: tAuth("codeTooManyAttempts") }, { status: 429 });
     }
 
     const codeValid = await verifyCode(email, code, RESET_CODE_PREFIX);
     if (!codeValid) {
-      return NextResponse.json({ error: t("codeInvalidOrExpired") }, { status: 400 });
+      return NextResponse.json({ error: tAuth("codeInvalidOrExpired") }, { status: 400 });
     }
 
     const user = await db.user.findUnique({
@@ -125,7 +127,7 @@ export async function PATCH(request: Request) {
       select: { id: true },
     });
     if (!user) {
-      return NextResponse.json({ error: t("resetFailed") }, { status: 400 });
+      return NextResponse.json({ error: tAuth("resetFailed") }, { status: 400 });
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
@@ -134,9 +136,9 @@ export async function PATCH(request: Request) {
       data: { passwordHash },
     });
 
-    return NextResponse.json({ success: true, message: t("resetSuccess") });
+    return NextResponse.json({ success: true, message: tAuth("resetSuccess") });
   } catch (err) {
     logger.error("[api/auth/reset-password][PATCH] Unexpected error", err);
-    return NextResponse.json({ error: t("internal") }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

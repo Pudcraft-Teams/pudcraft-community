@@ -6,11 +6,11 @@ import { handleMobileLoginPost } from "@/lib/mobile/sessionFacade";
 
 export async function POST(request: Request) {
   const locale = await getRequestLocale(request);
-  const t = await getTranslations({ locale, namespace: "errors.api.auth" });
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
   try {
     return await handleMobileLoginPost(request);
   } catch (error) {
     logger.error("[api/mobile/session/login] Unexpected POST error", error);
-    return NextResponse.json({ error: t("internal") }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

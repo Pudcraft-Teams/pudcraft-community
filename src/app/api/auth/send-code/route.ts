@@ -16,19 +16,20 @@ import { canSendCode, generateCode, setSendCooldown, storeCode } from "@/lib/ver
  */
 export async function POST(request: Request) {
   const locale = await getRequestLocale(request);
-  const t = await getTranslations({ locale, namespace: "errors.api.auth" });
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tAuth = await getTranslations({ locale, namespace: "errors.api.auth" });
   try {
     let rawBody: unknown;
     try {
       rawBody = await request.json();
     } catch {
-      return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
+      return NextResponse.json({ error: tCommon("invalidJson") }, { status: 400 });
     }
 
     const parsed = sendCodeSchema.safeParse(rawBody);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: t("validationFailed"), details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: parsed.error.flatten() },
         { status: 400 },
       );
     }
@@ -38,12 +39,12 @@ export async function POST(request: Request) {
 
     const sendAllowed = await canSendCode(email);
     if (!sendAllowed) {
-      return NextResponse.json({ error: t("sendCooldown") }, { status: 429 });
+      return NextResponse.json({ error: tAuth("sendCooldown") }, { status: 429 });
     }
 
     const ipRate = await rateLimit(`send-code:${ip}`, 10, 24 * 60 * 60);
     if (!ipRate.allowed) {
-      return NextResponse.json({ error: t("ipDailyLimit") }, { status: 429 });
+      return NextResponse.json({ error: tAuth("ipDailyLimit") }, { status: 429 });
     }
 
     const code = generateCode();
@@ -51,9 +52,9 @@ export async function POST(request: Request) {
     await sendVerificationCode(email, code);
     await setSendCooldown(email);
 
-    return NextResponse.json({ success: true, message: t("codeSent") });
+    return NextResponse.json({ success: true, message: tAuth("codeSent") });
   } catch (err) {
     logger.error("[api/auth/send-code] Unexpected error", err);
-    return NextResponse.json({ error: t("internal") }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

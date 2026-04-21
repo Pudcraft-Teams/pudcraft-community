@@ -9,7 +9,7 @@ import { getPublicUrl } from "@/lib/storage";
 
 export async function GET(request: Request) {
   const locale = await getRequestLocale(request);
-  const t = await getTranslations({ locale, namespace: "errors.api.auth" });
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
   try {
     return await handleMobileSessionGet(
       {
@@ -42,17 +42,17 @@ export async function GET(request: Request) {
     );
   } catch (error) {
     logger.error("[api/mobile/session] Unexpected GET error", error);
-    return NextResponse.json({ error: t("internal") }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
 
 export async function DELETE(request: Request) {
   const locale = await getRequestLocale(request);
-  const t = await getTranslations({ locale, namespace: "errors.api.auth" });
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
   try {
     return await handleMobileSessionDelete(request);
   } catch (error) {
     logger.error("[api/mobile/session] Unexpected DELETE error", error);
-    return NextResponse.json({ error: t("internal") }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

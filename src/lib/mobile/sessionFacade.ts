@@ -67,23 +67,39 @@ type MobileAuthErrorKey =
   | "banned"
   | "credentials"
   | "loginFailed"
-  | "logoutFailed"
-  | "validationFailed";
+  | "logoutFailed";
+
+type MobileApiCommonErrorKey = "validationFailed";
 
 type MobileAuthTranslator = (key: MobileAuthErrorKey) => string;
+
+type MobileApiCommonTranslator = (key: MobileApiCommonErrorKey) => string;
+
+interface SessionFacadeTranslators {
+  common: MobileApiCommonTranslator;
+  auth: MobileAuthTranslator;
+}
 
 const messagesByLocale: Record<Locale, typeof zhMessages> = {
   zh: zhMessages,
   en: enMessages,
 };
 
-function getSessionFacadeTranslator(locale: Locale): MobileAuthTranslator {
-  const t = createTranslator({
+function getSessionFacadeTranslators(locale: Locale): SessionFacadeTranslators {
+  const tCommon = createTranslator({
+    locale,
+    namespace: "errors.api",
+    messages: messagesByLocale[locale],
+  });
+  const tAuth = createTranslator({
     locale,
     namespace: "errors.api.auth",
     messages: messagesByLocale[locale],
   });
-  return (key) => t(key);
+  return {
+    common: (key) => tCommon(key),
+    auth: (key) => tAuth(key),
+  };
 }
 
 export function toMobileSessionUser(user: MobileSessionUserSource): MobileSessionUser {
@@ -201,12 +217,12 @@ export function toMobileLoginError(
   status: number;
   body: { error: string; code: "credentials" | "banned" };
 } {
-  const t = getSessionFacadeTranslator(locale);
+  const { auth: tAuth } = getSessionFacadeTranslators(locale);
   if (reason === "banned") {
     return {
       status: 403,
       body: {
-        error: t("banned"),
+        error: tAuth("banned"),
         code: "banned",
       },
     };
@@ -215,7 +231,7 @@ export function toMobileLoginError(
   return {
     status: 401,
     body: {
-      error: t("credentials"),
+      error: tAuth("credentials"),
       code: "credentials",
     },
   };
@@ -251,13 +267,13 @@ export function resolveTrustedAuthBaseUrl(
 
 export async function handleMobileLoginPost(request: Request, deps: MobileLoginPostDependencies = {}) {
   const locale = await getRequestLocale(request);
-  const t = getSessionFacadeTranslator(locale);
+  const { common: tCommon, auth: tAuth } = getSessionFacadeTranslators(locale);
   const fetchImpl = deps.fetchImpl ?? fetch;
   const body = await request.json().catch(() => null);
   const parsed = loginSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: t("validationFailed"), details: parsed.error.flatten() },
+      { error: tCommon("validationFailed"), details: parsed.error.flatten() },
       { status: 400 },
     );
   }
@@ -312,7 +328,7 @@ export async function handleMobileLoginPost(request: Request, deps: MobileLoginP
     cache: "no-store",
   });
   if (authResult.kind === "error") {
-    const response = NextResponse.json({ error: t("loginFailed") }, { status: 500 });
+    const response = NextResponse.json({ error: tAuth("loginFailed") }, { status: 500 });
     appendSetCookieHeaders(response.headers, responseCookies);
     return response;
   }
@@ -336,7 +352,7 @@ export async function handleMobileSessionDelete(
   deps: MobileSessionDeleteDependencies = {},
 ) {
   const locale = await getRequestLocale(request);
-  const t = getSessionFacadeTranslator(locale);
+  const { auth: tAuth } = getSessionFacadeTranslators(locale);
   const fetchImpl = deps.fetchImpl ?? fetch;
   const authBaseUrl = resolveTrustedAuthBaseUrl(process.env, request);
   const forwardedIpHeaders = getForwardedClientIpHeaders(request);
@@ -382,7 +398,7 @@ export async function handleMobileSessionDelete(
   const responseCookies = mergeSetCookieHeaders(csrfCookies, signoutCookies);
 
   const response = NextResponse.json(
-    signoutResponse.ok ? { ok: true } : { error: t("logoutFailed") },
+    signoutResponse.ok ? { ok: true } : { error: tAuth("logoutFailed") },
     { status: signoutResponse.ok ? 200 : 500 },
   );
   appendSetCookieHeaders(response.headers, responseCookies);
@@ -393,20 +409,20 @@ export async function handleMobileSessionGet(
   deps: MobileSessionGetDependencies,
   locale: Locale = "zh",
 ) {
-  const t = getSessionFacadeTranslator(locale);
+  const { auth: tAuth } = getSessionFacadeTranslators(locale);
   const session = await deps.authImpl();
   const userId = session?.user?.id;
   if (!userId) {
-    return NextResponse.json({ error: t("notAuthenticated") }, { status: 401 });
+    return NextResponse.json({ error: tAuth("notAuthenticated") }, { status: 401 });
   }
 
   const user = await deps.loadUserById(userId);
   if (!user) {
-    return NextResponse.json({ error: t("userNotFound") }, { status: 401 });
+    return NextResponse.json({ error: tAuth("userNotFound") }, { status: 401 });
   }
 
   if (user.isBanned) {
-    return NextResponse.json({ error: t("banned") }, { status: 403 });
+    return NextResponse.json({ error: tAuth("banned") }, { status: 403 });
   }
 
   return NextResponse.json({
