@@ -317,7 +317,7 @@ model ReservedNumericId {
   numericId Int      @map("numeric_id")
   createdAt DateTime @default(now()) @map("created_at")
 
-  @@unique([type, numericId], name: "unique_type_numeric_id")
+  @@unique([type, numericId], name: "unique_type_numeric_id", map: "unique_type_numeric_id")
   @@index([type])
   @@map("reserved_numeric_ids")
 }
