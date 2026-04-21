@@ -41,7 +41,12 @@ const PERIOD_OPTIONS: Array<{ key: StatsPeriod; label: string }> = [
   { key: "30d", label: "30天" },
 ];
 
-function renderTooltip({ active, label, payload }: TooltipContentProps<number, string>) {
+function renderTooltip(
+  { active, label, payload }: TooltipContentProps<
+    number | string | ReadonlyArray<number | string>,
+    number | string
+  >,
+) {
   if (!active || !payload || payload.length === 0) {
     return null;
   }

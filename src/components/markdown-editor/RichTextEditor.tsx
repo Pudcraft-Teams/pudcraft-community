@@ -12,6 +12,7 @@ interface RichTextEditorProps {
   html: string;
   placeholder?: string;
   disabled?: boolean;
+  imageAccept?: string;
   onHtmlChange: (nextHtml: string) => void;
   onUploadImage?: (file: File) => Promise<string | null>;
 }
@@ -152,6 +153,7 @@ export function RichTextEditor({
   html,
   placeholder,
   disabled = false,
+  imageAccept = ".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp",
   onHtmlChange,
   onUploadImage,
 }: RichTextEditorProps) {
@@ -327,7 +329,7 @@ export function RichTextEditor({
       <input
         ref={imageInputRef}
         type="file"
-        accept="image/png,image/jpeg,image/webp,image/gif"
+        accept={imageAccept}
         className="hidden"
         onChange={handleImageInputChange}
       />

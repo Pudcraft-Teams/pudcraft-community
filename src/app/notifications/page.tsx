@@ -202,7 +202,7 @@ export default function NotificationsPage() {
       ) : notifications.length === 0 ? (
         <EmptyState
           title="暂无通知"
-          description="当有人回复你或你收藏的服务器上线时，会显示在这里"
+          description="当你的服务器状态变化、审核有结果或收藏的服务器重新上线时，会显示在这里"
         />
       ) : (
         <>

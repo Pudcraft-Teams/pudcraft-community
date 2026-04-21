@@ -1,201 +1,33 @@
 # Pudcraft Community API 文档
 
-> 版本: 1.0.0
-> 基础路径: `/api`
+> 版本：server-only branch
+> 基础路径：`/api`
 
----
+当前文档只描述 live 的 server-only 接口。历史 forum / MoltBook 相关接口已经从当前分支移除，不再属于现网 API 面。
 
-## 目录
-
-- [通用规范](#通用规范)
-- [认证 (Auth)](#认证-auth)
-- [服务器 (Servers)](#服务器-servers)
-- [服务器私有功能 (Private Servers)](#服务器私有功能-private-servers)
-- [白名单同步 (Whitelist Sync)](#白名单同步-whitelist-sync)
-- [评论 (Comments)](#评论-comments)
-- [收藏 (Favorites)](#收藏-favorites)
-- [整合包 (Modpacks)](#整合包-modpacks)
-- [用户 (User)](#用户-user)
-- [通知 (Notifications)](#通知-notifications)
-- [更新日志 (Changelog)](#更新日志-changelog)
-- [上传 (Uploads)](#上传-uploads)
-- [管理员 (Admin)](#管理员-admin)
-- [系统 (System)](#系统-system)
-
----
-
-## 通用规范
+## 通用约定
 
 ### 认证方式
 
-- **Session Cookie**: 大多数 API 使用 NextAuth.js 的 session cookie 进行认证
-- **API Key**: 插件相关 API 使用 Bearer Token (API Key) 认证
+- Web：Session Cookie（Auth.js / NextAuth）
+- 插件 / 同步 / 插件认领：Bearer API Key 或认领密钥
+- 移动端：`/api/mobile/session*` 返回的受信 session cookie
 
-### 通用响应格式
+### 响应格式
 
-**成功响应 (200-299)**:
+成功响应通常返回以下结构之一：
+
+```json
+{ "data": {} }
+```
+
+```json
+{ "success": true }
+```
+
 ```json
 {
-  "data": { ... },           // 或具体字段
-  "success": true,           // 部分接口返回
-  "pagination": { ... }      // 列表接口返回
-}
-```
-
-**错误响应 (400-599)**:
-```json
-{
-  "error": "错误描述",
-  "details": { ... },        // 校验失败时返回
-  "message": "额外信息"      // 可选
-}
-```
-
-### HTTP 状态码
-
-| 状态码 | 含义 |
-|--------|------|
-| 200 | 成功 |
-| 201 | 创建成功 |
-| 400 | 请求参数错误 |
-| 401 | 未登录/未授权 |
-| 403 | 无权限 |
-| 404 | 资源不存在 |
-| 409 | 资源冲突 |
-| 410 | 资源已过期 |
-| 422 | 内容审核未通过 |
-| 429 | 请求过于频繁 |
-| 500 | 服务器内部错误 |
-| 504 | 超时 |
-
----
-
-## 认证 (Auth)
-
-### NextAuth 回调
-```
-GET/POST /api/auth/[...nextauth]
-```
-NextAuth.js 标准路由，处理登录/登出/会话等。
-
----
-
-### 注册
-```
-POST /api/auth/register
-```
-
-**请求体**:
-```json
-{
-  "email": "user@example.com",
-  "password": "password123",
-  "code": "123456"
-}
-```
-
-**响应**:
-```json
-{
-  "success": true,
-  "message": "注册成功"
-}
-```
-
-**错误码**: 400 (校验失败), 409 (邮箱已存在), 429 (发送频繁/已锁定)
-
----
-
-### 发送验证码
-```
-POST /api/auth/send-code
-```
-
-**请求体**:
-```json
-{
-  "email": "user@example.com"
-}
-```
-
-**响应**:
-```json
-{
-  "success": true,
-  "message": "验证码已发送"
-}
-```
-
-**限流**: 每邮箱 60 秒冷却，每 IP 日限 10 封
-
----
-
-### 重置密码
-```
-POST /api/auth/reset-password  # 发送重置验证码
-PATCH /api/auth/reset-password # 使用验证码重置密码
-```
-
-**POST 请求体**:
-```json
-{
-  "email": "user@example.com"
-}
-```
-
-**PATCH 请求体**:
-```json
-{
-  "email": "user@example.com",
-  "code": "123456",
-  "newPassword": "newpassword123"
-}
-```
-
----
-
-## 服务器 (Servers)
-
-### 服务器列表
-```
-GET /api/servers
-```
-
-**认证**: 可选
-
-**查询参数**:
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| page | number | 页码，默认 1 |
-| limit/pageSize | number | 每页数量，默认 20 |
-| tag | string | 按标签过滤 |
-| search | string | 关键词搜索 |
-| sort | string | 排序: `newest`/`popular`/`players`/`name` |
-| ownerId | string | 按服主过滤 |
-
-**响应**:
-```json
-{
-  "data": [{
-    "id": "cuid",
-    "psid": 123456,
-    "name": "服务器名",
-    "host": "mc.example.com",
-    "port": 25565,
-    "description": "...",
-    "tags": ["生存"],
-    "iconUrl": "https://...",
-    "favoriteCount": 100,
-    "isVerified": true,
-    "visibility": "public",
-    "joinMode": "open",
-    "status": {
-      "online": true,
-      "playerCount": 10,
-      "maxPlayers": 100,
-      "checkedAt": "2024-01-01T00:00:00Z"
-    }
-  }],
+  "data": [],
   "pagination": {
     "page": 1,
     "pageSize": 20,
@@ -205,977 +37,175 @@ GET /api/servers
 }
 ```
 
----
+错误响应统一为：
 
-### 创建服务器
-```
-POST /api/servers
-```
-
-**认证**: 需登录
-
-**Content-Type**: `multipart/form-data`
-
-**字段**:
-| 字段 | 类型 | 必需 | 说明 |
-|------|------|------|------|
-| name | string | 是 | 服务器名称 (2-50字符) |
-| address | string | 是 | 服务器地址 |
-| port | number | 是 | 端口 (1-65535) |
-| version | string | 否 | 游戏版本 |
-| tags | string | 否 | 逗号分隔的标签 |
-| description | string | 否 | 简介 (最多500字符) |
-| content | string | 否 | 详细介绍 (Markdown) |
-| maxPlayers | number | 否 | 最大玩家数 |
-| qqGroup | string | 否 | QQ群号 |
-| icon | File | 否 | 图标图片 (max 5MB) |
-
-**响应**:
-```json
-{
-  "success": true,
-  "message": "服务器已提交，等待管理员审核",
-  "warning": "图标包含违规内容，已跳过上传",
-  "data": {
-    "id": "cuid",
-    "psid": 123456,
-    "name": "...",
-    "host": "...",
-    "port": 25565,
-    ...
-  }
-}
-```
-
-**限流**: 每用户日限 5 次提交
-
----
-
-### 服务器详情
-```
-GET /api/servers/:id
-```
-
-**认证**: 可选 (未审核服务器需 owner/admin)
-
-**参数**: `:id` 支持 CUID 或 6位 PSID
-
-**响应**:
-```json
-{
-  "data": {
-    "id": "cuid",
-    "psid": 123456,
-    "name": "...",
-    "host": "hidden",          // 私有服务器对非成员隐藏
-    "port": 0,
-    "description": "...",
-    "content": "...",
-    "ownerId": "user-cuid",
-    "tags": [],
-    "iconUrl": "https://...",
-    "imageUrl": "https://...",
-    "favoriteCount": 100,
-    "isVerified": true,
-    "verifiedAt": "2024-01-01T00:00:00Z",
-    "visibility": "public",
-    "joinMode": "open",
-    "isMember": false,
-    "applicationForm": [...],  // joinMode 为 apply 时返回
-    "hasApiKey": true,         // owner 可见
-    "status": { ... },
-    "createdAt": "...",
-    "updatedAt": "..."
-  }
-}
-```
-
----
-
-### 编辑服务器
-```
-PATCH /api/servers/:id
-```
-
-**认证**: 需登录 (仅 owner)
-
-**Content-Type**: `multipart/form-data`
-
-**字段**: 同创建，所有字段可选
-
-**响应**:
-```json
-{
-  "success": true,
-  "warning": "图标上传失败，已保留原图标",
-  "resubmittedForReview": false,
-  "data": { ... }
-}
-```
-
----
-
-### 删除服务器
-```
-DELETE /api/servers/:id
-```
-
-**认证**: 需登录 (owner 或 admin)
-
----
-
-### 服务器统计
-```
-GET /api/servers/:id/stats?period=24h|7d|30d
-```
-
-**认证**: 需登录 (仅 owner)
-
-**响应**:
-```json
-{
-  "period": "24h",
-  "dataPoints": [{
-    "time": "14:00",
-    "playerCount": 10,
-    "maxPlayers": 100,
-    "isOnline": true
-  }],
-  "summary": {
-    "avgPlayers": 15,
-    "peakPlayers": 50,
-    "peakTime": "20:00",
-    "uptimePercent": 95.5,
-    "totalChecks": 288,
-    "onlineChecks": 275
-  },
-  "hourlyAverages": [{
-    "hour": "00:00",
-    "avgPlayers": 5,
-    "sampleCount": 12
-  }]
-}
-```
-
----
-
-### Ping 测试
-```
-GET /api/servers/:id/ping
-```
-
-**认证**: 公开
-
-**说明**: 轻量端点，仅校验 ID 格式后立即返回，用于前端测延迟
-
----
-
-### 认领服务器
-```
-GET /api/servers/:id/verify   # 查询认领状态
-POST /api/servers/:id/verify  # 发起认领，获取 MOTD Token
-PATCH /api/servers/:id/verify # 触发验证任务
-```
-
-**认证**: 需登录
-
-**POST 响应**:
-```json
-{
-  "token": "pudcraft-abc12345",
-  "expiresAt": "2024-01-01T00:30:00Z",
-  "instruction": "请将此 Token 添加到服务器 MOTD 中",
-  "currentOwner": "该服务器已有管理员..."
-}
-```
-
----
-
-## 服务器私有功能 (Private Servers)
-
-### 获取成员状态
-```
-GET /api/servers/:id/membership
-```
-
-**认证**: 需登录
-
-**响应**:
-```json
-{
-  "isMember": false,
-  "application": {
-    "id": "app-cuid",
-    "status": "pending",
-    "createdAt": "2024-01-01T00:00:00Z"
-  }
-}
-```
-
----
-
-### 服务器设置
-```
-PUT /api/servers/:id/settings
-```
-
-**认证**: 需登录 (仅 owner)
-
-**请求体**:
-```json
-{
-  "visibility": "public|private|unlisted",
-  "joinMode": "open|apply|invite|apply_and_invite",
-  "applicationForm": [
-    {
-      "key": "why_join",
-      "label": "为什么想加入？",
-      "type": "textarea",
-      "required": true
-    }
-  ]
-}
-```
-
----
-
-### 申请列表 (Owner)
-```
-GET /api/servers/:id/applications?page=1&limit=20&status=pending|approved|rejected|all
-```
-
-**认证**: 需登录 (仅 owner)
-
-**响应**:
-```json
-{
-  "data": [{
-    "id": "app-cuid",
-    "userId": "user-cuid",
-    "userName": "玩家名",
-    "userImage": "https://...",
-    "mcUsername": "MinecraftID",
-    "status": "pending",
-    "formData": { "why_join": "..." },
-    "reviewNote": null,
-    "reviewerName": null,
-    "createdAt": "...",
-    "updatedAt": "..."
-  }],
-  "total": 10,
-  "page": 1,
-  "totalPages": 1
-}
-```
-
----
-
-### 提交申请
-```
-POST /api/servers/:id/applications
-```
-
-**认证**: 需登录
-
-**请求体**:
-```json
-{
-  "mcUsername": "MinecraftID",
-  "formData": {
-    "why_join": "想玩生存服务器"
-  }
-}
-```
-
-**错误码**: 400 (不支持申请), 409 (已提交/已是成员)
-
----
-
-### 审核申请
-```
-PUT /api/servers/:id/applications/:appId
-```
-
-**认证**: 需登录 (仅 owner)
-
-**请求体**:
-```json
-{
-  "action": "approve|reject",
-  "reviewNote": "欢迎加入！"
-}
-```
-
----
-
-### 邀请码列表
-```
-GET /api/servers/:id/invites
-```
-
-**认证**: 需登录 (仅 owner)
-
----
-
-### 创建邀请码
-```
-POST /api/servers/:id/invites
-```
-
-**认证**: 需登录 (仅 owner)
-
-**请求体**:
-```json
-{
-  "maxUses": 10,          // 可选，null 表示无限制
-  "expiresInHours": 24    // 可选，null 表示永不过期
-}
-```
-
-**响应**:
-```json
-{
-  "success": true,
-  "data": {
-    "id": "invite-cuid",
-    "code": "a1b2c3d4",
-    "url": "/servers/123456/join/a1b2c3d4",
-    "maxUses": 10,
-    "usedCount": 0,
-    "expiresAt": "2024-01-02T00:00:00Z",
-    "createdAt": "..."
-  }
-}
-```
-
----
-
-### 撤销邀请码
-```
-DELETE /api/servers/:id/invites/:code
-```
-
-**认证**: 需登录 (仅 owner)
-
----
-
-### 通过邀请码加入
-```
-POST /api/servers/:id/join/:code
-```
-
-**认证**: 需登录
-
-**请求体**:
-```json
-{
-  "mcUsername": "MinecraftID"
-}
-```
-
-**错误码**: 404 (邀请码无效), 410 (过期/达上限), 409 (已是成员)
-
----
-
-### 成员列表
-```
-GET /api/servers/:id/members?page=1&limit=20
-```
-
-**认证**: 需登录 (仅 owner)
-
-**响应**:
-```json
-{
-  "members": [{
-    "id": "member-cuid",
-    "userId": "user-cuid",
-    "userName": "玩家名",
-    "userImage": "https://...",
-    "mcUsername": "MinecraftID",
-    "joinedVia": "apply|invite",
-    "createdAt": "...",
-    "syncStatus": "pending|pushed|acked|failed"
-  }],
-  "total": 10,
-  "page": 1,
-  "totalPages": 1
-}
-```
-
----
-
-### 移除成员
-```
-DELETE /api/servers/:id/members/:memberId
-```
-
-**认证**: 需登录 (仅 owner)
-
-**说明**: 会触发白名单移除同步
-
----
-
-### API Key 管理
-```
-POST /api/servers/:id/api-key
-```
-
-**认证**: 需登录 (仅 owner)
-
-**响应**:
-```json
-{
-  "success": true,
-  "apiKey": "pk_live_xxxxxxxx",
-  "message": "API Key 已生成，请妥善保存。此密钥仅显示一次。"
-}
-```
-
-**注意**: 重新生成会覆盖旧 Key
-
----
-
-## 白名单同步 (Whitelist Sync)
-
-用于 Minecraft 服务器插件同步白名单。
-
-### 认证方式
-```
-Authorization: Bearer <API_KEY>
-```
-
-### Handshake
-```
-POST /api/servers/:id/sync/handshake
-```
-
-**认证**: API Key
-
-**响应**:
-```json
-{
-  "whitelist": ["Player1", "Player2"],
-  "pendingSyncs": [{
-    "id": "sync-cuid",
-    "memberId": "member-cuid",
-    "mcUsername": "Player1",
-    "action": "add|remove",
-    "status": "pending",
-    "retryCount": 0,
-    "lastAttemptAt": null,
-    "ackedAt": null,
-    "createdAt": "..."
-  }],
-  "wsUrl": "ws://localhost:3001"
-}
-```
-
----
-
-### 获取待同步列表
-```
-GET /api/servers/:id/sync/pending
-```
-
-**认证**: API Key
-
----
-
-### 同步状态 (控制台查看)
-```
-GET /api/servers/:id/sync/status
-```
-
-**认证**: 需登录 (仅 owner)
-
-**响应**:
-```json
-{
-  "connected": true,
-  "pendingCount": 2,
-  "failedCount": 0,
-  "lastAckedAt": "2024-01-01T00:00:00Z",
-  "recentSyncs": [...]
-}
-```
-
----
-
-### 确认同步完成
-```
-POST /api/sync/:syncId/ack
-```
-
-**认证**: API Key
-
-**说明**: 插件完成白名单操作后调用，标记同步记录为已确认
-
----
-
-## 评论 (Comments)
-
-### 获取评论列表
-```
-GET /api/servers/:id/comments?page=1&limit=20
-```
-
-**认证**: 可选 (未审核服务器需 owner/admin)
-
-**响应**:
-```json
-{
-  "comments": [{
-    "id": "comment-cuid",
-    "content": "评论内容",
-    "createdAt": "...",
-    "author": {
-      "id": "user-cuid",
-      "uid": 123,
-      "name": "用户名",
-      "image": "https://..."
-    },
-    "replies": [{
-      "id": "reply-cuid",
-      "content": "回复内容",
-      "createdAt": "...",
-      "author": { ... }
-    }]
-  }],
-  "total": 100,
-  "page": 1,
-  "totalPages": 5
-}
-```
-
----
-
-### 发表评论
-```
-POST /api/servers/:id/comments
-```
-
-**认证**: 需登录
-
-**请求体**:
-```json
-{
-  "content": "评论内容 (5-1000字符)",
-  "parentId": "comment-cuid"  // 可选，回复时传入
-}
-```
-
-**限制**: 每分钟最多 5 条
-
----
-
-### 删除评论
-```
-DELETE /api/servers/:id/comments/:commentId
-```
-
-**认证**: 需登录 (评论作者或 admin)
-
----
-
-## 收藏 (Favorites)
-
-### 收藏操作
-```
-GET    /api/servers/:id/favorite  # 查询收藏状态
-POST   /api/servers/:id/favorite  # 收藏
-DELETE /api/servers/:id/favorite  # 取消收藏
-```
-
-**认证**: 需登录
-
-**GET 响应**:
-```json
-{
-  "favorited": true
-}
-```
-
-**POST/DELETE 响应**:
-```json
-{
-  "success": true,
-  "favorited": true,
-  "favoriteCount": 100
-}
-```
-
----
-
-## 整合包 (Modpacks)
-
-### 获取整合包列表
-```
-GET /api/servers/:id/modpack
-```
-
-**认证**: 可选 (未审核服务器需 owner/admin)
-
----
-
-### 上传整合包
-```
-POST /api/servers/:id/modpack
-```
-
-**认证**: 需登录 (仅 owner，需先认领)
-
-**Content-Type**: `multipart/form-data`
-
-**字段**:
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| file | File | .mrpack 文件 (max 50MB) |
-| version | string | 版本号 |
-| loader | string | 加载器: fabric/forge/neoforge/quilt |
-| gameVersion | string | 游戏版本 |
-
----
-
-### 删除整合包
-```
-DELETE /api/modpacks/:modpackId
-```
-
-**认证**: 需登录 (仅 owner)
-
----
-
-### 下载整合包
-```
-GET /api/modpacks/:modpackId/download
-```
-
-**认证**: 可选 (未审核服务器需 owner/admin)
-
-**说明**: 本地存储返回文件流，对象存储返回 307 跳转
-
----
-
-## 用户 (User)
-
-### 当前用户资料
-```
-GET /api/user/profile
-```
-
-**认证**: 需登录
-
-**响应**:
-```json
-{
-  "data": {
-    "id": "user-cuid",
-    "uid": 123,
-    "name": "用户名",
-    "email": "user@example.com",
-    "image": "https://...",
-    "bio": "简介"
-  }
-}
-```
-
----
-
-### 更新资料
-```
-PATCH /api/user/profile
-```
-
-**认证**: 需登录
-
-**Content-Type**: `multipart/form-data`
-
-**字段**:
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| name | string | 用户名 (2-30字符) |
-| bio | string | 简介 (最多200字符) |
-| avatar | File | 头像图片 (max 5MB) |
-
----
-
-### 用户公开资料
-```
-GET /api/user/:id
-```
-
-**认证**: 可选
-
-**说明**: `:id` 支持 CUID 或 UID
-
-**响应**: 不含邮箱，包含用户的服务器列表
-
----
-
-### 收藏列表
-```
-GET /api/user/favorites
-```
-
-**认证**: 需登录
-
----
-
-### 收藏 ID 列表
-```
-GET /api/user/favorites/ids
-```
-
-**认证**: 需登录
-
-**响应**:
-```json
-{
-  "serverIds": ["server-cuid-1", "server-cuid-2"]
-}
-```
-
----
-
-## 通知 (Notifications)
-
-### 通知列表
-```
-GET /api/notifications?page=1&limit=20&unreadOnly=false
-```
-
-**认证**: 需登录
-
-**响应**:
-```json
-{
-  "notifications": [{
-    "id": "notif-cuid",
-    "type": "comment_reply|server_online|server_approved|server_rejected|application_approved|application_rejected|member_removed|whitelist_sync_failed",
-    "title": "标题",
-    "message": "内容",
-    "link": "/servers/123456",
-    "readAt": null,
-    "createdAt": "..."
-  }],
-  "total": 10,
-  "unreadCount": 3,
-  "page": 1,
-  "totalPages": 1
-}
-```
-
----
-
-### 标记已读
-```
-PATCH /api/notifications
-```
-
-**认证**: 需登录
-
-**请求体**:
-```json
-{
-  "all": true
-}
-// 或
-{
-  "ids": ["notif-cuid-1", "notif-cuid-2"]
-}
-```
-
----
-
-### 未读数量
-```
-GET /api/notifications/unread-count
-```
-
-**认证**: 需登录
-
----
-
-## 更新日志 (Changelog)
-
-### 公开列表
-```
-GET /api/changelog?page=1&limit=20
-```
-
-**认证**: 公开
-
----
-
-## 上传 (Uploads)
-
-### 编辑器图片上传
-```
-POST /api/uploads/editor-image
-```
-
-**认证**: 需登录
-
-**Content-Type**: `multipart/form-data`
-
-**字段**:
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| image | File | 图片 (max 5MB) |
-
-**响应**:
-```json
-{
-  "data": {
-    "url": "https://..."
-  }
-}
-```
-
----
-
-## 管理员 (Admin)
-
-所有管理员接口需要 `role=admin`。
-
-### 服务器管理
-```
-GET /api/admin/servers?page=1&limit=20&status=pending|approved|rejected|all&search=
-PATCH /api/admin/servers/:id  # { action: "approve|reject", reason?: string }
-DELETE /api/admin/servers/:id
-```
-
----
-
-### 用户管理
-```
-GET /api/admin/users?page=1&limit=20&banned=normal|banned|all&search=
-PATCH /api/admin/users/:id    # { action: "ban|unban", reason?: string }
-```
-
----
-
-### 更新日志管理
-```
-GET /api/admin/changelog?page=1&limit=20&published=all|published|draft
-POST /api/admin/changelog
-PATCH /api/admin/changelog/:id
-DELETE /api/admin/changelog/:id
-```
-
-**POST/PATCH 请求体**:
-```json
-{
-  "title": "标题",
-  "content": "内容 (Markdown)",
-  "type": "feature|fix|improvement|breaking",
-  "published": true
-}
-```
-
----
-
-### 内容审查日志
-```
-GET /api/admin/moderation?page=1&limit=20&filter=all|passed|failed|unreviewed&type=all|server|comment|modpack|username
-PATCH /api/admin/moderation/:id  # { reviewed?: boolean, adminNote?: string }
-```
-
-**响应包含近7天统计**:
-```json
-{
-  "data": [...],
-  "stats": {
-    "total": 100,
-    "failed": 5,
-    "passed": 95,
-    "unreviewed": 2
-  },
-  "pagination": { ... }
-}
-```
-
----
-
-## 系统 (System)
-
-### 健康检查
-```
-GET /api/health
-```
-
-**认证**: 公开
-
-**响应**:
-```json
-{
-  "status": "ok",
-  "timestamp": "2024-01-01T00:00:00Z"
-}
-```
-
----
-
-## 数据类型定义
-
-### ServerVisibility
-- `public` - 公开，所有人可见
-- `private` - 私密，仅成员可见
-- `unlisted` - 需申请，列表可见但地址隐藏
-
-### ServerJoinMode
-- `open` - 开放加入
-- `apply` - 申请加入
-- `invite` - 邀请加入
-- `apply_and_invite` - 申请或邀请
-
-### ApplicationStatus
-- `pending` - 待审核
-- `approved` - 已通过
-- `rejected` - 已拒绝
-- `cancelled` - 已取消
-
-### SyncStatus
-- `pending` - 待同步
-- `pushed` - 已推送
-- `acked` - 已确认
-- `failed` - 失败
-
----
-
-## 限流策略
-
-| 接口 | 策略 |
-|------|------|
-| 注册 | IP 日限 10 次 |
-| 发送验证码 | 邮箱 60 秒冷却，IP 日限 10 次 |
-| 提交服务器 | 用户 日限 5 次 |
-| 评论 | 用户 每分钟 5 次 |
-| 收藏 | 用户 每分钟 30 次 |
-| 搜索 | IP 每分钟 60 次 |
-
----
-
-## 错误处理
-
-### 通用错误格式
 ```json
 {
   "error": "错误描述",
-  "details": {
-    "fieldErrors": { "field": ["error"] },
-    "formErrors": []
-  }
+  "details": {}
 }
 ```
 
-### 常见错误
-- `400` - 参数校验失败，检查请求格式
-- `401` - 未登录，请先登录
-- `403` - 无权限，检查用户角色
-- `404` - 资源不存在，检查 ID 是否正确
-- `409` - 资源冲突（已存在/重复操作）
-- `422` - 内容审核未通过
-- `429` - 请求频繁，请稍后再试
-- `500` - 服务器错误，请联系管理员
+其中 `details` 是可选字段；很多业务错误只返回 `{ error }`，校验失败或需要补充上下文时才会附带 `details`。
+
+### 常用状态码
+
+- `200`：成功
+- `201`：创建成功
+- `400`：参数错误 / 校验失败
+- `401`：未登录
+- `403`：无权限或账号不可用
+- `404`：资源不存在
+- `409`：资源冲突 / 重复提交
+- `429`：限流
+- `500`：服务器内部错误
+
+### 服务器 ID 说明
+
+部分接口支持以下两种服务器标识：
+
+- 数据库 `cuid`
+- 对外展示的 `PSID`
+
+文档统一写作 `{id}`。
+
+## 认证接口
+
+| 方法 | 路径 | 认证 | 说明 |
+|---|---|---|---|
+| GET / POST | `/auth/[...nextauth]` | - | Auth.js 标准路由 |
+| POST | `/auth/register` | - | 邮箱注册 |
+| POST | `/auth/send-code` | - | 发送邮箱验证码 |
+| POST / PATCH | `/auth/reset-password` | - | 发送重置验证码 / 使用验证码重置密码 |
+
+## 公共与用户接口
+
+### 服务器发现与详情
+
+| 方法 | 路径 | 认证 | 说明 |
+|---|---|---|---|
+| GET | `/servers` | 可选 | 服务器列表；支持 `page`、`limit/pageSize`、`tag`、`search`、`sort`、`ownerId` |
+| POST | `/servers` | 需要登录 | 提交服务器，支持 multipart/form-data 和图标上传 |
+| GET | `/servers/{id}` | 可选 | 获取服务器详情；未审核或非公开服务器按权限裁剪 |
+| PATCH | `/servers/{id}` | owner | 编辑服务器信息 |
+| DELETE | `/servers/{id}` | owner / admin | 删除服务器 |
+| GET | `/servers/{id}/ping` | 可选 | 轻量延迟探针；不查数据库，只校验服务器 ID 格式后立即返回 |
+| GET | `/servers/{id}/stats` | owner | 服务器统计数据；支持 `period=24h|7d|30d` |
+| POST | `/servers/{id}/status/report` | 插件 API Key | 上报在线状态 |
+
+### 收藏与评论
+
+| 方法 | 路径 | 认证 | 说明 |
+|---|---|---|---|
+| GET | `/servers/{id}/favorite` | 需要登录 | 查询当前用户对目标服务器的收藏状态 |
+| POST | `/servers/{id}/favorite` | 需要登录 | 收藏服务器 |
+| DELETE | `/servers/{id}/favorite` | 需要登录 | 取消收藏 |
+| GET | `/user/favorites` | 需要登录 | 当前用户收藏的服务器列表 |
+| GET | `/user/favorites/ids` | 需要登录 | 当前用户收藏服务器 ID 列表 |
+| GET | `/servers/{id}/comments` | 可选 | 评论列表 |
+| POST | `/servers/{id}/comments` | 需要登录 | 发表评论或回复 |
+| DELETE | `/servers/{id}/comments/{commentId}` | 作者 / admin | 删除评论 |
+
+### 用户资料、通知、举报
+
+| 方法 | 路径 | 认证 | 说明 |
+|---|---|---|---|
+| GET | `/user/{id}` | 可选 | 用户公开资料与其公开服务器 |
+| GET | `/user/profile` | 需要登录 | 当前用户资料 |
+| PATCH | `/user/profile` | 需要登录 | 更新当前用户资料 |
+| GET | `/notifications` | 需要登录 | 通知列表，支持分页与 `unreadOnly` |
+| PATCH | `/notifications` | 需要登录 | 批量标记通知已读 |
+| GET | `/notifications/unread-count` | 需要登录 | 获取未读通知数量 |
+| POST | `/reports` | 需要登录 | 举报服务器、评论或用户 |
+| GET | `/changelog` | 可选 | 公开更新日志 |
+| GET | `/health` | - | 健康检查 |
+| POST | `/uploads/editor-image` | 需要登录 | 编辑器图片上传 |
+
+## 服务器认领与服主管理接口
+
+### 认领流程
+
+| 方法 | 路径 | 认证 | 说明 |
+|---|---|---|---|
+| GET | `/servers/{id}/verify` | 需要登录 | 获取当前登录用户视角下的认领状态；仅当前 claim 发起者可看到 `verifyToken` |
+| POST | `/servers/{id}/verify` | 需要登录 | 发起 MOTD Token 认领；任意登录用户都可发起，成功后 owner 可能转移 |
+| PATCH | `/servers/{id}/verify` | 需要登录（当前 claim 发起者） | 触发 BullMQ 验证任务并等待结果 |
+| POST | `/servers/{id}/verify/claim` | Bearer 认领密钥 / API Key | 插件侧完成认领或已认领服务器的 API Key 验证 |
+| GET | `/servers/{id}/verify/claim-key` | 需要登录 | 查看当前登录用户相关的 claim key 状态 |
+| POST | `/servers/{id}/verify/claim-key` | 需要登录 | 为未认领服务器生成 claim key；当前 owner 或有效 claim 发起者可操作 |
+
+### 私有服设置、申请、邀请、成员
+
+> 说明：以下接口受 `NEXT_PUBLIC_ENABLE_PRIVATE_SERVERS` 控制；默认关闭，关闭时会统一返回 `404`，前端不应暴露申请、邀请码或成员管理入口。
+
+| 方法 | 路径 | 认证 | 说明 |
+|---|---|---|---|
+| PUT | `/servers/{id}/settings` | owner | 更新可见性、加入模式、申请表等设置 |
+| GET | `/servers/{id}/membership` | 需要登录 | 当前用户的成员 / 申请状态 |
+| GET | `/servers/{id}/applications` | owner | 申请列表 |
+| POST | `/servers/{id}/applications` | 需要登录 | 提交入服申请 |
+| PUT | `/servers/{id}/applications/{appId}` | owner | 审批申请 |
+| GET | `/servers/{id}/invites` | owner | 邀请码列表 |
+| POST | `/servers/{id}/invites` | owner | 创建邀请码 |
+| DELETE | `/servers/{id}/invites/{code}` | owner | 撤销邀请码 |
+| POST | `/servers/{id}/join/{code}` | 需要登录 | 使用邀请码加入服务器 |
+| GET | `/servers/{id}/members` | owner | 成员列表 |
+| DELETE | `/servers/{id}/members/{memberId}` | owner | 移除成员 |
+| POST | `/servers/{id}/api-key` | owner | 生成或重置插件 API Key |
+
+### 整合包
+
+| 方法 | 路径 | 认证 | 说明 |
+|---|---|---|---|
+| GET | `/servers/{id}/modpack` | 可选 | 当前服务器整合包列表；未过审服务器仅 owner / admin 可见，私有服仍要求成员关系 |
+| POST | `/servers/{id}/modpack` | owner | 上传整合包 |
+| DELETE | `/modpacks/{modpackId}` | owner | 删除整合包 |
+| GET | `/modpacks/{modpackId}/download` | 可选 | 下载整合包；未过审服务器仅 owner / admin 可下载，私有服仍要求成员关系 |
+
+## 白名单同步与移动端接口
+
+### 白名单同步
+
+| 方法 | 路径 | 认证 | 说明 |
+|---|---|---|---|
+| POST | `/servers/{id}/sync/handshake` | 插件 API Key | 首次同步握手，返回白名单与 WS 信息 |
+| GET | `/servers/{id}/sync/pending` | 插件 API Key | 查询待处理 / 失败同步项 |
+| GET | `/servers/{id}/sync/status` | owner | 控制台查看同步总览 |
+| POST | `/sync/{syncId}/ack` | 插件 API Key | 确认某条同步事件已处理 |
+
+### 原生移动端接口
+
+| 方法 | 路径 | 认证 | 说明 |
+|---|---|---|---|
+| GET | `/mobile/session` | 移动端 session | 获取当前移动端会话 |
+| DELETE | `/mobile/session` | 移动端 session | 注销移动端会话 |
+| POST | `/mobile/session/login` | - | 移动端登录 |
+| GET | `/mobile/inbox` | 移动端 session | 获取合并后的移动端通知收件箱 |
+| POST | `/mobile/inbox/read` | 移动端 session | 标记移动端收件箱消息已读 |
+| GET | `/mobile/inbox/unread-summary` | 移动端 session | 获取移动端未读摘要 |
+
+## 管理后台接口
+
+### 服务器 / 用户 / 审查 / 举报 / 更新日志
+
+| 方法 | 路径 | 认证 | 说明 |
+|---|---|---|---|
+| GET | `/admin/servers` | admin | 管理后台服务器列表 |
+| PATCH | `/admin/servers/{id}` | admin | 审核 / 更新服务器状态 |
+| DELETE | `/admin/servers/{id}` | admin | 删除服务器 |
+| GET | `/admin/users` | admin | 用户列表 |
+| PATCH | `/admin/users/{id}` | admin | 封禁、解封、角色调整等 |
+| GET | `/admin/moderation` | admin | 审查日志列表 |
+| PATCH | `/admin/moderation/{id}` | admin | 处理审查记录 |
+| GET | `/admin/reports` | admin | 举报列表 |
+| PATCH | `/admin/reports/{id}` | admin | 处理举报 |
+| GET | `/admin/changelog` | admin | 更新日志列表 |
+| POST | `/admin/changelog` | admin | 创建更新日志 |
+| PATCH | `/admin/changelog/{id}` | admin | 编辑更新日志 |
+| DELETE | `/admin/changelog/{id}` | admin | 删除更新日志 |
+
+## 现网约束
+
+- 搜索、发现、收藏、通知、举报、控制台都只围绕服务器系统展开。
+- forum / circles / posts / tags / bookmarks / forum notifications 等接口已经不在当前分支中；如果有外部调用方仍依赖它们，需要走兼容层或迁移方案，而不是在现网文档里继续保留旧说明。
+- 若代码与文档冲突，以当前 `src/app/api/**/route.ts` 为准，并立即同步本文件。

@@ -2,36 +2,28 @@ export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Plus_Jakarta_Sans } from "next/font/google";
 import { AuthButtons, MobileNavMenu } from "@/components/AuthButtons";
 import { HeaderSearch } from "@/components/HeaderSearch";
 import { Providers } from "@/components/Providers";
 import "@/styles/globals.css";
 import "cropperjs/dist/cropper.css";
 
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-jakarta",
-  weight: ["400", "500", "600", "700"],
-});
-
 export const metadata: Metadata = {
   metadataBase: new URL("https://pudcraft.cn"),
   title: {
-    default: "PudCraft Community - 发现优质 Minecraft 服务器",
+    default: "PudCraft Community - Minecraft 服务器与社区广场",
     template: "%s | PudCraft Community",
   },
   description:
-    "浏览国内优质 Minecraft 私人服务器，找到适合你的社区。支持 Java 版和基岩版，实时在线状态监控。",
-  keywords: ["Minecraft", "MC服务器", "我的世界", "服务器列表", "MC联机", "我的世界服务器"],
+    "发现优质 Minecraft 服务器，提交、认领、评论与收藏，与服主和玩家一起交流。",
+  keywords: ["Minecraft", "MC服务器", "我的世界", "服务器列表", "社区", "MC联机"],
   authors: [{ name: "PudCraft" }],
   openGraph: {
     type: "website",
     locale: "zh_CN",
     siteName: "PudCraft Community",
-    title: "PudCraft Community - 发现优质 Minecraft 服务器",
-    description: "浏览国内优质 Minecraft 私人服务器，找到适合你的社区。",
+    title: "PudCraft Community - Minecraft 服务器与社区广场",
+    description: "发现优质 Minecraft 服务器，提交、认领、评论与收藏，与服主和玩家一起交流。",
     url: "https://pudcraft.cn",
   },
   robots: {
@@ -43,7 +35,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN">
-      <body className={`${jakarta.variable} min-h-screen antialiased`}>
+      <body className="min-h-screen antialiased">
         <Providers>
           {/* ─── Skip Link ─── */}
           <a
@@ -64,12 +56,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <span className="text-xs font-medium text-warm-400">Community</span>
               </Link>
               <nav className="hidden items-center gap-1 md:flex">
-                <Link href="/" className="nav-link">
-                  广场
-                </Link>
-                <Link href="/explore" className="nav-link">
-                  探索
-                </Link>
                 <Link href="/servers" className="nav-link">
                   服务器
                 </Link>

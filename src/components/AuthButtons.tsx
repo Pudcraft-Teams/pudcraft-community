@@ -10,8 +10,6 @@ import { UserAvatar } from "@/components/UserAvatar";
 const MOBILE_HEADER_OVERLAY_EVENT = "pudcraft-mobile-header-overlay";
 
 const PRIMARY_LINKS = [
-  { href: "/", label: "广场" },
-  { href: "/explore", label: "探索" },
   { href: "/servers", label: "服务器" },
   { href: "/changelog", label: "更新日志" },
 ] as const;
@@ -114,20 +112,15 @@ export function AuthButtons() {
 
       {open && (
         <div className="m3-surface absolute right-0 top-11 z-50 w-44 p-2">
-          <Link
-            href={`/u/${session.user.uid}`}
-            className="block rounded-lg px-3 py-2 text-sm text-warm-800 transition-colors hover:bg-warm-100"
-            onClick={() => setOpen(false)}
-          >
-            我的主页
-          </Link>
-          <Link
-            href={`/user/${session.user.uid}`}
-            className="block rounded-lg px-3 py-2 text-sm text-warm-800 transition-colors hover:bg-warm-100"
-            onClick={() => setOpen(false)}
-          >
-            个人主页
-          </Link>
+          {session.user.uid !== undefined && (
+            <Link
+              href={`/u/${session.user.uid}`}
+              className="block rounded-lg px-3 py-2 text-sm text-warm-800 transition-colors hover:bg-warm-100"
+              onClick={() => setOpen(false)}
+            >
+              我的主页
+            </Link>
+          )}
           <Link
             href="/settings/profile"
             className="block rounded-lg px-3 py-2 text-sm text-warm-800 transition-colors hover:bg-warm-100"
@@ -300,7 +293,7 @@ export function MobileNavMenu() {
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-warm-500">登录后可发帖、收藏和管理你的圈子。</p>
+                <p className="text-sm text-warm-500">登录后可提交服务器、收藏内容并管理你的服务。</p>
               )}
             </div>
 
@@ -337,13 +330,15 @@ export function MobileNavMenu() {
                     >
                       通知中心
                     </Link>
-                    <Link
-                      href={`/u/${session.user.uid}`}
-                      className={MOBILE_MENU_LINK_CLASS}
-                      onClick={() => setOpen(false)}
-                    >
-                      我的主页
-                    </Link>
+                    {session.user.uid !== undefined && (
+                      <Link
+                        href={`/u/${session.user.uid}`}
+                        className={MOBILE_MENU_LINK_CLASS}
+                        onClick={() => setOpen(false)}
+                      >
+                        我的主页
+                      </Link>
+                    )}
                     <Link
                       href="/settings/profile"
                       className={MOBILE_MENU_LINK_CLASS}

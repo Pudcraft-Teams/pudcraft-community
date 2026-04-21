@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PageLoading } from "@/components/PageLoading";
+import { isPrivateServersEnabled } from "@/lib/features";
 
 interface ServerInfo {
   name: string;
@@ -21,6 +22,7 @@ export default function InviteJoinPage() {
   const router = useRouter();
   const { id, code } = useParams<{ id: string; code: string }>();
   const { status } = useSession();
+  const privateServersEnabled = isPrivateServersEnabled();
 
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
   const [isLoadingServer, setIsLoadingServer] = useState(true);
@@ -46,15 +48,23 @@ export default function InviteJoinPage() {
 
   // 未登录时跳转登录页
   useEffect(() => {
+    if (!privateServersEnabled) {
+      return;
+    }
+
     if (status === "unauthenticated") {
       router.replace(
         `/login?callbackUrl=${encodeURIComponent(`/servers/${id}/join/${code}`)}`,
       );
     }
-  }, [id, code, router, status]);
+  }, [code, id, privateServersEnabled, router, status]);
 
   // 加载服务器基本信息
   const fetchServerInfo = useCallback(async () => {
+    if (!privateServersEnabled) {
+      return;
+    }
+
     setIsLoadingServer(true);
     setPageError(null);
 
@@ -89,9 +99,14 @@ export default function InviteJoinPage() {
     } finally {
       setIsLoadingServer(false);
     }
-  }, [id]);
+  }, [id, privateServersEnabled]);
 
   useEffect(() => {
+    if (!privateServersEnabled) {
+      setIsLoadingServer(false);
+      return;
+    }
+
     if (status !== "authenticated") {
       if (status !== "loading") {
         setIsLoadingServer(false);
@@ -110,7 +125,7 @@ export default function InviteJoinPage() {
     return () => {
       cancelled = true;
     };
-  }, [fetchServerInfo, status]);
+  }, [fetchServerInfo, privateServersEnabled, status]);
 
   // 客户端校验 MC 用户名
   function validateMcUsername(value: string): string | null {
@@ -207,6 +222,22 @@ export default function InviteJoinPage() {
 
   if (status === "loading" || isLoadingServer) {
     return <PageLoading />;
+  }
+
+  if (!privateServersEnabled) {
+    return (
+      <div className="mx-auto max-w-md px-4">
+        <div className="m3-surface p-6 text-center">
+          <h1 className="text-lg font-semibold text-warm-800">当前未开放邀请码加入</h1>
+          <p className="mt-2 text-sm text-warm-500">
+            站点当前未启用私有服务器邀请流程，请从服务器详情页关注后续开放状态。
+          </p>
+          <Link href={`/servers/${id}`} className="m3-link mt-4 inline-block text-sm">
+            返回服务器详情
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   if (status === "unauthenticated") {

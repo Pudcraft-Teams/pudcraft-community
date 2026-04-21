@@ -154,42 +154,6 @@ async function executeActions(
                 logger.error("[api/admin/reports/[id]] Failed to notify comment author (takedown)", error);
               }
             }
-          } else if (targetType === "post") {
-            const post = await prisma.post.findUnique({
-              where: { id: targetId },
-              select: { id: true, authorId: true, title: true },
-            });
-            if (post) {
-              await prisma.post.delete({ where: { id: post.id } });
-              try {
-                await createNotification({
-                  userId: post.authorId,
-                  type: "content_takedown",
-                  title: "帖子已被删除",
-                  message: `你发布的帖子「${post.title || "无标题"}」因违规举报已被管理员删除`,
-                });
-              } catch (error) {
-                logger.error("[api/admin/reports/[id]] Failed to notify post author (takedown)", error);
-              }
-            }
-          } else if (targetType === "forum_comment") {
-            const forumComment = await prisma.comment.findUnique({
-              where: { id: targetId },
-              select: { id: true, authorId: true },
-            });
-            if (forumComment) {
-              await prisma.comment.delete({ where: { id: forumComment.id } });
-              try {
-                await createNotification({
-                  userId: forumComment.authorId,
-                  type: "content_takedown",
-                  title: "评论已被删除",
-                  message: "你发布的论坛评论因违规举报已被管理员删除",
-                });
-              } catch (error) {
-                logger.error("[api/admin/reports/[id]] Failed to notify forum comment author (takedown)", error);
-              }
-            }
           }
           // targetType === "user" — takedown doesn't apply, skip
           break;
@@ -227,20 +191,6 @@ async function resolveTargetOwner(targetType: string, targetId: string): Promise
         select: { authorId: true },
       });
       return comment?.authorId ?? null;
-    }
-    if (targetType === "post") {
-      const post = await prisma.post.findUnique({
-        where: { id: targetId },
-        select: { authorId: true },
-      });
-      return post?.authorId ?? null;
-    }
-    if (targetType === "forum_comment") {
-      const forumComment = await prisma.comment.findUnique({
-        where: { id: targetId },
-        select: { authorId: true },
-      });
-      return forumComment?.authorId ?? null;
     }
     if (targetType === "user") {
       return targetId;

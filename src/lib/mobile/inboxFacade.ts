@@ -1,22 +1,14 @@
 import { NextResponse } from "next/server";
 import { queryNotificationsSchema } from "@/lib/validation";
 
-export interface MobileInboxSourceUser {
-  id: string;
-  uid: number;
-  name: string | null;
-  image: string | null;
-}
-
 export interface MobileInboxItem {
   id: string;
-  kind: "server" | "forum";
+  kind: "server";
   title: string;
   body: string;
   destination: string | null;
   read: boolean;
   createdAt: string;
-  sourceUser?: MobileInboxSourceUser;
 }
 
 interface MobileInboxAuthResult {
@@ -35,57 +27,42 @@ interface ServerInboxNotificationRecord {
   createdAt: Date;
 }
 
-interface ForumInboxNotificationRecord {
-  id: string;
-  type: "POST_COMMENT" | "COMMENT_REPLY" | "MENTION";
-  isRead: boolean;
-  createdAt: Date;
-  sourceUser: MobileInboxSourceUser;
-  post: {
-    id: string;
-    title: string;
-    circle: {
-      slug: string;
-    } | null;
-  } | null;
-}
-
-interface MobileInboxData {
+interface ServerMobileInboxData {
   serverTotal: number;
-  forumTotal: number;
   serverUnread: number;
-  forumUnread: number;
   serverNotifications: ServerInboxNotificationRecord[];
-  forumNotifications: ForumInboxNotificationRecord[];
 }
 
 interface MobileInboxGetDependencies {
   requireActiveUserImpl: () => Promise<MobileInboxAuthResult>;
-  loadInboxData: (input: { userId: string; unreadOnly: boolean; fetchLimit: number }) => Promise<MobileInboxData>;
+  loadServerInboxData: (input: {
+    userId: string;
+    unreadOnly: boolean;
+    fetchLimit: number;
+  }) => Promise<ServerMobileInboxData>;
   maxMergedFetchWindow?: number;
 }
 
 export const DEFAULT_MAX_MERGED_FETCH_WINDOW = 500;
 
 export interface MobileInboxUnreadSummary {
-  serverUnread: number;
   forumUnread: number;
+  serverUnread: number;
   unreadCount: number;
 }
 
-export function buildMobileInboxUnreadSummary(serverUnread: number, forumUnread: number): MobileInboxUnreadSummary {
+export function buildMobileInboxUnreadSummary(serverUnread: number): MobileInboxUnreadSummary {
   return {
+    forumUnread: 0,
     serverUnread,
-    forumUnread,
-    unreadCount: serverUnread + forumUnread,
+    unreadCount: serverUnread,
   };
 }
 
 export function mergeInboxItems(
   serverItems: MobileInboxItem[],
-  forumItems: MobileInboxItem[],
 ): MobileInboxItem[] {
-  return [...serverItems, ...forumItems].sort((lhs, rhs) => rhs.createdAt.localeCompare(lhs.createdAt));
+  return [...serverItems].sort((lhs, rhs) => rhs.createdAt.localeCompare(lhs.createdAt));
 }
 
 export function getMaxMobileInboxPages(limit: number, maxMergedFetchWindow = DEFAULT_MAX_MERGED_FETCH_WINDOW): number {
@@ -126,7 +103,7 @@ export async function handleMobileInboxGet(request: Request, deps: MobileInboxGe
   }
 
   const fetchLimit = page * limit;
-  const inboxData = await deps.loadInboxData({
+  const inboxData = await deps.loadServerInboxData({
     userId,
     unreadOnly,
     fetchLimit,
@@ -142,64 +119,15 @@ export async function handleMobileInboxGet(request: Request, deps: MobileInboxGe
       read: notification.readAt !== null,
       createdAt: notification.createdAt.toISOString(),
     })),
-    inboxData.forumNotifications.map((notification): MobileInboxItem => {
-      const sourceUserName = notification.sourceUser.name ?? "未知用户";
-      const postTitle = notification.post?.title ?? "某个帖子";
-      const text = getForumInboxText(notification.type, sourceUserName, postTitle);
-
-      return {
-        id: notification.id,
-        kind: "forum",
-        title: text.title,
-        body: text.body,
-        destination: getForumInboxDestination(notification.post),
-        read: notification.isRead,
-        createdAt: notification.createdAt.toISOString(),
-        sourceUser: notification.sourceUser,
-      };
-    }),
   );
 
-  const total = inboxData.serverTotal + inboxData.forumTotal;
+  const total = inboxData.serverTotal;
 
   return NextResponse.json({
     notifications: merged.slice((page - 1) * limit, page * limit),
     total,
-    ...buildMobileInboxUnreadSummary(inboxData.serverUnread, inboxData.forumUnread),
+    ...buildMobileInboxUnreadSummary(inboxData.serverUnread),
     page,
     totalPages: getMobileInboxTotalPages(total, limit, maxMergedFetchWindow),
   });
-}
-
-function getForumInboxText(type: "POST_COMMENT" | "COMMENT_REPLY" | "MENTION", sourceUserName: string, postTitle: string) {
-  if (type === "POST_COMMENT") {
-    return {
-      title: `${sourceUserName} 评论了你的帖子`,
-      body: postTitle,
-    };
-  }
-
-  if (type === "MENTION") {
-    return {
-      title: `${sourceUserName} 在帖子中提到了你`,
-      body: postTitle,
-    };
-  }
-
-  return {
-    title: `${sourceUserName} 回复了你的评论`,
-    body: postTitle,
-  };
-}
-
-function getForumInboxDestination(post: { id: string; circle: { slug: string } | null } | null): string | null {
-  if (!post) {
-    return null;
-  }
-
-  if (post.circle) {
-    return `/c/${post.circle.slug}/post/${post.id}`;
-  }
-
-  return `/post/${post.id}`;
 }

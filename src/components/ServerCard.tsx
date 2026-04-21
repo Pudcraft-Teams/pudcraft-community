@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { isPrivateServersEnabled } from "@/lib/features";
 import type { ServerListItem } from "@/lib/types";
 
 interface ServerCardProps {
@@ -35,14 +38,17 @@ export function ServerCard({
     iconUrl,
     joinMode,
   } = server;
+  const privateServersEnabled = isPrivateServersEnabled();
   const isStale = status.isStale;
   const isOnline = status.online;
   const statusText = isStale ? "未知" : isOnline ? "在线" : "离线";
   const isAddressHidden = host === "hidden" && port === 0;
   const showApplyBadge =
-    joinMode === "apply" || joinMode === "apply_and_invite";
+    privateServersEnabled &&
+    (joinMode === "apply" || joinMode === "apply_and_invite");
   const showInviteBadge =
-    joinMode === "invite" || joinMode === "apply_and_invite";
+    privateServersEnabled &&
+    (joinMode === "invite" || joinMode === "apply_and_invite");
 
   return (
     <article

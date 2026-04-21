@@ -3,7 +3,6 @@
 import { SessionProvider } from "next-auth/react";
 import type { ReactNode } from "react";
 import { ConfirmProvider } from "@/components/ConfirmDialog";
-import { ComposeProvider } from "@/components/forum/ComposeDialog";
 import { ToastProvider } from "@/components/Toast";
 
 interface ProvidersProps {
@@ -18,9 +17,7 @@ export function Providers({ children }: ProvidersProps) {
   return (
     <SessionProvider>
       <ConfirmProvider>
-        <ToastProvider>
-          <ComposeProvider>{children}</ComposeProvider>
-        </ToastProvider>
+        <ToastProvider>{children}</ToastProvider>
       </ConfirmProvider>
     </SessionProvider>
   );

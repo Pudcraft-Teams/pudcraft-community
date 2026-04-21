@@ -285,7 +285,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       });
       if (!modResult.passed) {
         return NextResponse.json(
-          { error: "内容包含违规信息，请修改后重新提交", detail: modResult.reason },
+          { error: "内容包含违规信息，请修改后重新提交", details: modResult.reason },
           { status: 422 },
         );
       }
@@ -361,7 +361,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         }
         if (error instanceof ImageModerationError) {
           return NextResponse.json(
-            { error: "图标包含违规内容，请更换图片", detail: error.message },
+            { error: "图标包含违规内容，请更换图片", details: error.message },
             { status: error.status },
           );
         }

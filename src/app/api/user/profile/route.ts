@@ -139,7 +139,7 @@ export async function PATCH(request: Request) {
       });
       if (!modResult.passed) {
         return NextResponse.json(
-          { error: "用户名或简介包含违规内容", detail: modResult.reason },
+          { error: "用户名或简介包含违规内容", details: modResult.reason },
           { status: 422 },
         );
       }
@@ -196,7 +196,7 @@ export async function PATCH(request: Request) {
         }
         if (error instanceof ImageModerationError) {
           return NextResponse.json(
-            { error: "头像包含违规内容，请更换图片", detail: error.message },
+            { error: "头像包含违规内容，请更换图片", details: error.message },
             { status: error.status },
           );
         }

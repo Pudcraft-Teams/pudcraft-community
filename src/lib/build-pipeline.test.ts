@@ -91,3 +91,64 @@ test("next.config forwards OSS regional envs into remote image patterns", () => 
     /legacy-bucket\.s3\.cn-hangzhou\.amazonaws\.com/,
   );
 });
+
+test("next.config exposes a public storage base url for client-side markdown image allowlists", () => {
+  const script = `
+    import config from "./next.config.ts";
+    const resolvedConfig = config.default ?? config;
+    console.log(JSON.stringify(resolvedConfig.env ?? {}));
+  `;
+  const result = spawnSync(
+    process.execPath,
+    ["--import", "tsx", "-e", script],
+    {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        NEXT_PUBLIC_STORAGE_PUBLIC_BASE_URL: "",
+        S3_PUBLIC_BASE_URL: "https://cdn.example.com/storage",
+        OSS_PUBLIC_BASE_URL: "",
+      },
+      encoding: "utf8",
+    },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /"NEXT_PUBLIC_STORAGE_PUBLIC_BASE_URL":"https:\/\/cdn\.example\.com\/storage"/);
+});
+
+test("next.config exposes a public storage base url fallback for the client bundle", () => {
+  const script = `
+    import config from "./next.config.ts";
+    const resolvedConfig = config.default ?? config;
+    console.log(JSON.stringify({
+      publicStorageBaseUrl: resolvedConfig.env?.NEXT_PUBLIC_STORAGE_PUBLIC_BASE_URL ?? null,
+      remotePatterns: resolvedConfig.images?.remotePatterns ?? [],
+    }));
+  `;
+  const result = spawnSync(
+    process.execPath,
+    ["--import", "tsx", "-e", script],
+    {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        NEXT_PUBLIC_STORAGE_PUBLIC_BASE_URL: "",
+        S3_PUBLIC_BASE_URL: "https://cdn.example.com/storage",
+        OSS_PUBLIC_BASE_URL: "",
+        S3_BUCKET: "",
+        S3_REGION: "",
+        S3_ENDPOINT: "",
+        OSS_BUCKET: "",
+        OSS_REGION: "",
+        OSS_ENDPOINT: "",
+      },
+      encoding: "utf8",
+    },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /"publicStorageBaseUrl":"https:\/\/cdn\.example\.com\/storage"/);
+  assert.match(result.stdout, /"hostname":"cdn\.example\.com"/);
+  assert.match(result.stdout, /"pathname":"\/storage\/\*\*"/);
+});

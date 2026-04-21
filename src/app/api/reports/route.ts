@@ -8,6 +8,13 @@ import { prisma } from "@/lib/db";
 import { createReportSchema } from "@/lib/validation";
 import { logger } from "@/lib/logger";
 
+export function buildCreateReportSuccessPayload() {
+  return {
+    success: true,
+    message: "举报已提交，感谢你的反馈",
+  };
+}
+
 /**
  * POST /api/reports
  * 用户提交举报（服务器、评论、用户）。
@@ -67,28 +74,6 @@ export async function POST(request: NextRequest) {
       });
       if (!targetUser) {
         return NextResponse.json({ error: "举报的用户不存在" }, { status: 404 });
-      }
-    } else if (targetType === "post") {
-      const post = await prisma.post.findUnique({
-        where: { id: targetId },
-        select: { id: true, authorId: true },
-      });
-      if (!post) {
-        return NextResponse.json({ error: "举报的帖子不存在" }, { status: 404 });
-      }
-      if (post.authorId === userId) {
-        return NextResponse.json({ error: "不能举报自己的帖子" }, { status: 400 });
-      }
-    } else if (targetType === "forum_comment") {
-      const forumComment = await prisma.comment.findUnique({
-        where: { id: targetId },
-        select: { id: true, authorId: true },
-      });
-      if (!forumComment) {
-        return NextResponse.json({ error: "举报的评论不存在" }, { status: 404 });
-      }
-      if (forumComment.authorId === userId) {
-        return NextResponse.json({ error: "不能举报自己的评论" }, { status: 400 });
       }
     }
 
@@ -171,7 +156,7 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    return NextResponse.json({ message: "举报已提交，感谢你的反馈" }, { status: 201 });
+    return NextResponse.json(buildCreateReportSuccessPayload(), { status: 201 });
   } catch (error) {
     logger.error("[api/reports] Unexpected POST error", error);
     return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });

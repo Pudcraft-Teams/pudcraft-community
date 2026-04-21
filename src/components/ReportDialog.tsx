@@ -11,7 +11,7 @@ type ReportCategory =
   | "other";
 
 interface ReportDialogProps {
-  targetType: "server" | "comment" | "user" | "post" | "forum_comment";
+  targetType: "server" | "comment" | "user";
   targetId: string;
   open: boolean;
   onClose: () => void;
@@ -33,8 +33,6 @@ const TARGET_TYPE_LABELS: Record<ReportDialogProps["targetType"], string> = {
   server: "服务器",
   comment: "评论",
   user: "用户",
-  post: "帖子",
-  forum_comment: "评论",
 };
 
 function toApiPayload(raw: unknown): ReportApiResponse {

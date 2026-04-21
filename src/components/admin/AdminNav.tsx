@@ -16,7 +16,6 @@ const ADMIN_ITEMS: AdminNavItem[] = [
   { href: "/admin/moderation", label: "审查", match: "/admin/moderation" },
   { href: "/admin/reports", label: "举报", match: "/admin/reports" },
   { href: "/admin/changelog", label: "日志", match: "/admin/changelog" },
-  { href: "/admin/tags", label: "话题", match: "/admin/tags" },
 ];
 
 function isActivePath(pathname: string, match: string): boolean {

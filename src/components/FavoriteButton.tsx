@@ -17,6 +17,17 @@ interface FavoriteApiResponse {
   error?: string;
 }
 
+const FAVORITE_CHANGE_EVENT = "pudcraft:favorite-change";
+
+function broadcastFavoriteDelta(serverId: string, delta: number) {
+  if (typeof window === "undefined" || delta === 0) return;
+  window.dispatchEvent(
+    new CustomEvent(FAVORITE_CHANGE_EVENT, {
+      detail: { serverId, delta },
+    }),
+  );
+}
+
 function toApiPayload(raw: unknown): FavoriteApiResponse {
   if (typeof raw !== "object" || raw === null) {
     return {};
@@ -105,6 +116,7 @@ export function FavoriteButton({
 
     setFavorited(next);
     onChange?.(next);
+    broadcastFavoriteDelta(serverId, next ? 1 : -1);
     setIsPending(true);
 
     try {
@@ -116,16 +128,19 @@ export function FavoriteButton({
       if (!response.ok) {
         setFavorited(previous);
         onChange?.(previous);
+        broadcastFavoriteDelta(serverId, next ? -1 : 1);
         return;
       }
 
-      if (typeof payload.favorited === "boolean") {
+      if (typeof payload.favorited === "boolean" && payload.favorited !== next) {
         setFavorited(payload.favorited);
         onChange?.(payload.favorited);
+        broadcastFavoriteDelta(serverId, payload.favorited ? 1 : -1);
       }
     } catch {
       setFavorited(previous);
       onChange?.(previous);
+      broadcastFavoriteDelta(serverId, next ? -1 : 1);
     } finally {
       setIsPending(false);
     }

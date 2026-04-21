@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
 import { ApplicationForm } from "@/components/ApplicationForm";
 import { PageLoading } from "@/components/PageLoading";
+import { isPrivateServersEnabled } from "@/lib/features";
 import type { ApplicationFormField, MembershipStatus } from "@/lib/types";
 
 interface ServerInfo {
@@ -25,6 +26,7 @@ export default function ApplyPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const { status: authStatus } = useSession();
+  const privateServersEnabled = isPrivateServersEnabled();
 
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
   const [membership, setMembership] = useState<MembershipStatus | null>(null);
@@ -33,14 +35,22 @@ export default function ApplyPage() {
 
   // Redirect to login if not authenticated
   useEffect(() => {
+    if (!privateServersEnabled) {
+      return;
+    }
+
     if (authStatus === "unauthenticated") {
       router.replace(
         `/login?callbackUrl=${encodeURIComponent(`/servers/${id}/apply`)}`,
       );
     }
-  }, [id, router, authStatus]);
+  }, [authStatus, id, privateServersEnabled, router]);
 
   const fetchData = useCallback(async () => {
+    if (!privateServersEnabled) {
+      return;
+    }
+
     setIsLoading(true);
     setPageError(null);
 
@@ -93,9 +103,14 @@ export default function ApplyPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [id]);
+  }, [id, privateServersEnabled]);
 
   useEffect(() => {
+    if (!privateServersEnabled) {
+      setIsLoading(false);
+      return;
+    }
+
     if (authStatus !== "authenticated") {
       if (authStatus !== "loading") {
         setIsLoading(false);
@@ -114,7 +129,7 @@ export default function ApplyPage() {
     return () => {
       cancelled = true;
     };
-  }, [fetchData, authStatus]);
+  }, [authStatus, fetchData, privateServersEnabled]);
 
   const serverDetailUrl = serverInfo?.psid
     ? `/servers/${serverInfo.psid}`
@@ -124,6 +139,22 @@ export default function ApplyPage() {
 
   if (authStatus === "loading" || isLoading) {
     return <PageLoading />;
+  }
+
+  if (!privateServersEnabled) {
+    return (
+      <div className="mx-auto max-w-md px-4">
+        <div className="m3-surface p-6 text-center">
+          <h1 className="text-lg font-semibold text-warm-800">当前未开放私有服务器申请</h1>
+          <p className="mt-2 text-sm text-warm-500">
+            站点当前未启用申请加入流程，详情页也不会继续展示该入口。
+          </p>
+          <Link href={`/servers/${id}`} className="m3-link mt-4 inline-block text-sm">
+            返回服务器详情
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   if (authStatus === "unauthenticated") {

@@ -13,10 +13,31 @@ const coreEnvSchema = z.object({
   NEXTAUTH_URL: z.string().url("NEXTAUTH_URL 必须是合法的 URL（生产环境必填）").optional(),
 });
 
-coreEnvSchema.parse(process.env);
+let _coreEnv: z.infer<typeof coreEnvSchema> | null = null;
+
+/**
+ * 核心认证 / 数据库环境变量。
+ * 延迟到真正需要时再校验，避免构建期仅因 import 侧链触发而提前失败。
+ */
+export function getCoreEnv(): z.infer<typeof coreEnvSchema> {
+  if (!_coreEnv) {
+    _coreEnv = coreEnvSchema.parse(process.env);
+  }
+
+  return _coreEnv;
+}
 
 // ─── Redis 连接（REDIS_URL 或 REDIS_HOST + REDIS_PORT 二选一） ───
-export const redisEnv = parseRedisConfig();
+let _redisEnv: ReturnType<typeof parseRedisConfig> | null = null;
+
+/** Redis 配置，首次访问时才校验，避免构建期仅因 import 侧链而提前失败。 */
+export function getRedisEnv(): ReturnType<typeof parseRedisConfig> {
+  if (!_redisEnv) {
+    _redisEnv = parseRedisConfig();
+  }
+
+  return _redisEnv;
+}
 
 // ─── SMTP 邮件配置 ─────────────────────────────────────
 const envSchema = z.object({
