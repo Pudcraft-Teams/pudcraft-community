@@ -5,6 +5,7 @@ import Link from "@tiptap/extension-link";
 import Underline from "@tiptap/extension-underline";
 import StarterKit from "@tiptap/starter-kit";
 import { EditorContent, useEditor } from "@tiptap/react";
+import { useTranslations } from "next-intl";
 import { type ChangeEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { sanitizeEditorHtml } from "@/lib/markdown-editor-conversion";
 
@@ -157,6 +158,8 @@ export function RichTextEditor({
   onHtmlChange,
   onUploadImage,
 }: RichTextEditorProps) {
+  const t = useTranslations("servers.common.markdownEditor");
+  const tToolbar = useTranslations("servers.common.markdownEditor.toolbar");
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
@@ -223,7 +226,7 @@ export function RichTextEditor({
     }
 
     const previousUrl = editor.getAttributes("link").href as string | undefined;
-    const url = window.prompt("请输入链接 URL", previousUrl ?? "https://");
+    const url = window.prompt(t("linkPrompt"), previousUrl ?? "https://");
     if (url === null) {
       return;
     }
@@ -244,7 +247,7 @@ export function RichTextEditor({
         rel: "noopener noreferrer nofollow",
       })
       .run();
-  }, [disabled, editor]);
+  }, [disabled, editor, t]);
 
   useEffect(() => {
     if (!editor || disabled) {
@@ -275,7 +278,7 @@ export function RichTextEditor({
       return;
     }
 
-    const url = window.prompt("请输入图片 URL", "https://");
+    const url = window.prompt(t("imageUrlPrompt"), "https://");
     if (!url) {
       return;
     }
@@ -337,14 +340,14 @@ export function RichTextEditor({
       <div className="flex flex-wrap items-center gap-0.5 border-b border-warm-200 bg-warm-50 px-2 py-1.5">
         <ToolbarButton
           icon={iconH2}
-          title="二级标题"
+          title={tToolbar("heading2")}
           disabled={buttonDisabled}
           active={editor?.isActive("heading", { level: 2 })}
           onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
         />
         <ToolbarButton
           icon={iconH3}
-          title="三级标题"
+          title={tToolbar("heading3")}
           disabled={buttonDisabled}
           active={editor?.isActive("heading", { level: 3 })}
           onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
@@ -354,28 +357,28 @@ export function RichTextEditor({
 
         <ToolbarButton
           icon={iconBold}
-          title="粗体"
+          title={tToolbar("bold")}
           disabled={buttonDisabled}
           active={editor?.isActive("bold")}
           onClick={() => editor?.chain().focus().toggleBold().run()}
         />
         <ToolbarButton
           icon={iconItalic}
-          title="斜体"
+          title={tToolbar("italic")}
           disabled={buttonDisabled}
           active={editor?.isActive("italic")}
           onClick={() => editor?.chain().focus().toggleItalic().run()}
         />
         <ToolbarButton
           icon={iconUnderline}
-          title="下划线"
+          title={tToolbar("underline")}
           disabled={buttonDisabled}
           active={editor?.isActive("underline")}
           onClick={() => editor?.chain().focus().toggleUnderline().run()}
         />
         <ToolbarButton
           icon={iconStrikethrough}
-          title="删除线"
+          title={tToolbar("strikethrough")}
           disabled={buttonDisabled}
           active={editor?.isActive("strike")}
           onClick={() => editor?.chain().focus().toggleStrike().run()}
@@ -385,21 +388,21 @@ export function RichTextEditor({
 
         <ToolbarButton
           icon={iconBulletList}
-          title="无序列表"
+          title={tToolbar("bulletList")}
           disabled={buttonDisabled}
           active={editor?.isActive("bulletList")}
           onClick={() => editor?.chain().focus().toggleBulletList().run()}
         />
         <ToolbarButton
           icon={iconOrderedList}
-          title="有序列表"
+          title={tToolbar("orderedList")}
           disabled={buttonDisabled}
           active={editor?.isActive("orderedList")}
           onClick={() => editor?.chain().focus().toggleOrderedList().run()}
         />
         <ToolbarButton
           icon={iconQuote}
-          title="引用"
+          title={tToolbar("quote")}
           disabled={buttonDisabled}
           active={editor?.isActive("blockquote")}
           onClick={() => editor?.chain().focus().toggleBlockquote().run()}
@@ -409,14 +412,14 @@ export function RichTextEditor({
 
         <ToolbarButton
           icon={iconCode}
-          title="行内代码"
+          title={tToolbar("inlineCode")}
           disabled={buttonDisabled}
           active={editor?.isActive("code")}
           onClick={() => editor?.chain().focus().toggleCode().run()}
         />
         <ToolbarButton
           icon={iconCodeBlock}
-          title="代码块"
+          title={tToolbar("codeBlock")}
           disabled={buttonDisabled}
           active={editor?.isActive("codeBlock")}
           onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
@@ -426,14 +429,14 @@ export function RichTextEditor({
 
         <ToolbarButton
           icon={iconLink}
-          title="链接"
+          title={tToolbar("link")}
           disabled={buttonDisabled}
           active={editor?.isActive("link")}
           onClick={setLink}
         />
         <ToolbarButton
           icon={isUploadingImage ? <span className="text-xs">...</span> : iconImage}
-          title={isUploadingImage ? "上传中..." : "插入图片"}
+          title={isUploadingImage ? tToolbar("imageUploading") : tToolbar("image")}
           disabled={buttonDisabled}
           onClick={onUploadImage ? pickAndUploadImage : setImageByUrl}
         />
@@ -442,13 +445,13 @@ export function RichTextEditor({
 
         <ToolbarButton
           icon={iconUndo}
-          title="撤销"
+          title={tToolbar("undo")}
           disabled={buttonDisabled || !editor?.can().undo()}
           onClick={() => editor?.chain().focus().undo().run()}
         />
         <ToolbarButton
           icon={iconRedo}
-          title="重做"
+          title={tToolbar("redo")}
           disabled={buttonDisabled || !editor?.can().redo()}
           onClick={() => editor?.chain().focus().redo().run()}
         />
@@ -457,7 +460,7 @@ export function RichTextEditor({
       <div className="relative">
         <EditorContent editor={editor} />
         {!editor && (
-          <div className="min-h-[220px] px-4 py-3 text-sm text-warm-400">编辑器加载中...</div>
+          <div className="min-h-[220px] px-4 py-3 text-sm text-warm-400">{t("loading")}</div>
         )}
         {placeholder && editor?.isEmpty && (
           <span className="pointer-events-none absolute left-4 top-3 text-sm text-warm-400">

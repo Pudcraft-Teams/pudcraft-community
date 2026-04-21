@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import {
   type ChangeEvent,
@@ -15,15 +16,20 @@ import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { useToast } from "@/hooks/useToast";
 import { editorHtmlToMarkdown, markdownToEditorHtml } from "@/lib/markdown-editor-conversion";
 
+function RichTextLoadingPlaceholder() {
+  const t = useTranslations("servers.common.markdownEditor");
+  return (
+    <div className="min-h-[220px] rounded-xl border border-warm-200 bg-surface px-4 py-3 text-sm text-warm-400">
+      {t("loading")}
+    </div>
+  );
+}
+
 const RichTextEditor = dynamic(
   () => import("./markdown-editor/RichTextEditor").then((module) => module.RichTextEditor),
   {
     ssr: false,
-    loading: () => (
-      <div className="min-h-[220px] rounded-xl border border-warm-200 bg-surface px-4 py-3 text-sm text-warm-400">
-        编辑器加载中...
-      </div>
-    ),
+    loading: () => <RichTextLoadingPlaceholder />,
   },
 );
 
@@ -53,12 +59,16 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       onChange,
       label,
       maxLength,
-      placeholder = "请输入内容",
+      placeholder,
       disabled = false,
       onDirtyChange,
     },
     ref,
   ) {
+    const t = useTranslations("servers.common.markdownEditor");
+    const tToolbar = useTranslations("servers.common.markdownEditor.toolbar");
+    const tPlaceholders = useTranslations("servers.common.markdownEditor.placeholders");
+    const resolvedPlaceholder = placeholder ?? t("placeholderDefault");
     const { toast } = useToast();
     const [mode, setMode] = useState<EditorMode>("rich");
     const [markdownMobileTab, setMarkdownMobileTab] = useState<MarkdownMobileTab>("edit");
@@ -155,7 +165,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         },
       ) => {
         if (typeof maxLength === "number" && nextValue.length > maxLength) {
-          toast.error(`内容最多 ${maxLength} 字`);
+          toast.error(t("overMaxToast", { max: maxLength }));
           return;
         }
 
@@ -178,7 +188,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           textarea.setSelectionRange(selection.start, selection.end);
         });
       },
-      [maxLength, onChange, setRichDirty, toast],
+      [maxLength, onChange, setRichDirty, t, toast],
     );
 
     const uploadEditorImage = useCallback(
@@ -203,25 +213,25 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           } | null;
 
           if (!response.ok) {
-            toast.error(payload?.error ?? "图片上传失败，请稍后重试");
+            toast.error(payload?.error ?? t("uploadFailed"));
             return null;
           }
 
           const uploadedUrl = payload?.data?.url;
           if (!uploadedUrl) {
-            toast.error("图片上传响应无效");
+            toast.error(t("uploadInvalid"));
             return null;
           }
 
           return uploadedUrl;
         } catch {
-          toast.error("图片上传失败，请稍后重试");
+          toast.error(t("uploadFailed"));
           return null;
         } finally {
           setIsImageUploading(false);
         }
       },
-      [disabled, toast],
+      [disabled, t, toast],
     );
 
     const switchMode = (nextMode: EditorMode) => {
@@ -286,9 +296,9 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
       const selected = source.slice(start, end);
-      const linkText = selected || "链接文本";
+      const linkText = selected || t("linkPlaceholder");
 
-      const inputUrl = window.prompt("请输入链接 URL", "https://");
+      const inputUrl = window.prompt(t("linkPrompt"), "https://");
       if (inputUrl === null) {
         return;
       }
@@ -304,7 +314,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         start: start + 1,
         end: start + 1 + linkText.length,
       });
-    }, [disabled, updateMarkdownValue]);
+    }, [disabled, t, updateMarkdownValue]);
 
     const insertMarkdownImage = useCallback(
       async (file: File) => {
@@ -352,13 +362,13 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       const key = event.key.toLowerCase();
       if (key === "b") {
         event.preventDefault();
-        wrapMarkdownSelection("**", "**", "粗体文本");
+        wrapMarkdownSelection("**", "**", tPlaceholders("bold"));
         return;
       }
 
       if (key === "i") {
         event.preventDefault();
-        wrapMarkdownSelection("*", "*", "斜体文本");
+        wrapMarkdownSelection("*", "*", tPlaceholders("italic"));
         return;
       }
 
@@ -370,7 +380,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
 
       if (key === "`") {
         event.preventDefault();
-        wrapMarkdownSelection("`", "`", "代码");
+        wrapMarkdownSelection("`", "`", tPlaceholders("code"));
       }
     };
 
@@ -396,7 +406,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
                   : "text-warm-400 hover:text-warm-700"
               }`}
             >
-              富文本
+              {t("modeRich")}
             </button>
             <button
               type="button"
@@ -408,7 +418,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
                   : "text-warm-400 hover:text-warm-700"
               }`}
             >
-              Markdown
+              {t("modeMarkdown")}
             </button>
           </div>
         </div>
@@ -417,7 +427,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           <RichTextEditor
             html={richHtml}
             disabled={disabled}
-            placeholder={placeholder}
+            placeholder={resolvedPlaceholder}
             imageAccept={EDITOR_IMAGE_ACCEPT}
             onHtmlChange={handleRichHtmlChange}
             onUploadImage={uploadEditorImage}
@@ -436,9 +446,9 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
               <div className="flex items-center gap-0.5">
                 <button
                   type="button"
-                  title="粗体"
+                  title={tToolbar("bold")}
                   onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => wrapMarkdownSelection("**", "**", "粗体文本")}
+                  onClick={() => wrapMarkdownSelection("**", "**", tPlaceholders("bold"))}
                   disabled={disabled}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-warm-500 transition-colors hover:bg-warm-200/60 hover:text-warm-700 disabled:cursor-not-allowed disabled:opacity-40"
                 >
@@ -446,9 +456,9 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
                 </button>
                 <button
                   type="button"
-                  title="斜体"
+                  title={tToolbar("italic")}
                   onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => wrapMarkdownSelection("*", "*", "斜体文本")}
+                  onClick={() => wrapMarkdownSelection("*", "*", tPlaceholders("italic"))}
                   disabled={disabled}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-warm-500 transition-colors hover:bg-warm-200/60 hover:text-warm-700 disabled:cursor-not-allowed disabled:opacity-40"
                 >
@@ -456,7 +466,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
                 </button>
                 <button
                   type="button"
-                  title="链接"
+                  title={tToolbar("link")}
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={insertMarkdownLink}
                   disabled={disabled}
@@ -466,7 +476,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
                 </button>
                 <button
                   type="button"
-                  title={isImageUploading ? "上传中..." : "插入图片"}
+                  title={isImageUploading ? tToolbar("imageUploading") : tToolbar("image")}
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => markdownImageInputRef.current?.click()}
                   disabled={disabled || isImageUploading}
@@ -490,7 +500,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
                       : "text-warm-400 hover:text-warm-700"
                   }`}
                 >
-                  编辑
+                  {t("mobileEdit")}
                 </button>
                 <button
                   type="button"
@@ -501,7 +511,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
                       : "text-warm-400 hover:text-warm-700"
                   }`}
                 >
-                  预览
+                  {t("mobilePreview")}
                 </button>
               </div>
             </div>
@@ -518,7 +528,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
                   onChange={handleMarkdownChange}
                   onKeyDown={handleMarkdownKeyDown}
                   className="min-h-[220px] w-full resize-y border-0 bg-surface px-4 py-3 text-sm leading-7 text-warm-800 outline-none"
-                  placeholder={placeholder}
+                  placeholder={resolvedPlaceholder}
                   maxLength={maxLength}
                   disabled={disabled}
                 />
@@ -528,13 +538,13 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
                 className={`${markdownMobileTab === "edit" ? "hidden md:block" : "block"} bg-warm-50/70`}
               >
                 <div className="border-b border-warm-200 px-4 py-2 text-xs text-warm-400">
-                  预览
+                  {t("previewHeading")}
                 </div>
                 <div className="max-h-[460px] overflow-y-auto px-4 py-3">
                   {markdownText.trim() ? (
                     <MarkdownRenderer content={markdownText} />
                   ) : (
-                    <p className="text-sm text-warm-400">暂无可预览内容</p>
+                    <p className="text-sm text-warm-400">{t("previewEmpty")}</p>
                   )}
                 </div>
               </div>
@@ -548,15 +558,15 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           return (
             <div className="flex items-center justify-between text-xs text-warm-400">
               <span className={isOverLimit ? "font-medium text-accent-hover" : ""}>
-                {maxLength ? `${displayLength}/${maxLength}` : `${displayLength} 字`}
+                {maxLength
+                  ? t("charCountWithMax", { length: displayLength, max: maxLength })
+                  : t("charCount", { length: displayLength })}
               </span>
               {isOverLimit ? (
-                <span className="font-medium text-accent-hover">内容超出字数限制</span>
+                <span className="font-medium text-accent-hover">{t("overLimit")}</span>
               ) : (
                 mode === "rich" &&
-                isRichDirty && (
-                  <span>富文本改动将在切换模式或保存时同步为 Markdown</span>
-                )
+                isRichDirty && <span>{t("dirtyHint")}</span>
               )}
             </div>
           );

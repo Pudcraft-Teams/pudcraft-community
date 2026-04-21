@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
@@ -85,6 +86,7 @@ interface MarkdownRendererProps {
  * 支持 GFM、XSS 过滤与代码高亮，适配浅色主题。
  */
 export function MarkdownRenderer({ content }: MarkdownRendererProps) {
+  const t = useTranslations("servers.common.markdownRenderer");
   return (
     <div className="prose prose-stone max-w-none text-warm-800">
       <ReactMarkdown
@@ -154,7 +156,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
               if (!isAllowedMarkdownImageSrc(resolvedSrc)) {
                 return (
                   <div className="my-4 rounded-xl border border-warm-200 bg-warm-50 px-3 py-2 text-sm text-warm-500">
-                    已屏蔽远程图片
+                    {t("blockedRemoteImage")}
                     {resolvedSrc.startsWith("http") && (
                       <>
                         {" "}
@@ -164,7 +166,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
                           rel="noopener noreferrer"
                           className="font-medium text-accent underline underline-offset-4"
                         >
-                          查看原图
+                          {t("viewOriginal")}
                         </a>
                       </>
                     )}
@@ -177,7 +179,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={resolvedSrc}
-                  alt={alt ?? "图片"}
+                  alt={alt ?? t("imageAltFallback")}
                   className="my-4 h-auto max-w-full rounded-xl border border-warm-200"
                   loading="lazy"
                   referrerPolicy="no-referrer"
