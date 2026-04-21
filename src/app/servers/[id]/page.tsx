@@ -1,5 +1,6 @@
 import { cache } from "react";
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -193,11 +194,15 @@ const getServerPageData = cache(async (rawId: string) => {
 });
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const [{ id }, session] = await Promise.all([params, auth()]);
+  const [{ id }, session, t] = await Promise.all([
+    params,
+    auth(),
+    getTranslations("servers.detail"),
+  ]);
   const data = await getServerPageData(id);
 
   if (!data) {
-    return { title: "服务器未找到" };
+    return { title: t("metaNotFound") };
   }
 
   const { server } = data;
@@ -209,22 +214,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     currentUserRole: session?.user?.role,
   });
   if (!canAccessCurrentServer) {
-    return { title: "服务器未找到" };
+    return { title: t("metaNotFound") };
   }
   const isPublicServer = server.visibility === "public";
   const serverAddress = server.port !== 25565 ? `${server.host}:${server.port}` : server.host;
   const description =
     server.description?.trim() ||
     (isPublicServer
-      ? `${server.name} - Minecraft 服务器，地址 ${serverAddress}`
-      : `${server.name} - Minecraft 服务器`);
+      ? t("metaDescriptionPublic", { name: server.name, address: serverAddress })
+      : t("metaDescriptionPrivate", { name: server.name }));
 
   return {
     title: server.name,
     description,
     openGraph: {
-      title: `${server.name} | PudCraft Community`,
-      description: server.description?.trim() || `${server.name} Minecraft 服务器`,
+      title: t("metaOgTitleSuffix", { name: server.name }),
+      description:
+        server.description?.trim() ||
+        t("metaOgDescriptionFallback", { name: server.name }),
       images: server.iconUrl
         ? [{ url: toAbsoluteUrl(getPublicUrl(server.iconUrl) ?? "/default-server-icon.png") }]
         : [],
@@ -236,7 +243,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  * 服务器详情页 —— 服务端渲染详情 + 评论首屏预取。
  */
 export default async function ServerDetailPage({ params }: Props) {
-  const [{ id }, session] = await Promise.all([params, auth()]);
+  const [{ id }, session, t] = await Promise.all([
+    params,
+    auth(),
+    getTranslations("servers.detail"),
+  ]);
   const data = await getServerPageData(id);
 
   if (!data) {
@@ -272,13 +283,13 @@ export default async function ServerDetailPage({ params }: Props) {
   const isOnline = server.isOnline;
   const addressHidden = !canSeeAddress;
   const serverAddress = addressHidden
-    ? "地址隐藏"
+    ? t("addressHidden")
     : server.port !== 25565
       ? `${server.host}:${server.port}`
       : server.host;
   const canViewModpacks = canSeeAddress;
   const favoriteCount = server.favoriteCount;
-  const lastPingLabel = server.lastPingedAt ? timeAgo(server.lastPingedAt) : "尚未检测";
+  const lastPingLabel = server.lastPingedAt ? timeAgo(server.lastPingedAt) : t("lastPingUnchecked");
   const verifiedAtLabel = server.verifiedAt
     ? new Intl.DateTimeFormat("zh-CN", {
         year: "numeric",
@@ -354,7 +365,7 @@ export default async function ServerDetailPage({ params }: Props) {
     "@context": "https://schema.org",
     "@type": "GameServer",
     name: server.name,
-    description: server.description || `${server.name} Minecraft 服务器`,
+    description: server.description || t("gameServerSchemaDescription", { name: server.name }),
     url: `${SITE_URL}/servers/${server.psid}`,
     image: [toAbsoluteUrl(getPublicUrl(server.iconUrl) ?? "/default-server-icon.png")],
     game: {
@@ -374,10 +385,10 @@ export default async function ServerDetailPage({ params }: Props) {
 
       <nav className="mb-6 flex items-center gap-2 text-sm text-warm-500">
         <Link href="/servers" className="m3-link">
-          &larr; 服务器
+          &larr; {t("breadcrumbServers")}
         </Link>
         <span>/</span>
-        <span className="text-warm-700">服务器详情</span>
+        <span className="text-warm-700">{t("breadcrumbCurrent")}</span>
       </nav>
 
       <section className="m3-surface mb-6 p-4 sm:p-6">
@@ -388,7 +399,7 @@ export default async function ServerDetailPage({ params }: Props) {
                 href={`/servers/${server.psid}/edit`}
                 className="m3-btn m3-btn-primary rounded-lg px-3 py-1.5 text-xs"
               >
-                编辑
+                {t("actionEdit")}
               </Link>
             )}
 
@@ -397,7 +408,7 @@ export default async function ServerDetailPage({ params }: Props) {
                 href={`/servers/${server.psid}/modpacks`}
                 className="m3-btn m3-btn-tonal rounded-lg px-3 py-1.5 text-xs text-accent"
               >
-                整合包管理
+                {t("actionManageModpacks")}
               </Link>
             )}
 
@@ -406,7 +417,7 @@ export default async function ServerDetailPage({ params }: Props) {
                 href={`/servers/${server.psid}/verify`}
                 className="m3-btn m3-btn-tonal rounded-lg px-3 py-1.5 text-xs text-accent"
               >
-                认领此服务器
+                {t("actionClaim")}
               </Link>
             )}
 
@@ -415,7 +426,7 @@ export default async function ServerDetailPage({ params }: Props) {
                 href={`/console/${server.id}`}
                 className="m3-btn m3-btn-tonal rounded-lg px-3 py-1.5 text-xs text-accent"
               >
-                打开控制台
+                {t("actionOpenConsole")}
               </Link>
             )}
 
@@ -424,7 +435,7 @@ export default async function ServerDetailPage({ params }: Props) {
                 href={`/login?callbackUrl=${encodeURIComponent(`/servers/${server.psid}/verify`)}`}
                 className="text-xs text-warm-400 underline underline-offset-4"
               >
-                登录后认领
+                {t("actionClaimAfterLogin")}
               </Link>
             )}
           </div>
@@ -435,7 +446,7 @@ export default async function ServerDetailPage({ params }: Props) {
             <span className="inline-flex h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-warm-200 bg-warm-100">
               <Image
                 src={getPublicUrl(server.iconUrl) ?? "/default-server-icon.png"}
-                alt={`${server.name} 图标`}
+                alt={t("iconAlt", { name: server.name })}
                 width={64}
                 height={64}
                 className="h-full w-full object-cover"
@@ -449,12 +460,12 @@ export default async function ServerDetailPage({ params }: Props) {
                 </h1>
                 {privateServersEnabled && server.visibility === "unlisted" && (
                   <span className="inline-flex shrink-0 items-center rounded-full bg-accent-hover px-2.5 py-1 text-xs font-semibold text-accent-hover ring-1 ring-accent-hover">
-                    需申请加入
+                    {t("badgeApplyRequired")}
                   </span>
                 )}
                 {privateServersEnabled && server.visibility === "private" && (
                   <span className="inline-flex shrink-0 items-center rounded-full bg-warm-100 px-2.5 py-1 text-xs font-semibold text-warm-400 ring-1 ring-warm-200">
-                    私密服务器
+                    {t("badgePrivate")}
                   </span>
                 )}
               </div>
@@ -462,15 +473,15 @@ export default async function ServerDetailPage({ params }: Props) {
                 <div className="mt-1 inline-flex items-center gap-2">
                   <span
                     className="inline-flex items-center rounded-full bg-accent-muted px-2.5 py-1 text-xs font-semibold text-accent ring-1 ring-accent/20"
-                    title="已认领 - 管理员已验证"
+                    title={t("badgeClaimedTitle")}
                   >
-                    已认领
+                    {t("badgeClaimed")}
                   </span>
                   {(canReclaimVerified || !isLoggedIn) && (
                     <details className="group relative">
                       <summary
                         className="cursor-pointer list-none rounded-md px-1.5 py-0.5 text-xs text-warm-400 transition-colors hover:bg-warm-100 hover:text-warm-500"
-                        aria-label="更多操作"
+                        aria-label={t("actionMoreAriaLabel")}
                       >
                         ...
                       </summary>
@@ -483,7 +494,7 @@ export default async function ServerDetailPage({ params }: Props) {
                           }
                           className="text-xs text-warm-500 underline underline-offset-4"
                         >
-                          {isLoggedIn ? "我是服主，重新认领" : "登录后认领"}
+                          {isLoggedIn ? t("actionReclaim") : t("actionClaimAfterLogin")}
                         </Link>
                       </div>
                     </details>
@@ -503,7 +514,7 @@ export default async function ServerDetailPage({ params }: Props) {
         </div>
 
         {server.isVerified && verifiedAtLabel && (
-          <p className="mb-4 text-xs text-accent">已于 {verifiedAtLabel} 通过认领验证</p>
+          <p className="mb-4 text-xs text-accent">{t("verifiedAtHint", { time: verifiedAtLabel })}</p>
         )}
 
         {isOwner && server.status !== "approved" && (
@@ -515,17 +526,19 @@ export default async function ServerDetailPage({ params }: Props) {
             }`}
           >
             <p className="font-medium">
-              {server.status === "pending" ? "审核中：管理员审核通过后将展示在首页" : "审核未通过"}
+              {server.status === "pending" ? t("reviewPending") : t("reviewRejected")}
             </p>
             {server.status === "rejected" && server.rejectReason && (
-              <p className="mt-1 text-xs">拒绝原因：{server.rejectReason}</p>
+              <p className="mt-1 text-xs">
+                {t("reviewRejectReason", { reason: server.rejectReason })}
+              </p>
             )}
             {server.status === "rejected" && (
               <Link
                 href={`/servers/${server.psid}/edit`}
                 className="mt-2 inline-flex text-xs underline underline-offset-4"
               >
-                去修改并重新提交
+                {t("reviewGoEdit")}
               </Link>
             )}
           </div>
@@ -542,22 +555,22 @@ export default async function ServerDetailPage({ params }: Props) {
             <span
               className={`h-1.5 w-1.5 rounded-full ${isOnline ? "bg-forest-light0" : "bg-warm-400"}`}
             />
-            {isOnline ? "在线" : "离线"}
+            {isOnline ? t("statusOnline") : t("statusOffline")}
           </span>
           <span className="text-warm-500">
-            当前在线 {server.playerCount} / {server.maxPlayers}
+            {t("currentOnline", { count: server.playerCount, max: server.maxPlayers })}
           </span>
           <span className="text-warm-500">
             <LiveFavoriteCount initialCount={favoriteCount} serverId={server.id} />
           </span>
-          <span className="text-warm-400">最后检测：{lastPingLabel}</span>
+          <span className="text-warm-400">{t("lastPing", { time: lastPingLabel })}</span>
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-3">
           {addressHidden ? (
             <>
-              <p className="text-sm text-warm-400">地址隐藏</p>
-              <span className="text-xs text-warm-400">加入后可见</span>
+              <p className="text-sm text-warm-400">{t("addressHidden")}</p>
+              <span className="text-xs text-warm-400">{t("addressHiddenHint")}</span>
             </>
           ) : (
             <>
@@ -586,9 +599,9 @@ export default async function ServerDetailPage({ params }: Props) {
             {isMember ? (
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center rounded-full bg-forest-light px-2.5 py-1 text-xs font-semibold text-forest ring-1 ring-forest-light">
-                  已加入
+                  {t("membershipJoined")}
                 </span>
-                <span className="text-xs text-warm-400">你已是该服务器成员</span>
+                <span className="text-xs text-warm-400">{t("membershipJoinedHint")}</span>
               </div>
             ) : isLoggedIn ? (
               <div className="space-y-2">
@@ -596,22 +609,22 @@ export default async function ServerDetailPage({ params }: Props) {
                 {latestApplicationStatus === "pending" && (
                   <div className="flex items-center gap-2">
                     <span className="inline-flex items-center rounded-full bg-accent-hover px-2.5 py-1 text-xs font-semibold text-accent-hover ring-1 ring-accent-hover">
-                      申请审核中
+                      {t("applicationPending")}
                     </span>
-                    <span className="text-xs text-warm-400">请等待服主审核</span>
+                    <span className="text-xs text-warm-400">{t("applicationPendingHint")}</span>
                   </div>
                 )}
                 {latestApplicationStatus === "rejected" && (
                   <div className="flex items-center gap-2">
                     <span className="inline-flex items-center rounded-full bg-accent-hover px-2.5 py-1 text-xs font-semibold text-accent-hover ring-1 ring-accent-hover">
-                      申请被拒绝
+                      {t("applicationRejected")}
                     </span>
                     {(server.joinMode === "apply" || server.joinMode === "apply_and_invite") && (
                       <Link
                         href={`/servers/${server.psid}/apply`}
                         className="text-xs text-accent underline underline-offset-4 hover:text-accent"
                       >
-                        重新申请
+                        {t("applicationReapply")}
                       </Link>
                     )}
                   </div>
@@ -626,14 +639,14 @@ export default async function ServerDetailPage({ params }: Props) {
                           href={`/servers/${server.psid}/apply`}
                           className="m3-btn m3-btn-tonal rounded-lg px-3 py-1.5 text-xs text-accent"
                         >
-                          申请加入
+                          {t("joinApply")}
                         </Link>
                       )}
                     {(server.joinMode === "invite" || server.joinMode === "apply_and_invite") && (
-                      <span className="text-xs text-warm-400">需要邀请码加入</span>
+                      <span className="text-xs text-warm-400">{t("joinInviteHint")}</span>
                     )}
                     {server.joinMode === "open" && (
-                      <span className="text-xs text-warm-400">该服务器为开放加入</span>
+                      <span className="text-xs text-warm-400">{t("joinOpenHint")}</span>
                     )}
                   </div>
                 )}
@@ -644,7 +657,7 @@ export default async function ServerDetailPage({ params }: Props) {
                   href={`/login?callbackUrl=${encodeURIComponent(`/servers/${server.psid}`)}`}
                   className="text-xs text-accent underline underline-offset-4 hover:text-accent"
                 >
-                  登录后查看加入方式
+                  {t("loginToSeeJoin")}
                 </Link>
               </div>
             )}
@@ -654,7 +667,7 @@ export default async function ServerDetailPage({ params }: Props) {
 
       {server.content && (
         <section className="m3-surface p-4 sm:p-6">
-          <h2 className="mb-4 text-lg font-semibold text-warm-800">服务器介绍</h2>
+          <h2 className="mb-4 text-lg font-semibold text-warm-800">{t("introHeading")}</h2>
           <MarkdownRenderer
             content={
               canSeeAddress
@@ -668,19 +681,19 @@ export default async function ServerDetailPage({ params }: Props) {
       {canViewModpacks && (
         <section className="mt-6 rounded-xl border border-warm-200 bg-surface p-4 sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-warm-800">整合包</h2>
+            <h2 className="text-lg font-semibold text-warm-800">{t("modpackHeading")}</h2>
             {isOwner && (
               <Link
                 href={`/servers/${server.psid}/modpacks`}
                 className="rounded-xl border border-accent px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-muted"
               >
-                上传 / 管理
+                {t("modpackManage")}
               </Link>
             )}
           </div>
 
           {modpacks.length === 0 ? (
-            <p className="text-sm text-warm-400">当前暂无整合包版本。</p>
+            <p className="text-sm text-warm-400">{t("modpackEmpty")}</p>
           ) : (
             <div className="space-y-3">
               {modpacks.map((modpack, index) => (
@@ -689,19 +702,23 @@ export default async function ServerDetailPage({ params }: Props) {
                     <h3 className="text-base font-semibold text-warm-800">{modpack.name}</h3>
                     {index === 0 && (
                       <span className="rounded-full border border-accent px-2 py-0.5 text-xs font-medium text-accent">
-                        最新版本
+                        {t("modpackLatestBadge")}
                       </span>
                     )}
                   </div>
 
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-warm-500">
-                    <span>版本：{modpack.version ?? "--"}</span>
-                    <span>加载器：{modpack.loader ?? "--"}</span>
-                    <span>游戏版本：{modpack.gameVersion ?? "--"}</span>
-                    <span>Mods：{modpack.modsCount}</span>
-                    <span>文件大小：{formatFileSize(modpack.fileSize)}</span>
-                    <span>上传时间：{formatDate(modpack.createdAt)}</span>
-                    <span>{modpack.hasOverrides ? "含 overrides" : "无 overrides"}</span>
+                    <span>{t("modpackVersion", { value: modpack.version ?? "--" })}</span>
+                    <span>{t("modpackLoader", { value: modpack.loader ?? "--" })}</span>
+                    <span>{t("modpackGameVersion", { value: modpack.gameVersion ?? "--" })}</span>
+                    <span>{t("modpackMods", { count: modpack.modsCount })}</span>
+                    <span>{t("modpackFileSize", { size: formatFileSize(modpack.fileSize) })}</span>
+                    <span>{t("modpackUploadedAt", { time: formatDate(modpack.createdAt) })}</span>
+                    <span>
+                      {modpack.hasOverrides
+                        ? t("modpackWithOverrides")
+                        : t("modpackWithoutOverrides")}
+                    </span>
                   </div>
 
                   {modpack.summary && (
@@ -713,7 +730,7 @@ export default async function ServerDetailPage({ params }: Props) {
                       href={`/api/modpacks/${modpack.id}/download`}
                       className="rounded-xl border border-accent px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-muted"
                     >
-                      下载
+                      {t("modpackDownload")}
                     </a>
                     {isOwner && (
                       <DeleteModpackButton
