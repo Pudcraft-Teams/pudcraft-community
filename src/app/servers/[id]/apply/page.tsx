@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -27,6 +28,8 @@ export default function ApplyPage() {
   const { id } = useParams<{ id: string }>();
   const { status: authStatus } = useSession();
   const privateServersEnabled = isPrivateServersEnabled();
+  const t = useTranslations("servers.apply");
+  const tCommon = useTranslations("servers.common");
 
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
   const [membership, setMembership] = useState<MembershipStatus | null>(null);
@@ -61,31 +64,31 @@ export default function ApplyPage() {
       ]);
 
       if (serverRes.status === 404) {
-        setPageError("服务器未找到");
+        setPageError(t("serverNotFound"));
         return;
       }
 
       if (!serverRes.ok) {
-        setPageError("加载服务器信息失败，请稍后重试");
+        setPageError(t("loadFailedRetry"));
         return;
       }
 
       const serverBody = (await serverRes.json()) as { data?: Record<string, unknown> };
       const s = serverBody.data;
       if (!s) {
-        setPageError("加载服务器信息失败");
+        setPageError(t("loadFailed"));
         return;
       }
 
       const joinMode = typeof s.joinMode === "string" ? s.joinMode : "open";
 
       if (joinMode !== "apply" && joinMode !== "apply_and_invite") {
-        setPageError("该服务器不接受入服申请");
+        setPageError(t("notAcceptingApplication"));
         return;
       }
 
       setServerInfo({
-        name: typeof s.name === "string" ? s.name : "未知服务器",
+        name: typeof s.name === "string" ? s.name : t("unknownServer"),
         psid: typeof s.psid === "number" ? s.psid : 0,
         iconUrl: typeof s.iconUrl === "string" ? s.iconUrl : null,
         joinMode,
@@ -99,11 +102,11 @@ export default function ApplyPage() {
         setMembership(membershipBody);
       }
     } catch {
-      setPageError("网络异常，无法加载页面");
+      setPageError(t("networkError"));
     } finally {
       setIsLoading(false);
     }
-  }, [id, privateServersEnabled]);
+  }, [id, privateServersEnabled, t]);
 
   useEffect(() => {
     if (!privateServersEnabled) {
@@ -145,12 +148,10 @@ export default function ApplyPage() {
     return (
       <div className="mx-auto max-w-md px-4">
         <div className="m3-surface p-6 text-center">
-          <h1 className="text-lg font-semibold text-warm-800">当前未开放私有服务器申请</h1>
-          <p className="mt-2 text-sm text-warm-500">
-            站点当前未启用申请加入流程，详情页也不会继续展示该入口。
-          </p>
+          <h1 className="text-lg font-semibold text-warm-800">{t("featureDisabledHeading")}</h1>
+          <p className="mt-2 text-sm text-warm-500">{t("featureDisabledDescription")}</p>
           <Link href={`/servers/${id}`} className="m3-link mt-4 inline-block text-sm">
-            返回服务器详情
+            {t("backToDetail")}
           </Link>
         </div>
       </div>
@@ -160,7 +161,7 @@ export default function ApplyPage() {
   if (authStatus === "unauthenticated") {
     return (
       <div className="py-12 text-center text-sm text-warm-500">
-        正在跳转到登录页...
+        {tCommon("redirectingToLogin")}
       </div>
     );
   }
@@ -171,7 +172,7 @@ export default function ApplyPage() {
         <div className="m3-surface p-6 text-center">
           <p className="text-sm text-warm-600">{pageError}</p>
           <Link href="/" className="m3-link mt-4 inline-block text-sm">
-            &larr; 返回首页
+            &larr; {t("backHome")}
           </Link>
         </div>
       </div>
@@ -198,10 +199,10 @@ export default function ApplyPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
             </svg>
           </div>
-          <h2 className="text-lg font-semibold text-warm-800">你已是该服务器成员</h2>
-          <p className="mt-1 text-sm text-warm-500">无需再次申请</p>
+          <h2 className="text-lg font-semibold text-warm-800">{t("alreadyMember")}</h2>
+          <p className="mt-1 text-sm text-warm-500">{t("alreadyMemberHint")}</p>
           <Link href={serverDetailUrl} className="m3-link mt-4 inline-block text-sm">
-            返回服务器详情
+            {t("backToDetail")}
           </Link>
         </div>
       </div>
@@ -224,10 +225,10 @@ export default function ApplyPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h2 className="text-lg font-semibold text-warm-800">申请审核中</h2>
-          <p className="mt-1 text-sm text-warm-500">你已提交过申请，请等待服主审核</p>
+          <h2 className="text-lg font-semibold text-warm-800">{t("pendingTitle")}</h2>
+          <p className="mt-1 text-sm text-warm-500">{t("pendingHint")}</p>
           <Link href={serverDetailUrl} className="m3-link mt-4 inline-block text-sm">
-            返回服务器详情
+            {t("backToDetail")}
           </Link>
         </div>
       </div>
