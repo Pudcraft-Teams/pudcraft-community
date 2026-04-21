@@ -1,7 +1,12 @@
+// NOTE: These Chinese literals are persisted as part of the server's Markdown
+// `content` field and are parsed back out by `extractServerContentMetadata`.
+// Changing them would break parsing for every server already in the database.
+// They are effectively a storage format, not UI copy — do not translate.
 const META_HEADER = "## 基础信息";
 const VERSION_PREFIX = "- 游戏版本：";
 const MAX_PLAYERS_PREFIX = "- 最大玩家数：";
 const QQ_GROUP_PREFIX = "- QQ 群：";
+const VERSION_UNKNOWN_FALLBACK = "未知";
 
 export interface ServerContentMetadata {
   body: string;
@@ -28,7 +33,7 @@ export function buildServerContent({
   maxPlayers: number | undefined;
   qqGroup: string | undefined;
 }): string {
-  const normalizedVersion = version.trim() || "未知";
+  const normalizedVersion = version.trim() || VERSION_UNKNOWN_FALLBACK;
   const metadataLines = [`${VERSION_PREFIX}${normalizedVersion}`];
 
   if (typeof maxPlayers === "number") {

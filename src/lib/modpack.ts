@@ -1,3 +1,9 @@
+// TODO(i18n Batch 7 / residual sweep): the Chinese strings thrown from this
+// module surface to clients when mrpack parsing fails (the route handler wraps
+// them with `resolveErrorMessage(err, fallback)` and returns the original
+// message). They should be routed through translator keys in a later pass;
+// see docs/plans/2026-04-21-i18n-full-extraction.md.
+
 import { createHash } from "crypto";
 import path from "path";
 import yauzl from "yauzl";
