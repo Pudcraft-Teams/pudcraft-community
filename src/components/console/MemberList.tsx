@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
@@ -35,28 +36,34 @@ function parseMembersPayload(raw: unknown): MembersResponse {
   };
 }
 
-function resolveJoinMethodLabel(joinedVia: "apply" | "invite"): { label: string; className: string } {
+function resolveJoinMethodLabel(
+  joinedVia: "apply" | "invite",
+  t: ReturnType<typeof useTranslations>,
+): { label: string; className: string } {
   if (joinedVia === "apply") {
     return {
-      label: "申请加入",
+      label: t("joinMethodApply"),
       className: "bg-accent-muted text-accent ring-1 ring-accent/20",
     };
   }
 
   return {
-    label: "邀请加入",
+    label: t("joinMethodInvite"),
     className: "bg-accent-muted text-accent-hover ring-1 ring-accent-hover/20",
   };
 }
 
-function resolveSyncIndicator(status: SyncStatus | null): {
+function resolveSyncIndicator(
+  status: SyncStatus | null,
+  t: ReturnType<typeof useTranslations>,
+): {
   label: string;
   dotClassName: string;
   textClassName: string;
 } {
   if (status === "acked") {
     return {
-      label: "已同步",
+      label: t("syncAcked"),
       dotClassName: "bg-forest",
       textClassName: "text-forest",
     };
@@ -64,7 +71,7 @@ function resolveSyncIndicator(status: SyncStatus | null): {
 
   if (status === "pending" || status === "pushed") {
     return {
-      label: "同步中",
+      label: t("syncPending"),
       dotClassName: "bg-accent-hover",
       textClassName: "text-accent-hover",
     };
@@ -72,24 +79,25 @@ function resolveSyncIndicator(status: SyncStatus | null): {
 
   if (status === "failed") {
     return {
-      label: "同步失败",
+      label: t("syncFailed"),
       dotClassName: "bg-accent-hover",
       textClassName: "text-accent-hover",
     };
   }
 
   return {
-    label: "未同步",
+    label: t("syncNone"),
     dotClassName: "bg-warm-400",
     textClassName: "text-warm-500",
   };
 }
 
 /**
- * 服务器成员列表组件。
- * 支持分页查看、同步状态指示和移除成员操作。
+ * Server member list component.
+ * Supports paginated viewing, sync-status indicator, and member removal.
  */
 export function MemberList({ serverId }: MemberListProps) {
+  const t = useTranslations("console.members");
   const confirm = useConfirm();
   const [members, setMembers] = useState<ServerMemberItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -112,7 +120,7 @@ export function MemberList({ serverId }: MemberListProps) {
         const payload = parseMembersPayload(await response.json().catch(() => ({})));
 
         if (!response.ok) {
-          throw new Error(payload.error ?? "成员列表加载失败");
+          throw new Error(payload.error ?? t("loadFailed"));
         }
 
         setMembers(payload.members ?? []);
@@ -120,13 +128,13 @@ export function MemberList({ serverId }: MemberListProps) {
         setPage(payload.page ?? targetPage);
         setTotalPages(payload.totalPages ?? 1);
       } catch (fetchError) {
-        const message = fetchError instanceof Error ? fetchError.message : "成员列表加载失败";
+        const message = fetchError instanceof Error ? fetchError.message : t("loadFailed");
         setError(message);
       } finally {
         setIsLoading(false);
       }
     },
-    [serverId],
+    [serverId, t],
   );
 
   useEffect(() => {
@@ -143,7 +151,7 @@ export function MemberList({ serverId }: MemberListProps) {
         const payload = parseMembersPayload(await response.json().catch(() => ({})));
 
         if (!response.ok) {
-          throw new Error(payload.error ?? "成员列表加载失败");
+          throw new Error(payload.error ?? t("loadFailed"));
         }
 
         if (!cancelled) {
@@ -154,7 +162,7 @@ export function MemberList({ serverId }: MemberListProps) {
         }
       } catch (fetchError) {
         if (!cancelled) {
-          const message = fetchError instanceof Error ? fetchError.message : "成员列表加载失败";
+          const message = fetchError instanceof Error ? fetchError.message : t("loadFailed");
           setError(message);
         }
       } finally {
@@ -169,13 +177,13 @@ export function MemberList({ serverId }: MemberListProps) {
     return () => {
       cancelled = true;
     };
-  }, [serverId]);
+  }, [serverId, t]);
 
   async function handleRemove(memberId: string) {
     const confirmed = await confirm({
-      title: "移除成员",
-      message: "确定要移除该成员吗？",
-      confirmText: "移除",
+      title: t("removeConfirmTitle"),
+      message: t("removeConfirmMessage"),
+      confirmText: t("removeAction"),
       danger: true,
     });
     if (!confirmed) {
@@ -194,13 +202,13 @@ export function MemberList({ serverId }: MemberListProps) {
         const payload = await response.json().catch(() => ({}));
         const errorPayload = payload as Record<string, unknown>;
         throw new Error(
-          typeof errorPayload.error === "string" ? errorPayload.error : "移除成员失败",
+          typeof errorPayload.error === "string" ? errorPayload.error : t("removeFailed"),
         );
       }
 
       await fetchMembers(page);
     } catch (removeError) {
-      const message = removeError instanceof Error ? removeError.message : "移除成员失败";
+      const message = removeError instanceof Error ? removeError.message : t("removeFailed");
       setError(message);
     } finally {
       setRemovingId(null);
@@ -210,9 +218,9 @@ export function MemberList({ serverId }: MemberListProps) {
   return (
     <section className="m3-surface p-4 sm:p-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-warm-800">成员管理</h2>
+        <h2 className="text-lg font-semibold text-warm-800">{t("title")}</h2>
         {total > 0 && (
-          <span className="text-sm text-warm-500">{total} 名成员</span>
+          <span className="text-sm text-warm-500">{t("totalMembers", { count: total })}</span>
         )}
       </div>
 
@@ -224,18 +232,18 @@ export function MemberList({ serverId }: MemberListProps) {
 
       {isLoading ? (
         <div className="mt-4 flex justify-center py-8">
-          <LoadingSpinner text="加载成员列表..." />
+          <LoadingSpinner text={t("loading")} />
         </div>
       ) : members.length === 0 ? (
         <div className="mt-4">
-          <EmptyState title="暂无成员" description="还没有成员加入该服务器" />
+          <EmptyState title={t("emptyTitle")} description={t("emptyDescription")} />
         </div>
       ) : (
         <>
           <div className="mt-4 space-y-2">
             {members.map((member) => {
-              const joinMethod = resolveJoinMethodLabel(member.joinedVia);
-              const syncIndicator = resolveSyncIndicator(member.syncStatus);
+              const joinMethod = resolveJoinMethodLabel(member.joinedVia, t);
+              const syncIndicator = resolveSyncIndicator(member.syncStatus, t);
 
               return (
                 <div
@@ -252,7 +260,7 @@ export function MemberList({ serverId }: MemberListProps) {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-sm font-medium text-warm-800">
-                          {member.userName ?? "未知用户"}
+                          {member.userName ?? t("userFallback")}
                         </span>
                         {member.mcUsername && (
                           <span className="rounded bg-warm-100 px-1.5 py-0.5 font-mono text-xs text-warm-500">
@@ -275,7 +283,7 @@ export function MemberList({ serverId }: MemberListProps) {
                           </span>
                         </span>
                         <span className="text-xs text-warm-500">
-                          {timeAgo(member.createdAt)} 加入
+                          {t("joinedAgo", { time: timeAgo(member.createdAt) })}
                         </span>
                       </div>
                     </div>
@@ -286,7 +294,7 @@ export function MemberList({ serverId }: MemberListProps) {
                     disabled={removingId === member.id}
                     className="m3-btn rounded-lg border border-accent-hover/20 bg-surface px-3 py-1.5 text-xs text-accent-hover transition-colors hover:bg-accent-muted"
                   >
-                    {removingId === member.id ? "移除中..." : "移除"}
+                    {removingId === member.id ? t("removing") : t("removeAction")}
                   </button>
                 </div>
               );
@@ -302,7 +310,7 @@ export function MemberList({ serverId }: MemberListProps) {
                 disabled={page <= 1 || isLoading}
                 className="m3-btn rounded-lg border border-warm-200 bg-surface px-3 py-1.5 text-sm text-warm-800 transition-colors hover:bg-warm-50 disabled:opacity-40"
               >
-                上一页
+                {t("pageNavPrev")}
               </button>
               <span className="text-sm text-warm-500">
                 {page} / {totalPages}
@@ -313,7 +321,7 @@ export function MemberList({ serverId }: MemberListProps) {
                 disabled={page >= totalPages || isLoading}
                 className="m3-btn rounded-lg border border-warm-200 bg-surface px-3 py-1.5 text-sm text-warm-800 transition-colors hover:bg-warm-50 disabled:opacity-40"
               >
-                下一页
+                {t("pageNavNext")}
               </button>
             </div>
           )}
