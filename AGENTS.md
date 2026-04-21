@@ -1,4 +1,8 @@
-# Pudcraft Community
+# AGENTS.md
+
+This file provides guidance to AI coding agents that follow the `AGENTS.md` convention (Codex CLI, OpenCode, Cursor, Aider, Continue, Zed, and other tools that auto-load `AGENTS.md`) when working with code in this repository. Claude Code reads the same content from `CLAUDE.md` — the two files are kept byte-identical from the `## Read this first` section onwards, so pick whichever your tool loads and trust it.
+
+## Overview
 
 Pudcraft Community is currently a server-only Minecraft server community platform. The live product surface only covers server discovery, submission, claiming, comments, favorites, private-server membership flow, notifications, changelog, and the admin console. Historical forum / MoltBook features have been removed from this branch and must not be treated as live capabilities, developed against, or documented as current behavior.
 
@@ -279,6 +283,16 @@ Database conventions:
 
 ## Documentation rules
 
-- Whenever product scope, routes, models, or APIs change, update `AGENTS.md`, `CLAUDE.md`, `docs/API.md`, and `docs/PRD.md` together
-- Changes that affect the live surface must not be reflected only in historical design notes
-- If documentation and code disagree, code and live routes win — correct the docs immediately
+- `AGENTS.md` and `CLAUDE.md` are kept byte-identical from the `## Read this first` section onwards. Only the opening title + intro paragraph differ. Edit both in the same change; never let them drift.
+- Whenever product scope, routes, models, or APIs change, update `AGENTS.md`, `CLAUDE.md`, `docs/API.md`, and `docs/PRD.md` **in the same commit / PR as the code change**. Doc drift is a bug, not a follow-up.
+- Before marking any task complete, run a doc pass: "what did I change that a future reader (or a future Claude session) needs to know?" If the answer is anything other than "nothing", update the docs now.
+- Changes that affect the live surface must not be reflected only in historical design notes.
+- If documentation and code disagree, code and live routes win — correct the docs immediately.
+
+## Past mistakes — do not repeat
+
+Record concrete mistakes here so the same one does not happen twice. When a new mistake is caught (by review, by the user, by a CI / test failure that traces back to a missed assumption), append an entry here in **both** `CLAUDE.md` and `AGENTS.md`. Keep entries short: what went wrong, why it happened, what to do next time.
+
+- **Scope creep through documentation (PRs #55, #56).** Forum / MoltBook features were designed, partially built, and documented as live even after the product decision to stay server-only. A full rollback was required. Next time: if a capability is not in the "Product scope" block above, do not build it, do not wire routes / APIs for it, and do not describe it as current behavior. A scope change must land in `CLAUDE.md` / `AGENTS.md` / `docs/PRD.md` **before** code.
+- **Docs drifting from code.** `docs/API.md`, `docs/PRD.md`, `CLAUDE.md`, and `AGENTS.md` were not updated in the same change as code, so later readers (including Claude itself) treated stale guidance as current and kept building on top of it. Next time: any PR that changes routes / models / APIs / scope must touch these four docs in the same PR, or explicitly call out why it does not.
+- **Letting `CLAUDE.md` and `AGENTS.md` diverge.** One was updated, the other was not, producing contradictory guidance depending on which tool opened the repo. Next time: after editing either file, diff them — everything from `## Read this first` down must match byte-for-byte.
