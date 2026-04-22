@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 import { DeleteModpackButton } from "@/components/DeleteModpackButton";
 import { PageLoading } from "@/components/PageLoading";
 import { useToast } from "@/hooks/useToast";
+import { defaultLocale, isLocale } from "@/i18n/config";
 import type { ModpackItem, ServerDetailResponse, ServerModpackListResponse } from "@/lib/types";
 
 interface ApiPayload {
@@ -39,13 +40,14 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-function formatDate(dateString: string): string {
+function formatDate(dateString: string, locale: string): string {
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) {
     return "--";
   }
 
-  return new Intl.DateTimeFormat("zh-CN", {
+  const intlLocale = locale === "en" ? "en-US" : "zh-CN";
+  return new Intl.DateTimeFormat(intlLocale, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -65,6 +67,8 @@ export default function ServerModpacksPage() {
   const { toast } = useToast();
   const t = useTranslations("modpacks");
   const tCommon = useTranslations("servers.common");
+  const rawLocale = useLocale();
+  const appLocale = isLocale(rawLocale) ? rawLocale : defaultLocale;
 
   const [isLoading, setIsLoading] = useState(true);
   const [isForbidden, setIsForbidden] = useState(false);
@@ -350,7 +354,7 @@ export default function ServerModpacksPage() {
                   <span>{t("gameVersionField", { value: modpack.gameVersion ?? "--" })}</span>
                   <span>{t("modsField", { count: modpack.modsCount })}</span>
                   <span>{t("sizeField", { size: formatFileSize(modpack.fileSize) })}</span>
-                  <span>{t("uploadedAtField", { time: formatDate(modpack.createdAt) })}</span>
+                  <span>{t("uploadedAtField", { time: formatDate(modpack.createdAt, appLocale) })}</span>
                 </div>
 
                 {modpack.summary && (
