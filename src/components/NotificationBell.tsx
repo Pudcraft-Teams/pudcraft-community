@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { defaultLocale, isLocale } from "@/i18n/config";
 import { timeAgo } from "@/lib/time";
 import type {
   MarkNotificationsReadResponse,
@@ -41,6 +42,8 @@ function markLocalAsRead(
 export function NotificationBell() {
   const router = useRouter();
   const t = useTranslations("notifications.bell");
+  const rawLocale = useLocale();
+  const appLocale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
   const [serverUnreadCount, setServerUnreadCount] = useState(0);
@@ -283,7 +286,7 @@ export function NotificationBell() {
                       {notification.message}
                     </span>
                     <span className="mt-1 block text-xs text-warm-400">
-                      {timeAgo(notification.createdAt)}
+                      {timeAgo(notification.createdAt, appLocale)}
                     </span>
                   </span>
                 </button>

@@ -2,11 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { PageLoading } from "@/components/PageLoading";
 import { useToast } from "@/hooks/useToast";
+import { defaultLocale, isLocale } from "@/i18n/config";
 import { timeAgo } from "@/lib/time";
 import type {
   MarkNotificationsReadResponse,
@@ -54,6 +55,8 @@ export default function NotificationsPage() {
   const { status } = useSession();
   const { toast } = useToast();
   const t = useTranslations("notifications.page");
+  const rawLocale = useLocale();
+  const appLocale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [total, setTotal] = useState(0);
@@ -235,7 +238,7 @@ export default function NotificationsPage() {
                       {notification.message}
                     </span>
                     <span className="mt-1 block text-xs text-warm-400">
-                      {timeAgo(notification.createdAt)}
+                      {timeAgo(notification.createdAt, appLocale)}
                     </span>
                   </span>
                 </button>
