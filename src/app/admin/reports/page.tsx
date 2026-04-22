@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useToast } from "@/hooks/useToast";
 import { timeAgo } from "@/lib/time";
 import { PageLoading } from "@/components/PageLoading";
+import { defaultLocale, isLocale } from "@/i18n/config";
 
 type StatusKey = "pending" | "resolved" | "dismissed" | "all";
 type TargetTypeKey = "all" | "server" | "comment" | "user";
@@ -70,6 +71,8 @@ interface ReportItem {
 
 export default function AdminReportsPage() {
   const t = useTranslations("admin.reports");
+  const rawLocale = useLocale();
+  const appLocale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const { toast } = useToast();
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
@@ -272,7 +275,7 @@ export default function AdminReportsPage() {
                     }`}
                   >
                     <td className="whitespace-nowrap px-4 py-3 text-xs text-warm-500">
-                      {timeAgo(report.createdAt)}
+                      {timeAgo(report.createdAt, appLocale)}
                     </td>
                     <td className="px-4 py-3">
                       <span className="inline-block rounded-md bg-warm-100 px-2 py-0.5 text-xs font-medium text-warm-700">
