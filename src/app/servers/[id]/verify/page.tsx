@@ -1,11 +1,12 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PageLoading } from "@/components/PageLoading";
+import { defaultLocale, isLocale } from "@/i18n/config";
 
 // ─── Types ─────────────────────────────────────
 
@@ -53,11 +54,12 @@ function splitRemainingTime(remainingMs: number): { minutes: number; seconds: st
   return { minutes, seconds: String(seconds).padStart(2, "0") };
 }
 
-function formatDateTime(dateString: string | null): string | null {
+function formatDateTime(dateString: string | null, locale: string): string | null {
   if (!dateString) return null;
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return null;
-  return new Intl.DateTimeFormat("zh-CN", {
+  const intlLocale = locale === "en" ? "en-US" : "zh-CN";
+  return new Intl.DateTimeFormat(intlLocale, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -81,6 +83,8 @@ export default function ServerVerifyPage() {
   const tMotd = useTranslations("servers.verify.motd");
   const tPlugin = useTranslations("servers.verify.plugin");
   const tCommon = useTranslations("servers.common");
+  const rawLocale = useLocale();
+  const appLocale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const formatRemainingTime = useCallback(
     (remainingMs: number) => {
       const { minutes, seconds } = splitRemainingTime(remainingMs);
@@ -275,7 +279,7 @@ export default function ServerVerifyPage() {
   const pluginRemainingMs = useMemo(() => (pluginExpiresAtTs ? pluginExpiresAtTs - tick : 0), [pluginExpiresAtTs, tick]);
   const isPluginKeyExpired = !!pluginExpiresAtTs && pluginRemainingMs <= 0;
 
-  const verifiedAtLabel = formatDateTime(verifyState.verifiedAt);
+  const verifiedAtLabel = formatDateTime(verifyState.verifiedAt, appLocale);
   const isVerifiedByCurrentUser = verifyState.isVerified && verifyState.isCurrentOwner;
   const isManagedByAnotherUser = verifyState.hasOwner && !verifyState.isCurrentOwner;
 
