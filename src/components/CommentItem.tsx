@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useToast } from "@/hooks/useToast";
+import { defaultLocale, isLocale } from "@/i18n/config";
 import { timeAgo } from "@/lib/time";
 import type { CommentAuthor, CommentReply, ServerComment } from "@/lib/types";
 
@@ -48,6 +49,8 @@ export function CommentItem({
   const { toast } = useToast();
   const confirmAction = useConfirm();
   const t = useTranslations("comments");
+  const rawLocale = useLocale();
+  const appLocale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const displayAuthorName = (author: Pick<CommentAuthor, "name">): string => {
     if (author.name && author.name.trim().length > 0) {
       return author.name.trim();
@@ -149,7 +152,7 @@ export function CommentItem({
             {displayAuthorName(comment.author)}
           </Link>
         </div>
-        <span className="text-sm text-warm-500">{timeAgo(comment.createdAt)}</span>
+        <span className="text-sm text-warm-500">{timeAgo(comment.createdAt, appLocale)}</span>
       </div>
 
       <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-warm-700">
@@ -253,7 +256,7 @@ export function CommentItem({
                     {displayAuthorName(reply.author)}
                   </Link>
                 </div>
-                <span className="text-sm text-warm-500">{timeAgo(reply.createdAt)}</span>
+                <span className="text-sm text-warm-500">{timeAgo(reply.createdAt, appLocale)}</span>
               </div>
               <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-warm-700">
                 {reply.content}
