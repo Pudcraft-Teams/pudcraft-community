@@ -195,7 +195,10 @@ export async function GET(request: Request, { params }: RouteContext) {
 
     if (!parsedQuery.success) {
       return NextResponse.json(
-        { error: tCommon("validationFailed"), details: parsedQuery.error.flatten() },
+        {
+          error: tCommon("validationFailed"),
+          details: flattenZodErrorWithLocale(parsedQuery.error, locale),
+        },
         { status: 400 },
       );
     }

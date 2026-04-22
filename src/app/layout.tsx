@@ -7,12 +7,23 @@ import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { AuthButtons, MobileNavMenu } from "@/components/AuthButtons";
 import { HeaderSearch } from "@/components/HeaderSearch";
 import { Providers } from "@/components/Providers";
-import { isLocale, localeHtmlLang } from "@/i18n/config";
+import { defaultLocale, isLocale, localeHtmlLang, type Locale } from "@/i18n/config";
 import "@/styles/globals.css";
 import "cropperjs/dist/cropper.css";
 
+const openGraphLocaleByAppLocale: Record<Locale, string> = {
+  zh: "zh_CN",
+  en: "en_US",
+};
+
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("metadata");
+  const rawLocale = await getLocale();
+  const appLocale = isLocale(rawLocale) ? rawLocale : defaultLocale;
+  const ogLocale = openGraphLocaleByAppLocale[appLocale];
+  const alternateLocales = (Object.keys(openGraphLocaleByAppLocale) as Locale[])
+    .filter((candidate) => candidate !== appLocale)
+    .map((candidate) => openGraphLocaleByAppLocale[candidate]);
 
   return {
     metadataBase: new URL("https://pudcraft.cn"),
@@ -25,7 +36,8 @@ export async function generateMetadata(): Promise<Metadata> {
     authors: [{ name: "PudCraft" }],
     openGraph: {
       type: "website",
-      locale: "zh_CN",
+      locale: ogLocale,
+      alternateLocale: alternateLocales,
       siteName: t("siteName"),
       title: t("title"),
       description: t("description"),

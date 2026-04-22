@@ -6,7 +6,7 @@ import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { isPrivateServersEnabled } from "@/lib/features";
-import { getZodErrorMap } from "@/lib/i18nZod";
+import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { resolveServerCuid } from "@/lib/lookup";
 import { getPublicUrl } from "@/lib/storage";
@@ -70,7 +70,10 @@ export async function GET(request: Request, { params }: RouteContext) {
     });
     if (!parsedQuery.success) {
       return NextResponse.json(
-        { error: tCommon("validationFailed"), details: parsedQuery.error.flatten() },
+        {
+          error: tCommon("validationFailed"),
+          details: flattenZodErrorWithLocale(parsedQuery.error, locale),
+        },
         { status: 400 },
       );
     }

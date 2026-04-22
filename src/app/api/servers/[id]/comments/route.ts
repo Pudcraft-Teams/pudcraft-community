@@ -6,6 +6,7 @@ import { getRequestLocale } from "@/i18n/locale";
 import { auth } from "@/lib/auth";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
+import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { moderateContent } from "@/lib/moderation";
 import { createTranslatedNotification } from "@/lib/notification";
@@ -169,13 +170,19 @@ export async function GET(request: Request, { params }: RouteContext) {
     }
 
     const { searchParams } = new URL(request.url);
-    const parsedQuery = queryCommentsSchema.safeParse({
-      page: searchParams.get("page") ?? undefined,
-      limit: searchParams.get("limit") ?? undefined,
-    });
+    const parsedQuery = queryCommentsSchema.safeParse(
+      {
+        page: searchParams.get("page") ?? undefined,
+        limit: searchParams.get("limit") ?? undefined,
+      },
+      { errorMap: getZodErrorMap(locale) },
+    );
     if (!parsedQuery.success) {
       return NextResponse.json(
-        { error: tCommon("validationFailed"), details: parsedQuery.error.flatten() },
+        {
+          error: tCommon("validationFailed"),
+          details: flattenZodErrorWithLocale(parsedQuery.error, locale),
+        },
         { status: 400 },
       );
     }
@@ -357,7 +364,10 @@ export async function POST(request: Request, { params }: RouteContext) {
     const parsedBody = createCommentSchema.safeParse(body);
     if (!parsedBody.success) {
       return NextResponse.json(
-        { error: tCommon("validationFailed"), details: parsedBody.error.flatten() },
+        {
+          error: tCommon("validationFailed"),
+          details: flattenZodErrorWithLocale(parsedBody.error, locale),
+        },
         { status: 400 },
       );
     }

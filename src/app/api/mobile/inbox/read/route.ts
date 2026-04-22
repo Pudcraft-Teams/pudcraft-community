@@ -5,7 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
-import { getZodErrorMap } from "@/lib/i18nZod";
+import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { buildMobileInboxUnreadSummary } from "@/lib/mobile/inboxFacade";
 import { markNotificationsReadSchema } from "@/lib/validation";
@@ -26,7 +26,10 @@ export async function POST(request: Request) {
     });
     if (!parsedBody.success) {
       return NextResponse.json(
-        { error: tCommon("validationFailed"), details: parsedBody.error.flatten() },
+        {
+          error: tCommon("validationFailed"),
+          details: flattenZodErrorWithLocale(parsedBody.error, locale),
+        },
         { status: 400 },
       );
     }

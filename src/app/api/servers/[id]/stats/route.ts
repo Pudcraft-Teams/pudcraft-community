@@ -5,6 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
+import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { resolveServerCuid } from "@/lib/lookup";
 import { queryServerStatsSchema, serverLookupIdSchema } from "@/lib/validation";
@@ -258,12 +259,18 @@ export async function GET(request: Request, { params }: RouteContext) {
     }
 
     const { searchParams } = new URL(request.url);
-    const parsedQuery = queryServerStatsSchema.safeParse({
-      period: searchParams.get("period") ?? undefined,
-    });
+    const parsedQuery = queryServerStatsSchema.safeParse(
+      {
+        period: searchParams.get("period") ?? undefined,
+      },
+      { errorMap: getZodErrorMap(locale) },
+    );
     if (!parsedQuery.success) {
       return NextResponse.json(
-        { error: tCommon("validationFailed"), details: parsedQuery.error.flatten() },
+        {
+          error: tCommon("validationFailed"),
+          details: flattenZodErrorWithLocale(parsedQuery.error, locale),
+        },
         { status: 400 },
       );
     }

@@ -2,6 +2,7 @@ import { createTranslator } from "next-intl";
 import { NextResponse } from "next/server";
 import type { Locale } from "@/i18n/config";
 import { getRequestLocale } from "@/i18n/locale";
+import { flattenZodErrorWithLocale } from "@/lib/i18nZod";
 import { getForwardedClientIpHeaders } from "@/lib/request-ip";
 import { loginSchema } from "@/lib/validation";
 import enMessages from "../../../messages/en.json";
@@ -273,7 +274,7 @@ export async function handleMobileLoginPost(request: Request, deps: MobileLoginP
   const parsed = loginSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: tCommon("validationFailed"), details: parsed.error.flatten() },
+      { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
       { status: 400 },
     );
   }
