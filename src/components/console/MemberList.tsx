@@ -1,11 +1,12 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { UserAvatar } from "@/components/UserAvatar";
+import { defaultLocale, isLocale } from "@/i18n/config";
 import { timeAgo } from "@/lib/time";
 import type { ServerMemberItem, SyncStatus } from "@/lib/types";
 
@@ -98,6 +99,8 @@ function resolveSyncIndicator(
  */
 export function MemberList({ serverId }: MemberListProps) {
   const t = useTranslations("console.members");
+  const rawLocale = useLocale();
+  const appLocale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const confirm = useConfirm();
   const [members, setMembers] = useState<ServerMemberItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -283,7 +286,7 @@ export function MemberList({ serverId }: MemberListProps) {
                           </span>
                         </span>
                         <span className="text-xs text-warm-500">
-                          {t("joinedAgo", { time: timeAgo(member.createdAt) })}
+                          {t("joinedAgo", { time: timeAgo(member.createdAt, appLocale) })}
                         </span>
                       </div>
                     </div>

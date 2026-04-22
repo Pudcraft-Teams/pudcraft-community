@@ -1,9 +1,10 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { Pagination } from "@/components/Pagination";
 import { UserAvatar } from "@/components/UserAvatar";
+import { defaultLocale, isLocale } from "@/i18n/config";
 import { timeAgo } from "@/lib/time";
 import type { ApplicationStatus, ServerApplicationItem } from "@/lib/types";
 
@@ -88,6 +89,8 @@ function resolveUserName(
  */
 export function ApplicationList({ serverId }: ApplicationListProps) {
   const t = useTranslations("console.applications");
+  const rawLocale = useLocale();
+  const appLocale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const [activeTab, setActiveTab] = useState<TabStatus>("pending");
   const [page, setPage] = useState(1);
   const [applications, setApplications] = useState<ServerApplicationItem[]>([]);
@@ -283,7 +286,7 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
 
                 <div className="flex shrink-0 items-center gap-2">
                   <StatusBadge status={app.status} t={t} />
-                  <span className="text-xs text-warm-400">{timeAgo(app.createdAt)}</span>
+                  <span className="text-xs text-warm-400">{timeAgo(app.createdAt, appLocale)}</span>
                 </div>
               </div>
 

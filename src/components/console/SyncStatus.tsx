@@ -1,7 +1,8 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { defaultLocale, isLocale } from "@/i18n/config";
 import { timeAgo } from "@/lib/time";
 
 import type { SyncStatusOverview, WhitelistSyncItem } from "@/lib/types";
@@ -66,6 +67,8 @@ function parseSyncOverview(raw: unknown): SyncStatusOverview | null {
  */
 export function SyncStatus({ serverId }: SyncStatusProps) {
   const t = useTranslations("console.sync");
+  const rawLocale = useLocale();
+  const appLocale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const [overview, setOverview] = useState<SyncStatusOverview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -194,7 +197,7 @@ export function SyncStatus({ serverId }: SyncStatusProps) {
           <div className="flex items-center gap-2">
             <span className="text-warm-500">{t("lastAckedLabel")}</span>
             <span className="font-medium text-warm-800">
-              {timeAgo(overview.lastAckedAt)}
+              {timeAgo(overview.lastAckedAt, appLocale)}
             </span>
           </div>
         )}
@@ -231,7 +234,7 @@ export function SyncStatus({ serverId }: SyncStatusProps) {
                       </span>
                     </td>
                     <td className="py-2.5 text-warm-500">
-                      {timeAgo(sync.createdAt)}
+                      {timeAgo(sync.createdAt, appLocale)}
                     </td>
                   </tr>
                 );

@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { UserAvatar } from "@/components/UserAvatar";
+import { defaultLocale, isLocale } from "@/i18n/config";
 import { timeAgo } from "@/lib/time";
 import type { ServerComment } from "@/lib/types";
 
@@ -46,6 +47,8 @@ function resolveAuthorName(
  */
 export function RecentComments({ serverId }: RecentCommentsProps) {
   const t = useTranslations("console.recentComments");
+  const rawLocale = useLocale();
+  const appLocale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const [comments, setComments] = useState<ServerComment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -118,7 +121,7 @@ export function RecentComments({ serverId }: RecentCommentsProps) {
                   <p className="line-clamp-1 text-sm text-warm-600">{comment.content}</p>
                 </div>
               </div>
-              <span className="shrink-0 text-xs text-warm-500">{timeAgo(comment.createdAt)}</span>
+              <span className="shrink-0 text-xs text-warm-500">{timeAgo(comment.createdAt, appLocale)}</span>
             </div>
           ))}
         </div>

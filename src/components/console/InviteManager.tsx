@@ -1,9 +1,10 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { defaultLocale, isLocale } from "@/i18n/config";
 import { timeAgo } from "@/lib/time";
 import type { ServerInviteItem } from "@/lib/types";
 
@@ -107,6 +108,8 @@ function isExpired(expiresAt: string | null): boolean {
  */
 export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
   const t = useTranslations("console.invites");
+  const rawLocale = useLocale();
+  const appLocale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const confirm = useConfirm();
   const [invites, setInvites] = useState<ServerInviteItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -361,7 +364,7 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
                       <span>{t("creator", { name: invite.creatorName })}</span>
                     )}
                     <span>{formatExpiry(invite.expiresAt, t)}</span>
-                    <span>{t("createdAgo", { time: timeAgo(invite.createdAt) })}</span>
+                    <span>{t("createdAgo", { time: timeAgo(invite.createdAt, appLocale) })}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -412,7 +415,7 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
                     </span>
                   </div>
                   <div className="mt-1 text-xs text-warm-400">
-                    {t("expiredSummary", { time: timeAgo(invite.createdAt) })}
+                    {t("expiredSummary", { time: timeAgo(invite.createdAt, appLocale) })}
                   </div>
                 </div>
                 <button
