@@ -179,6 +179,8 @@ export function RichTextEditor({
         heading: {
           levels: [2, 3],
         },
+        link: false,
+        underline: false,
       }),
       Underline,
       Link.configure({

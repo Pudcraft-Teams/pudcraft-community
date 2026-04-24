@@ -9,7 +9,7 @@ import { auth } from "@/lib/auth";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { translateImageValidationError } from "@/lib/i18nImage";
-import { flattenZodErrorWithLocale } from "@/lib/i18nZod";
+import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { resolveServerCuid } from "@/lib/lookup";
 import {
@@ -266,11 +266,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       }
     }
 
-    const parsed = updateServerSchema.safeParse(payload);
+    const parsed = updateServerSchema.safeParse(payload, {
+      errorMap: getZodErrorMap(locale),
+    });
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
+        {
+          error: tCommon("validationFailed"),
+          details: flattenZodErrorWithLocale(parsed.error, locale),
+        },
         { status: 400 },
       );
     }

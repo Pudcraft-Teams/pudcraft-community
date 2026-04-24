@@ -35,7 +35,7 @@ Exceptions — keep as-is, do not rewrite:
 ## Internationalization (i18n)
 
 - Library: `next-intl`. Messages live in `messages/zh.json` (default) and `messages/en.json`. Config is under `src/i18n/`.
-- Locale is resolved per request from the `NEXT_LOCALE` cookie, then `Accept-Language`, then falls back to `zh`. No URL prefix yet — adding path-based routing (`/en/...`) is a follow-up once English is ready to launch.
+- Locale is resolved per request from the `x-locale` header, then the `NEXT_LOCALE` cookie, then the best supported `Accept-Language` match by q-value, then falls back to `zh`. No URL prefix yet — adding path-based routing (`/en/...`) is a follow-up once English is ready to launch.
 - Every user-visible string in `.tsx` components must resolve through `useTranslations` (client) or `getTranslations` (server). Do not inline new Chinese or English UI copy in migrated files; new components should use translation keys from day one.
 - When adding a key, add it to **both** `messages/zh.json` and `messages/en.json` in the same change. English may be a draft, but the key must exist.
 - Do not extract `logger.*`, thrown `Error` messages, commit messages, code comments, or docs — those stay in English per the Written output language rules.

@@ -65,6 +65,15 @@ test("resolveLocaleFrom: picks en from multi-token when it's deeper in list", ()
   assert.equal(locale, "en");
 });
 
+test("resolveLocaleFrom: honors q-values over token order", () => {
+  const locale = resolveLocaleFrom({
+    header: null,
+    cookie: null,
+    acceptLanguage: "en-US;q=0.1,zh-CN;q=1.0",
+  });
+  assert.equal(locale, "zh");
+});
+
 test("resolveLocaleFrom: picks zh when en is absent but zh present in multi-token", () => {
   const locale = resolveLocaleFrom({
     header: null,

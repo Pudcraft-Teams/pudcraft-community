@@ -2,7 +2,7 @@ import { createTranslator } from "next-intl";
 import { NextResponse } from "next/server";
 import type { Locale } from "@/i18n/config";
 import { getRequestLocale } from "@/i18n/locale";
-import { flattenZodErrorWithLocale } from "@/lib/i18nZod";
+import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { getForwardedClientIpHeaders } from "@/lib/request-ip";
 import { loginSchema } from "@/lib/validation";
 import enMessages from "../../../messages/en.json";
@@ -271,10 +271,15 @@ export async function handleMobileLoginPost(request: Request, deps: MobileLoginP
   const { common: tCommon, auth: tAuth } = getSessionFacadeTranslators(locale);
   const fetchImpl = deps.fetchImpl ?? fetch;
   const body = await request.json().catch(() => null);
-  const parsed = loginSchema.safeParse(body);
+  const parsed = loginSchema.safeParse(body, {
+    errorMap: getZodErrorMap(locale),
+  });
   if (!parsed.success) {
     return NextResponse.json(
-      { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
+      {
+        error: tCommon("validationFailed"),
+        details: flattenZodErrorWithLocale(parsed.error, locale),
+      },
       { status: 400 },
     );
   }

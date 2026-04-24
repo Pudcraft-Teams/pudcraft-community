@@ -9,7 +9,7 @@ import { auth } from "@/lib/auth";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { translateImageValidationError } from "@/lib/i18nImage";
-import { flattenZodErrorWithLocale } from "@/lib/i18nZod";
+import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { generateAndReservePsid } from "@/lib/numeric-id";
 import { getClientIp } from "@/lib/request-ip";
@@ -88,19 +88,25 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
 
     // ─── Zod 输入校验 ───
-    const parsed = queryServersSchema.safeParse({
-      page: searchParams.get("page") ?? undefined,
-      limit: searchParams.get("limit") ?? undefined,
-      pageSize: searchParams.get("pageSize") ?? undefined,
-      tag: searchParams.get("tag") ?? undefined,
-      search: searchParams.get("search") ?? undefined,
-      sort: searchParams.get("sort") ?? undefined,
-      ownerId: searchParams.get("ownerId") ?? undefined,
-    });
+    const parsed = queryServersSchema.safeParse(
+      {
+        page: searchParams.get("page") ?? undefined,
+        limit: searchParams.get("limit") ?? undefined,
+        pageSize: searchParams.get("pageSize") ?? undefined,
+        tag: searchParams.get("tag") ?? undefined,
+        search: searchParams.get("search") ?? undefined,
+        sort: searchParams.get("sort") ?? undefined,
+        ownerId: searchParams.get("ownerId") ?? undefined,
+      },
+      { errorMap: getZodErrorMap(locale) },
+    );
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
+        {
+          error: tCommon("validationFailed"),
+          details: flattenZodErrorWithLocale(parsed.error, locale),
+        },
         { status: 400 },
       );
     }
@@ -255,22 +261,28 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const maxPlayersRaw = extractOptionalTextField(formData, "maxPlayers");
 
-    const parsed = createServerSchema.safeParse({
-      name: extractTextField(formData, "name"),
-      address: extractTextField(formData, "address"),
-      port: extractTextField(formData, "port"),
-      version: extractTextField(formData, "version"),
-      tags: extractTextField(formData, "tags"),
-      description: extractTextField(formData, "description") ?? "",
-      content: extractTextField(formData, "content") ?? "",
-      maxPlayers: maxPlayersRaw,
-      qqGroup: extractTextField(formData, "qqGroup") ?? "",
-      visibility: extractOptionalTextField(formData, "visibility"),
-    });
+    const parsed = createServerSchema.safeParse(
+      {
+        name: extractTextField(formData, "name"),
+        address: extractTextField(formData, "address"),
+        port: extractTextField(formData, "port"),
+        version: extractTextField(formData, "version"),
+        tags: extractTextField(formData, "tags"),
+        description: extractTextField(formData, "description") ?? "",
+        content: extractTextField(formData, "content") ?? "",
+        maxPlayers: maxPlayersRaw,
+        qqGroup: extractTextField(formData, "qqGroup") ?? "",
+        visibility: extractOptionalTextField(formData, "visibility"),
+      },
+      { errorMap: getZodErrorMap(locale) },
+    );
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
+        {
+          error: tCommon("validationFailed"),
+          details: flattenZodErrorWithLocale(parsed.error, locale),
+        },
         { status: 400 },
       );
     }

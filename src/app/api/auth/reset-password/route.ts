@@ -5,7 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { NextResponse } from "next/server";
 import { getRequestLocale } from "@/i18n/locale";
 import { db } from "@/lib/db";
-import { flattenZodErrorWithLocale } from "@/lib/i18nZod";
+import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { sendResetPasswordCode } from "@/lib/mail";
 import { getClientIp } from "@/lib/request-ip";
@@ -39,10 +39,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: tCommon("invalidJson") }, { status: 400 });
     }
 
-    const parsed = sendResetCodeSchema.safeParse(rawBody);
+    const parsed = sendResetCodeSchema.safeParse(rawBody, {
+      errorMap: getZodErrorMap(locale),
+    });
     if (!parsed.success) {
       return NextResponse.json(
-        { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
+        {
+          error: tCommon("validationFailed"),
+          details: flattenZodErrorWithLocale(parsed.error, locale),
+        },
         { status: 400 },
       );
     }
@@ -103,10 +108,15 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: tCommon("invalidJson") }, { status: 400 });
     }
 
-    const parsed = resetPasswordSchema.safeParse(rawBody);
+    const parsed = resetPasswordSchema.safeParse(rawBody, {
+      errorMap: getZodErrorMap(locale),
+    });
     if (!parsed.success) {
       return NextResponse.json(
-        { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
+        {
+          error: tCommon("validationFailed"),
+          details: flattenZodErrorWithLocale(parsed.error, locale),
+        },
         { status: 400 },
       );
     }

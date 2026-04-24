@@ -361,7 +361,9 @@ export async function POST(request: Request, { params }: RouteContext) {
     }
 
     const body = await request.json().catch(() => null);
-    const parsedBody = createCommentSchema.safeParse(body);
+    const parsedBody = createCommentSchema.safeParse(body, {
+      errorMap: getZodErrorMap(locale),
+    });
     if (!parsedBody.success) {
       return NextResponse.json(
         {

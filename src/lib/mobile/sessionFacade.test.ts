@@ -15,6 +15,7 @@ import {
 } from "./sessionFacade";
 
 const zhAuthErrors = zhMessages.errors.api.auth;
+const zhValidationErrors = zhMessages.errors.validation;
 
 function readRequestHeaders(init?: RequestInit): Headers {
   return new Headers(init?.headers);
@@ -262,6 +263,39 @@ test("handleMobileLoginPost falls back to a localhost request origin when auth b
   assert.equal(calls[0]?.url, "http://localhost:3000/api/auth/csrf");
   assert.equal(calls[1]?.url, "http://localhost:3000/api/auth/callback/credentials");
   assert.equal(calls[2]?.url, "http://localhost:3000/api/mobile/session");
+});
+
+test("handleMobileLoginPost localizes default Zod field errors", async () => {
+  const response = await handleMobileLoginPost(
+    new Request("http://localhost:3000/api/mobile/session/login", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-locale": "zh",
+      },
+      body: JSON.stringify({
+        email: "not-an-email",
+        password: "",
+      }),
+    }),
+    {
+      fetchImpl: async () => {
+        throw new Error("validation failure should not call fetch");
+      },
+    },
+  );
+
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), {
+    error: zhMessages.errors.api.validationFailed,
+    details: {
+      formErrors: [],
+      fieldErrors: {
+        email: [zhValidationErrors.invalidEmail],
+        password: [zhValidationErrors.auth.passwordRequired],
+      },
+    },
+  });
 });
 
 test("resolveTrustedAuthBaseUrl rejects non-local request origins when auth base env vars are missing", async () => {

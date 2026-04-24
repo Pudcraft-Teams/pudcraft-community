@@ -16,24 +16,33 @@ export function resolveLocaleFrom(sources: LocaleSources): Locale {
 }
 
 /**
- * Walk every token in an Accept-Language header and pick the first one whose
- * primary tag matches a supported locale.
- *
- * We intentionally ignore `q` weights and rely on the listed order, which is
- * the default preference order browsers emit. This avoids pulling in a full
- * language-negotiator dependency while still handling headers like
- * "fr-FR,en;q=0.9" correctly — the primary tag is unsupported but a later
- * token resolves to a supported locale.
+ * Pick the supported locale with the highest Accept-Language q-value.
+ * Ties preserve header order. Unsupported language tags are ignored.
  */
 function pickFromAcceptLanguage(acceptLanguage: string): Locale | null {
-  const tokens = acceptLanguage.split(",");
-  for (const raw of tokens) {
-    const tag = raw.split(";")[0]?.trim().toLowerCase() ?? "";
-    if (!tag) continue;
-    if (tag.startsWith("en")) return "en";
-    if (tag.startsWith("zh")) return "zh";
-  }
-  return null;
+  const candidates = acceptLanguage
+    .split(",")
+    .map((raw, index) => {
+      const [rawTag, ...params] = raw.split(";");
+      const primaryTag = rawTag?.trim().toLowerCase().split("-")[0] ?? "";
+      const locale = isLocale(primaryTag) ? primaryTag : null;
+      if (!locale) return null;
+
+      const rawQ = params
+        .map((param) => param.trim().toLowerCase())
+        .find((param) => param.startsWith("q="))
+        ?.slice(2);
+      const q = rawQ === undefined ? 1 : Number.parseFloat(rawQ);
+      if (!Number.isFinite(q) || q <= 0) return null;
+
+      return { index, locale, q };
+    })
+    .filter(
+      (candidate): candidate is { index: number; locale: Locale; q: number } => candidate !== null,
+    )
+    .sort((a, b) => b.q - a.q || a.index - b.index);
+
+  return candidates[0]?.locale ?? null;
 }
 
 export async function getRequestLocale(request?: Request): Promise<Locale> {
