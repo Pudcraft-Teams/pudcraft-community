@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -7,6 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 import { DeleteModpackButton } from "@/components/DeleteModpackButton";
 import { PageLoading } from "@/components/PageLoading";
 import { useToast } from "@/hooks/useToast";
+import { defaultLocale, isLocale } from "@/i18n/config";
 import type { ModpackItem, ServerDetailResponse, ServerModpackListResponse } from "@/lib/types";
 
 interface ApiPayload {
@@ -26,6 +28,8 @@ function toApiPayload(raw: unknown): ApiPayload {
   };
 }
 
+// File size unit suffixes kept as ASCII-only (B / KB / MB) so they need no
+// translation. The numeric formatting stays in the component.
 function formatFileSize(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) {
     return "0 B";
@@ -36,13 +40,14 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-function formatDate(dateString: string): string {
+function formatDate(dateString: string, locale: string): string {
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) {
     return "--";
   }
 
-  return new Intl.DateTimeFormat("zh-CN", {
+  const intlLocale = locale === "en" ? "en-US" : "zh-CN";
+  return new Intl.DateTimeFormat(intlLocale, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -60,11 +65,15 @@ export default function ServerModpacksPage() {
   const router = useRouter();
   const { status, data: session } = useSession();
   const { toast } = useToast();
+  const t = useTranslations("modpacks");
+  const tCommon = useTranslations("servers.common");
+  const rawLocale = useLocale();
+  const appLocale = isLocale(rawLocale) ? rawLocale : defaultLocale;
 
   const [isLoading, setIsLoading] = useState(true);
   const [isForbidden, setIsForbidden] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
-  const [serverName, setServerName] = useState<string>("服务器");
+  const [serverName, setServerName] = useState<string>(() => t("defaultServerName"));
   const [modpacks, setModpacks] = useState<ModpackItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -78,7 +87,7 @@ export default function ServerModpacksPage() {
       .json()
       .catch(() => ({}))) as Partial<ServerDetailResponse> & ApiPayload;
     if (!detailResponse.ok || !detailPayload.data) {
-      throw new Error(detailPayload.error ?? "加载服务器信息失败");
+      throw new Error(detailPayload.error ?? t("generalLoadFailed"));
     }
 
     if (!session?.user?.id || detailPayload.data.ownerId !== session.user.id) {
@@ -93,11 +102,11 @@ export default function ServerModpacksPage() {
       .json()
       .catch(() => ({}))) as ServerModpackListResponse & ApiPayload;
     if (!modpackResponse.ok) {
-      throw new Error(modpackPayload.error ?? "加载整合包列表失败");
+      throw new Error(modpackPayload.error ?? t("listLoadFailed"));
     }
 
     setModpacks(modpackPayload.data ?? []);
-  }, [id, session?.user?.id]);
+  }, [id, session?.user?.id, t]);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -135,7 +144,7 @@ export default function ServerModpacksPage() {
     void loadPageData()
       .catch((error) => {
         if (!cancelled) {
-          setPageError(error instanceof Error ? error.message : "加载失败，请稍后重试");
+          setPageError(error instanceof Error ? error.message : t("generalLoadFailed"));
         }
       })
       .finally(() => {
@@ -147,18 +156,18 @@ export default function ServerModpacksPage() {
     return () => {
       cancelled = true;
     };
-  }, [loadPageData, status]);
+  }, [loadPageData, status, t]);
 
   const handleUpload = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!selectedFile) {
-      toast.error("请先选择 .mrpack 文件");
+      toast.error(t("fileRequired"));
       return;
     }
 
     if (selectedFile.size > MAX_MRPACK_SIZE_BYTES) {
-      toast.error(`整合包大小不能超过 ${MAX_MRPACK_SIZE_MB}MB`);
+      toast.error(t("fileTooLarge", { max: MAX_MRPACK_SIZE_MB }));
       return;
     }
 
@@ -191,18 +200,18 @@ export default function ServerModpacksPage() {
         return;
       }
       if (!response.ok) {
-        toast.error(payload.error ?? "上传失败，请稍后重试");
+        toast.error(payload.error ?? t("uploadFailed"));
         return;
       }
 
-      toast.success("整合包上传成功");
+      toast.success(t("uploadSuccess"));
       setSelectedFile(null);
       setVersion("");
       setLoader("");
       setGameVersion("");
       await loadPageData();
     } catch {
-      toast.error("网络异常，上传失败");
+      toast.error(t("networkError"));
     } finally {
       setIsUploading(false);
     }
@@ -213,13 +222,13 @@ export default function ServerModpacksPage() {
   }
 
   if (status === "unauthenticated") {
-    return <div className="py-12 text-center text-sm text-warm-400">正在跳转到登录页...</div>;
+    return <div className="py-12 text-center text-sm text-warm-400">{tCommon("redirectingToLogin")}</div>;
   }
 
   if (isForbidden) {
     return (
       <div className="mx-auto max-w-3xl rounded-xl border border-accent-hover bg-accent-hover px-4 py-3 text-sm text-accent-hover">
-        无权限管理该服务器整合包，正在返回详情页...
+        {t("forbidden")}
       </div>
     );
   }
@@ -228,21 +237,21 @@ export default function ServerModpacksPage() {
     <div className="mx-auto w-full max-w-4xl space-y-6 px-4">
       <nav className="flex items-center gap-2 text-sm text-warm-400">
         <Link href={`/servers/${id}`} className="text-accent hover:text-accent-hover">
-          &larr; 返回服务器详情
+          &larr; {t("backToDetail")}
         </Link>
       </nav>
 
       <section className="rounded-xl border border-warm-200 bg-surface p-5 sm:p-6">
-        <h1 className="text-2xl font-semibold text-warm-800">整合包管理</h1>
-        <p className="mt-1 text-sm text-warm-500">服务器：{serverName}</p>
+        <h1 className="text-2xl font-semibold text-warm-800">{t("heading")}</h1>
+        <p className="mt-1 text-sm text-warm-500">{t("serverLabel", { name: serverName })}</p>
         <p className="mt-1 text-xs text-warm-400">
-          仅支持 .mrpack，单文件最大 {MAX_MRPACK_SIZE_MB}MB
+          {t("formatHint", { max: MAX_MRPACK_SIZE_MB })}
         </p>
 
         <form className="mt-5 space-y-4" onSubmit={handleUpload} noValidate>
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-warm-800" htmlFor="modpack-file">
-              整合包文件
+              {t("fileLabel")}
             </label>
             <input
               id="modpack-file"
@@ -258,20 +267,20 @@ export default function ServerModpacksPage() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
               <label className="block text-sm font-medium text-warm-800" htmlFor="modpack-version">
-                版本号（可选）
+                {t("versionLabel")}
               </label>
               <input
                 id="modpack-version"
                 value={version}
                 onChange={(event) => setVersion(event.target.value)}
                 className="mt-1 w-full rounded-lg border border-warm-200 bg-surface px-3 py-2 text-sm text-warm-800 outline-none focus:border-accent"
-                placeholder="例如 v1.0.0"
+                placeholder={t("versionPlaceholder")}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-warm-800" htmlFor="modpack-loader">
-                加载器（可选）
+                {t("loaderLabel")}
               </label>
               <select
                 id="modpack-loader"
@@ -279,7 +288,7 @@ export default function ServerModpacksPage() {
                 onChange={(event) => setLoader(event.target.value)}
                 className="mt-1 w-full rounded-lg border border-warm-200 bg-surface px-3 py-2 text-sm text-warm-800 outline-none focus:border-accent"
               >
-                <option value="">自动识别</option>
+                <option value="">{t("loaderAuto")}</option>
                 <option value="fabric">fabric</option>
                 <option value="forge">forge</option>
                 <option value="neoforge">neoforge</option>
@@ -292,14 +301,14 @@ export default function ServerModpacksPage() {
                 className="block text-sm font-medium text-warm-800"
                 htmlFor="modpack-game-version"
               >
-                游戏版本（可选）
+                {t("gameVersionLabel")}
               </label>
               <input
                 id="modpack-game-version"
                 value={gameVersion}
                 onChange={(event) => setGameVersion(event.target.value)}
                 className="mt-1 w-full rounded-lg border border-warm-200 bg-surface px-3 py-2 text-sm text-warm-800 outline-none focus:border-accent"
-                placeholder="例如 1.20.1"
+                placeholder={t("gameVersionPlaceholder")}
               />
             </div>
           </div>
@@ -309,13 +318,13 @@ export default function ServerModpacksPage() {
             disabled={isUploading}
             className="rounded-xl border border-accent px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent-muted disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isUploading ? "上传中..." : "上传整合包"}
+            {isUploading ? t("uploading") : t("upload")}
           </button>
         </form>
       </section>
 
       <section className="rounded-xl border border-warm-200 bg-surface p-5 sm:p-6">
-        <h2 className="text-lg font-semibold text-warm-800">已上传版本</h2>
+        <h2 className="text-lg font-semibold text-warm-800">{t("uploadedHeading")}</h2>
         {pageError && (
           <p className="mt-3 rounded-xl border border-accent-hover bg-accent-hover px-3 py-2 text-sm text-accent-hover">
             {pageError}
@@ -323,7 +332,7 @@ export default function ServerModpacksPage() {
         )}
 
         {!pageError && modpacks.length === 0 && (
-          <p className="mt-3 text-sm text-warm-400">还没有上传整合包版本。</p>
+          <p className="mt-3 text-sm text-warm-400">{t("emptyList")}</p>
         )}
 
         {!pageError && modpacks.length > 0 && (
@@ -334,18 +343,18 @@ export default function ServerModpacksPage() {
                   <h3 className="text-base font-semibold text-warm-800">{modpack.name}</h3>
                   {index === 0 && (
                     <span className="rounded-full border border-accent px-2 py-0.5 text-xs font-medium text-accent">
-                      最新版本
+                      {t("latestBadge")}
                     </span>
                   )}
                 </div>
 
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-warm-500">
-                  <span>版本：{modpack.version ?? "--"}</span>
-                  <span>加载器：{modpack.loader ?? "--"}</span>
-                  <span>游戏版本：{modpack.gameVersion ?? "--"}</span>
-                  <span>Mods：{modpack.modsCount}</span>
-                  <span>文件大小：{formatFileSize(modpack.fileSize)}</span>
-                  <span>上传时间：{formatDate(modpack.createdAt)}</span>
+                  <span>{t("versionField", { value: modpack.version ?? "--" })}</span>
+                  <span>{t("loaderField", { value: modpack.loader ?? "--" })}</span>
+                  <span>{t("gameVersionField", { value: modpack.gameVersion ?? "--" })}</span>
+                  <span>{t("modsField", { count: modpack.modsCount })}</span>
+                  <span>{t("sizeField", { size: formatFileSize(modpack.fileSize) })}</span>
+                  <span>{t("uploadedAtField", { time: formatDate(modpack.createdAt, appLocale) })}</span>
                 </div>
 
                 {modpack.summary && (
@@ -357,7 +366,7 @@ export default function ServerModpacksPage() {
                     href={`/api/modpacks/${modpack.id}/download`}
                     className="rounded-xl border border-accent px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent-muted"
                   >
-                    下载
+                    {t("download")}
                   </a>
                   <DeleteModpackButton
                     modpackId={modpack.id}

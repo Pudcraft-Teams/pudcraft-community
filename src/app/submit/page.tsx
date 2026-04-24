@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -45,6 +46,8 @@ export default function SubmitServerPage() {
   const router = useRouter();
   const { status } = useSession();
   const { toast } = useToast();
+  const t = useTranslations("servers.submit");
+  const tCommon = useTranslations("servers.common");
   const [duplicateServer, setDuplicateServer] = useState<{
     id: string;
     psid: number | null;
@@ -70,7 +73,7 @@ export default function SubmitServerPage() {
 
       if (response.status === 401) {
         router.replace("/login?callbackUrl=%2Fsubmit");
-        return { success: false, error: "请先登录后再提交服务器" };
+        return { success: false, error: t("loginRequired") };
       }
 
       if (response.status === 409) {
@@ -78,58 +81,58 @@ export default function SubmitServerPage() {
           setDuplicateServer({
             id: payload.existingServerId,
             psid: payload.existingServerPsid ?? null,
-            name: payload.existingServerName ?? "该服务器",
-            hint: payload.hint ?? "如果你是这个服务器的管理员，可以去认领它",
+            name: payload.existingServerName ?? t("duplicateDefaultName"),
+            hint: payload.hint ?? t("duplicateHintFallback"),
           });
         }
 
         return {
           success: false,
-          error: payload.error ?? "该服务器地址已被收录",
+          error: payload.error ?? t("duplicateHintFallback"),
         };
       }
 
       if (!response.ok) {
         return {
           success: false,
-          error: payload.error ?? "提交失败，请稍后重试",
+          error: payload.error ?? t("submitFailed"),
         };
       }
 
-      toast.success(payload.message ?? "服务器已提交，等待管理员审核");
+      toast.success(payload.message ?? t("submittedSuccess"));
       router.push("/console");
       return { success: true };
     } catch {
-      return { success: false, error: "网络异常，请稍后重试" };
+      return { success: false, error: tCommon("networkError") };
     }
   };
 
   if (status === "loading") {
-    return <PageLoading text="正在加载登录状态..." />;
+    return <PageLoading text={tCommon("loadingLoginStatus")} />;
   }
 
   if (status === "unauthenticated") {
-    return <div className="py-12 text-center text-sm text-warm-500">正在跳转到登录页...</div>;
+    return <div className="py-12 text-center text-sm text-warm-500">{tCommon("redirectingToLogin")}</div>;
   }
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4">
       <div className="m3-surface p-6">
-        <h1 className="text-2xl font-semibold text-warm-800">提交服务器</h1>
-        <p className="mt-2 text-sm text-warm-600">
-          提交你自己的 Minecraft 服务器信息，提交后将由管理员审核
-        </p>
+        <h1 className="text-2xl font-semibold text-warm-800">{t("heading")}</h1>
+        <p className="mt-2 text-sm text-warm-600">{t("description")}</p>
         {duplicateServer && (
           <div className="mt-4 rounded-xl border border-coral-amber/30 bg-coral-amber/10 px-4 py-3 text-sm text-coral-amber">
             <p>
-              该服务器地址已被收录为「{duplicateServer.name}」。
-              {duplicateServer.hint}
+              {t("duplicateMessage", {
+                name: duplicateServer.name,
+                hint: duplicateServer.hint,
+              })}
             </p>
             <Link
               href={`/servers/${duplicateServer.psid ?? duplicateServer.id}/verify`}
               className="m3-link mt-2 inline-flex text-sm"
             >
-              前往认领
+              {t("duplicateGoVerify")}
             </Link>
           </div>
         )}

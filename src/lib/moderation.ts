@@ -1,11 +1,11 @@
 /**
- * 文本内容审查模块（阿里云内容安全 Green 2.0 — TextModeration）
+ * Text content moderation (Alibaba Cloud Green 2.0 — TextModeration).
  *
- * 环境变量：
- *   CONTENT_MODERATION_ACCESS_KEY_ID      — 阿里云 AccessKey ID
- *   CONTENT_MODERATION_ACCESS_KEY_SECRET  — 阿里云 AccessKey Secret
- *   CONTENT_MODERATION_ENDPOINT           — API 端点，默认 green-cip.ap-southeast-1.aliyuncs.com
- *   CONTENT_MODERATION_ENABLED            — true | false，默认 true
+ * Environment variables:
+ *   CONTENT_MODERATION_ACCESS_KEY_ID      — Alibaba Cloud AccessKey ID
+ *   CONTENT_MODERATION_ACCESS_KEY_SECRET  — Alibaba Cloud AccessKey Secret
+ *   CONTENT_MODERATION_ENDPOINT           — API endpoint, default green-cip.ap-southeast-1.aliyuncs.com
+ *   CONTENT_MODERATION_ENABLED            — true | false, default true
  */
 import { TextModerationRequest } from "@alicloud/green20220302";
 import { RuntimeOptions } from "@darabonba/typescript";
@@ -34,11 +34,20 @@ const CONTEXT_SERVICE: Record<ModerationContext, string> = {
   modpack: "comment_detection",
 };
 
-/** 各场景下应忽略的标签（服务器简介天然含推广内容，不应拦截广告/灌水标签） */
+/** Labels that should be ignored per context (server descriptions naturally include
+ * marketing copy, so ad/nonsense tags are suppressed). */
 const IGNORED_LABELS: Partial<Record<ModerationContext, Set<string>>> = {
   server: new Set(["ad", "nonsense"]),
 };
 
+// LABEL_NAMES are human-readable renderings of Alibaba Cloud Green's AI
+// classification labels. These strings are NOT general UI copy: they are
+// audit metadata persisted to moderation logs and shown verbatim in the
+// admin moderation console, where moderators rely on the exact wording as
+// part of their review workflow. Translating them here risks breaking
+// existing moderator habits and downstream tooling that matches on the
+// stored text. Leave as Chinese; revisit only if an explicit moderator
+// request surfaces.
 const LABEL_NAMES: Record<string, string> = {
   political_content: "涉政",
   sexual_content: "色情",
@@ -53,7 +62,7 @@ const LABEL_NAMES: Record<string, string> = {
   C_customized: "自定义库命中",
 };
 
-/** 写入审查日志（失败不阻塞主流程） */
+/** Write the moderation log. Failures here must not block the main flow. */
 function writeModerationLog(
   contentType: ModerationContext,
   contentSnippet: string,
@@ -80,7 +89,7 @@ function writeModerationLog(
     });
 }
 
-/** 调用阿里云 Green TextModeration API */
+/** Call the Alibaba Cloud Green TextModeration API. */
 async function callTextModeration(
   content: string,
   service: string,
@@ -116,13 +125,15 @@ async function callTextModeration(
   }
 
   const category = labelList.map((l) => LABEL_NAMES[l] ?? l).join("、");
+  // `reason` is shown to the moderator alongside the stored Chinese labels;
+  // keep the phrasing consistent with LABEL_NAMES (see comment above).
   const reason = body.data.reason ?? `包含${category}内容`;
 
   return { passed: false, labels: category, reason };
 }
 
 /**
- * 审查单段文本内容
+ * Moderate a single text field.
  */
 export async function moderateContent(
   text: string,
@@ -158,7 +169,7 @@ export async function moderateContent(
 }
 
 /**
- * 批量审查多个字段（合并为一次请求，节省费用）
+ * Moderate multiple fields in a single batched API request to save cost.
  */
 export async function moderateFields(
   fields: Record<string, string>,

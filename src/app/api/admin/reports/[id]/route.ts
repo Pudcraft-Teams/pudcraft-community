@@ -1,44 +1,56 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
+import type { Locale } from "@/i18n/config";
 import { prisma } from "@/lib/db";
+import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
-import { requireAdmin, isAdminError } from "@/lib/admin";
+import { requireAdmin, isAdminError, translateAdminError } from "@/lib/admin";
 import { adminReportActionSchema } from "@/lib/validation";
-import { createNotification } from "@/lib/notification";
+import { createTranslatedNotification } from "@/lib/notification";
 
 /**
- * PATCH /api/admin/reports/:id — 处置举报（驳回/解决）。
+ * PATCH /api/admin/reports/:id — dispose of a report (dismiss / resolve).
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tAdmin = await getTranslations({ locale, namespace: "errors.api.admin" });
   try {
     const adminResult = await requireAdmin();
     if (isAdminError(adminResult)) {
-      return NextResponse.json({ error: adminResult.error }, { status: adminResult.status });
+      return NextResponse.json(
+        { error: translateAdminError(locale, adminResult.errorKey) },
+        { status: adminResult.status },
+      );
     }
 
     const { id } = await params;
 
     const report = await prisma.report.findUnique({ where: { id } });
     if (!report) {
-      return NextResponse.json({ error: "举报未找到" }, { status: 404 });
+      return NextResponse.json({ error: tAdmin("reportNotFound") }, { status: 404 });
     }
 
     if (report.status !== "pending") {
-      return NextResponse.json({ error: "该举报已被处理" }, { status: 400 });
+      return NextResponse.json({ error: tAdmin("reportAlreadyResolved") }, { status: 400 });
     }
 
     let body: unknown;
     try {
       body = await request.json();
     } catch {
-      return NextResponse.json({ error: "请求体必须是合法 JSON" }, { status: 400 });
+      return NextResponse.json({ error: tCommon("invalidJson") }, { status: 400 });
     }
 
-    const parsed = adminReportActionSchema.safeParse(body);
+    const parsed = adminReportActionSchema.safeParse(body, {
+      errorMap: getZodErrorMap(locale),
+    });
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
         { status: 400 },
       );
     }
@@ -60,40 +72,59 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
     // Execute enforcement actions when resolving
     if (action === "resolve" && actions && actions.length > 0) {
-      await executeActions(report.targetType, report.targetId, actions, adminNote);
+      await executeActions(report.targetType, report.targetId, actions, adminNote, locale);
     }
 
     // Notify reporter (non-blocking)
     try {
-      await createNotification({
-        userId: report.reporterId,
-        type: action === "dismiss" ? "report_dismissed" : "report_resolved",
-        title: action === "dismiss" ? "举报已驳回" : "举报已处理",
-        message:
-          action === "dismiss"
-            ? "你提交的举报经审核后未发现违规行为"
-            : "你提交的举报已被管理员处理，感谢你的反馈",
-      });
+      if (action === "dismiss") {
+        await createTranslatedNotification({
+          userId: report.reporterId,
+          type: "report_dismissed",
+          titleKey: "reportDismissedTitle",
+          bodyKey: "reportDismissedBody",
+        });
+      } else {
+        await createTranslatedNotification({
+          userId: report.reporterId,
+          type: "report_resolved",
+          titleKey: "reportResolvedTitle",
+          bodyKey: "reportResolvedBody",
+        });
+      }
     } catch (error) {
       logger.error("[api/admin/reports/[id]] Failed to notify reporter", error);
     }
 
-    return NextResponse.json({ success: true, message: action === "dismiss" ? "已驳回" : "已处理" });
+    return NextResponse.json({
+      success: true,
+      message: action === "dismiss" ? tAdmin("reportDismissed") : tAdmin("reportResolved"),
+    });
   } catch (err) {
     logger.error("[api/admin/reports/[id]] Unexpected PATCH error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
 
 /**
  * Execute enforcement actions on the reported target.
+ *
+ * `locale` is the acting admin's resolved locale. Persisted audit strings
+ * (`rejectReason`, default `banReason`) are rendered in that locale. They
+ * are not re-rendered at read time, so changing the admin's locale after
+ * the fact does not retroactively translate existing rows.
  */
 async function executeActions(
   targetType: string,
   targetId: string,
   actions: ("warn" | "takedown" | "ban_user")[],
-  adminNote?: string | null,
+  adminNote: string | null | undefined,
+  locale: Locale,
 ): Promise<void> {
+  const tPersisted = await getTranslations({
+    locale,
+    namespace: "notifications.persisted",
+  });
   // Resolve the target owner
   const ownerId = await resolveTargetOwner(targetType, targetId);
 
@@ -102,11 +133,11 @@ async function executeActions(
       switch (act) {
         case "warn": {
           if (!ownerId) break;
-          await createNotification({
+          await createTranslatedNotification({
             userId: ownerId,
             type: "content_warning",
-            title: "内容违规警告",
-            message: "你发布的内容因被举报并经管理员审核，确认存在违规。请注意遵守社区规范，否则可能被进一步处罚。",
+            titleKey: "contentWarningTitle",
+            bodyKey: "contentWarningBody",
           });
           break;
         }
@@ -119,15 +150,16 @@ async function executeActions(
             if (server) {
               await prisma.server.update({
                 where: { id: server.id },
-                data: { status: "rejected", rejectReason: "因举报被下架" },
+                data: { status: "rejected", rejectReason: tPersisted("rejectReasonFromReport") },
               });
               if (server.ownerId) {
                 try {
-                  await createNotification({
+                  await createTranslatedNotification({
                     userId: server.ownerId,
                     type: "content_takedown",
-                    title: "服务器已被下架",
-                    message: `你的服务器「${server.name}」因违规举报已被下架`,
+                    titleKey: "serverTakedownTitle",
+                    bodyKey: "serverTakedownBody",
+                    params: { serverName: server.name },
                     link: `/servers/${server.psid}`,
                     serverId: server.id,
                   });
@@ -144,11 +176,11 @@ async function executeActions(
             if (comment) {
               await prisma.serverComment.delete({ where: { id: comment.id } });
               try {
-                await createNotification({
+                await createTranslatedNotification({
                   userId: comment.authorId,
                   type: "content_takedown",
-                  title: "评论已被删除",
-                  message: "你发布的评论因违规举报已被管理员删除",
+                  titleKey: "commentTakedownTitle",
+                  bodyKey: "commentTakedownBody",
                 });
               } catch (error) {
                 logger.error("[api/admin/reports/[id]] Failed to notify comment author (takedown)", error);
@@ -162,7 +194,11 @@ async function executeActions(
           if (!ownerId) break;
           await prisma.user.update({
             where: { id: ownerId },
-            data: { bannedAt: new Date(), isBanned: true, banReason: adminNote ?? "举报处置" },
+            data: {
+              bannedAt: new Date(),
+              isBanned: true,
+              banReason: adminNote ?? tPersisted("banReasonFromReport"),
+            },
           });
           break;
         }

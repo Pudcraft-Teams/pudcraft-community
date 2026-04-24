@@ -1,4 +1,7 @@
+"use client";
+
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { normalizeImageSrc } from "@/lib/image-url";
 
 interface UserAvatarProps {
@@ -33,6 +36,7 @@ export function UserAvatar({
   fallbackClassName = "bg-gradient-to-br from-coral to-coral-amber text-white",
   showInitialFallback = false,
 }: UserAvatarProps) {
+  const t = useTranslations("user.avatar");
   const initial = resolveInitial(name, email);
   const sharedClassName = joinClassNames(
     "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full",
@@ -40,13 +44,14 @@ export function UserAvatar({
   );
 
   const resolvedSrc = normalizeImageSrc(src);
+  const resolvedAlt = alt ?? t("alt", { name: name ?? t("fallbackName") });
 
   if (resolvedSrc) {
     return (
       <span className={sharedClassName}>
         <Image
           src={resolvedSrc}
-          alt={alt ?? `${name ?? "用户"} 的头像`}
+          alt={resolvedAlt}
           width={96}
           height={96}
           className="h-full w-full object-cover"
@@ -60,7 +65,7 @@ export function UserAvatar({
       <span className={sharedClassName}>
         <Image
           src="/default-avatar.png"
-          alt={alt ?? `${name ?? "用户"} 的头像`}
+          alt={resolvedAlt}
           width={96}
           height={96}
           className="h-full w-full object-cover"

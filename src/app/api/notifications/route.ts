@@ -1,16 +1,21 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
+import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { markNotificationsReadSchema, queryNotificationsSchema } from "@/lib/validation";
 
 /**
  * GET /api/notifications
- * 获取当前用户通知列表。
+ * Returns the current user's notifications.
  */
 export async function GET(request: Request) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -19,15 +24,21 @@ export async function GET(request: Request) {
     const userId = authResult.user.id;
 
     const { searchParams } = new URL(request.url);
-    const parsedQuery = queryNotificationsSchema.safeParse({
-      page: searchParams.get("page") ?? undefined,
-      limit: searchParams.get("limit") ?? undefined,
-      unreadOnly: searchParams.get("unreadOnly") ?? undefined,
-    });
+    const parsedQuery = queryNotificationsSchema.safeParse(
+      {
+        page: searchParams.get("page") ?? undefined,
+        limit: searchParams.get("limit") ?? undefined,
+        unreadOnly: searchParams.get("unreadOnly") ?? undefined,
+      },
+      { errorMap: getZodErrorMap(locale) },
+    );
 
     if (!parsedQuery.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsedQuery.error.flatten() },
+        {
+          error: tCommon("validationFailed"),
+          details: flattenZodErrorWithLocale(parsedQuery.error, locale),
+        },
         { status: 400 },
       );
     }
@@ -80,15 +91,17 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     logger.error("[api/notifications] Unexpected GET error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
 
 /**
  * PATCH /api/notifications
- * 批量标记当前用户通知为已读。
+ * Batch-marks the current user's notifications as read.
  */
 export async function PATCH(request: Request) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -97,10 +110,15 @@ export async function PATCH(request: Request) {
     const userId = authResult.user.id;
 
     const body = await request.json().catch(() => null);
-    const parsedBody = markNotificationsReadSchema.safeParse(body);
+    const parsedBody = markNotificationsReadSchema.safeParse(body, {
+      errorMap: getZodErrorMap(locale),
+    });
     if (!parsedBody.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsedBody.error.flatten() },
+        {
+          error: tCommon("validationFailed"),
+          details: flattenZodErrorWithLocale(parsedBody.error, locale),
+        },
         { status: 400 },
       );
     }
@@ -135,6 +153,6 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ success: true, unreadCount });
   } catch (error) {
     logger.error("[api/notifications] Unexpected PATCH error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

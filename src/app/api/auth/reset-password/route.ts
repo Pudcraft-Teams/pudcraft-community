@@ -1,8 +1,11 @@
 export const dynamic = "force-dynamic";
 
 import bcrypt from "bcryptjs";
+import { getTranslations } from "next-intl/server";
 import { NextResponse } from "next/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { db } from "@/lib/db";
+import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { sendResetPasswordCode } from "@/lib/mail";
 import { getClientIp } from "@/lib/request-ip";
@@ -25,18 +28,26 @@ const RESET_ATTEMPTS_PREFIX = "reset-attempts";
  * 发送重置密码验证码（防邮箱枚举：邮箱不存在时也返回成功）。
  */
 export async function POST(request: Request) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tAuth = await getTranslations({ locale, namespace: "errors.api.auth" });
   try {
     let rawBody: unknown;
     try {
       rawBody = await request.json();
     } catch {
-      return NextResponse.json({ error: "请求体必须是合法 JSON" }, { status: 400 });
+      return NextResponse.json({ error: tCommon("invalidJson") }, { status: 400 });
     }
 
-    const parsed = sendResetCodeSchema.safeParse(rawBody);
+    const parsed = sendResetCodeSchema.safeParse(rawBody, {
+      errorMap: getZodErrorMap(locale),
+    });
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsed.error.flatten() },
+        {
+          error: tCommon("validationFailed"),
+          details: flattenZodErrorWithLocale(parsed.error, locale),
+        },
         { status: 400 },
       );
     }
@@ -45,13 +56,13 @@ export async function POST(request: Request) {
 
     const sendAllowed = await canSendCode(email, RESET_CODE_PREFIX);
     if (!sendAllowed) {
-      return NextResponse.json({ error: "发送过于频繁，请 60 秒后再试" }, { status: 429 });
+      return NextResponse.json({ error: tAuth("sendCooldown") }, { status: 429 });
     }
 
     const ip = getClientIp(request);
     const ipAllowed = await checkIpLimit(ip);
     if (!ipAllowed) {
-      return NextResponse.json({ error: "当前 IP 今日发送次数已达上限" }, { status: 429 });
+      return NextResponse.json({ error: tAuth("ipDailyLimit") }, { status: 429 });
     }
 
     const code = generateCode();
@@ -65,7 +76,7 @@ export async function POST(request: Request) {
 
     if (user) {
       try {
-        await sendResetPasswordCode(email, code);
+        await sendResetPasswordCode(email, code, locale);
       } catch (error) {
         logger.error("[api/auth/reset-password][POST] send mail failed", error);
       }
@@ -73,11 +84,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "如果该邮箱已注册，你将收到重置邮件",
+      message: tAuth("resetMailSent"),
     });
   } catch (err) {
     logger.error("[api/auth/reset-password][POST] Unexpected error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
 
@@ -86,18 +97,26 @@ export async function POST(request: Request) {
  * 使用邮箱 + 验证码重置密码。
  */
 export async function PATCH(request: Request) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tAuth = await getTranslations({ locale, namespace: "errors.api.auth" });
   try {
     let rawBody: unknown;
     try {
       rawBody = await request.json();
     } catch {
-      return NextResponse.json({ error: "请求体必须是合法 JSON" }, { status: 400 });
+      return NextResponse.json({ error: tCommon("invalidJson") }, { status: 400 });
     }
 
-    const parsed = resetPasswordSchema.safeParse(rawBody);
+    const parsed = resetPasswordSchema.safeParse(rawBody, {
+      errorMap: getZodErrorMap(locale),
+    });
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsed.error.flatten() },
+        {
+          error: tCommon("validationFailed"),
+          details: flattenZodErrorWithLocale(parsed.error, locale),
+        },
         { status: 400 },
       );
     }
@@ -106,12 +125,12 @@ export async function PATCH(request: Request) {
 
     const locked = await isLocked(email, RESET_ATTEMPTS_PREFIX);
     if (locked) {
-      return NextResponse.json({ error: "验证码错误次数过多，请稍后再试" }, { status: 429 });
+      return NextResponse.json({ error: tAuth("codeTooManyAttempts") }, { status: 429 });
     }
 
     const codeValid = await verifyCode(email, code, RESET_CODE_PREFIX);
     if (!codeValid) {
-      return NextResponse.json({ error: "验证码错误或已过期" }, { status: 400 });
+      return NextResponse.json({ error: tAuth("codeInvalidOrExpired") }, { status: 400 });
     }
 
     const user = await db.user.findUnique({
@@ -119,7 +138,7 @@ export async function PATCH(request: Request) {
       select: { id: true },
     });
     if (!user) {
-      return NextResponse.json({ error: "重置失败，请重试" }, { status: 400 });
+      return NextResponse.json({ error: tAuth("resetFailed") }, { status: 400 });
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
@@ -128,9 +147,9 @@ export async function PATCH(request: Request) {
       data: { passwordHash },
     });
 
-    return NextResponse.json({ success: true, message: "密码已重置" });
+    return NextResponse.json({ success: true, message: tAuth("resetSuccess") });
   } catch (err) {
     logger.error("[api/auth/reset-password][PATCH] Unexpected error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

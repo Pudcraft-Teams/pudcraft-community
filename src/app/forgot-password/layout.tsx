@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 
-export const metadata: Metadata = {
-  title: "找回密码",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("auth.forgot");
+  return {
+    title: t("metaTitle"),
+  };
+}
 
 export default function ForgotPasswordLayout({ children }: { children: ReactNode }) {
   return children;

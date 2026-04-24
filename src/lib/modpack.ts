@@ -3,12 +3,55 @@ import path from "path";
 import yauzl from "yauzl";
 import { z } from "zod";
 
-// Fix: modpack.ts:7 - MRPACK_MAX_FILE_SIZE_BYTES 从 500MB 改为 50MB（安全审查要求）
 const MRPACK_EXTENSION = ".mrpack";
+// MRPACK_MAX_FILE_SIZE_BYTES was lowered from 500MB to 50MB after a
+// security review — reject oversize uploads before they reach storage.
 const MRPACK_MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 const MRPACK_MAX_ENTRY_COUNT = 10_000;
 const MRPACK_MAX_UNCOMPRESSED_BYTES = 1024 * 1024 * 1024;
 const MRPACK_MAX_INDEX_BYTES = 5 * 1024 * 1024;
+
+/**
+ * User-visible modpack parse error. The `key` resolves to
+ * `errors.api.modpacks.<key>` at the route-handler layer so the thrown
+ * reason is localizable without baking copy into this module.
+ */
+export class ModpackError extends Error {
+  readonly key: string;
+  readonly params?: Record<string, string | number>;
+
+  constructor(key: string, params?: Record<string, string | number>, message?: string) {
+    super(message ?? key);
+    this.name = "ModpackError";
+    this.key = key;
+    this.params = params;
+  }
+}
+
+export const MODPACK_ERROR_KEYS = {
+  emptyPath: "emptyPath",
+  illegalPath: "illegalPath",
+  absolutePath: "absolutePath",
+  emptyDirName: "emptyDirName",
+  pathTraversal: "pathTraversal",
+  openZipFailed: "openZipFailed",
+  readIndexFailed: "readIndexFailed",
+  archiveCorrupted: "archiveCorrupted",
+  entryCountExceeded: "entryCountExceeded",
+  uncompressedExceeded: "uncompressedExceeded",
+  multipleIndex: "multipleIndex",
+  indexTooLarge: "indexTooLarge",
+  indexReadFailed: "indexReadFailed",
+  missingIndex: "missingIndex",
+  invalidJson: "invalidJson",
+  invalidStructure: "invalidStructure",
+  invalidFilePath: "invalidFilePath",
+  unsupportedExtension: "unsupportedExtension",
+  emptyFile: "emptyFile",
+  fileTooLarge: "fileTooLarge",
+  modpackNameRequired: "modpackNameRequired",
+  fallbackName: "fallbackName",
+} as const;
 
 const modrinthFileSchema = z
   .object({
@@ -24,7 +67,7 @@ const modrinthFileSchema = z
 
 const modrinthIndexSchema = z
   .object({
-    name: z.string().trim().min(1, "整合包名称不能为空"),
+    name: z.string().trim().min(1, MODPACK_ERROR_KEYS.modpackNameRequired),
     versionId: z.string().trim().optional(),
     summary: z.string().trim().optional(),
     dependencies: z.record(z.string()).optional(),
@@ -46,40 +89,40 @@ export interface ParsedMrpack {
   mrIndex: ModrinthIndex;
 }
 
-function parseErrorMessage(error: unknown, fallback: string): string {
+function wrapAsModpackError(error: unknown, fallbackKey: string): ModpackError {
+  if (error instanceof ModpackError) return error;
   if (error instanceof z.ZodError) {
-    return error.issues[0]?.message ?? fallback;
+    const first = error.issues[0]?.message;
+    if (first && first in MODPACK_ERROR_KEYS) {
+      return new ModpackError(first);
+    }
+    return new ModpackError(fallbackKey);
   }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return fallback;
+  return new ModpackError(fallbackKey);
 }
 
 function normalizeArchivePath(rawPath: string): string {
   const value = rawPath.replace(/\\/g, "/").trim();
   if (!value) {
-    throw new Error("整合包内存在空文件路径");
+    throw new ModpackError(MODPACK_ERROR_KEYS.emptyPath);
   }
 
   if (value.includes("\u0000")) {
-    throw new Error("整合包包含非法路径");
+    throw new ModpackError(MODPACK_ERROR_KEYS.illegalPath);
   }
 
   if (value.startsWith("/") || /^[A-Za-z]:\//.test(value)) {
-    throw new Error("整合包包含绝对路径，已拒绝");
+    throw new ModpackError(MODPACK_ERROR_KEYS.absolutePath);
   }
 
   const noTrailingSlash = value.endsWith("/") ? value.slice(0, -1) : value;
   if (!noTrailingSlash) {
-    throw new Error("整合包内存在空目录名");
+    throw new ModpackError(MODPACK_ERROR_KEYS.emptyDirName);
   }
 
   const segments = noTrailingSlash.split("/");
   if (segments.some((segment) => !segment || segment === "." || segment === "..")) {
-    throw new Error("整合包包含路径穿越风险，已拒绝");
+    throw new ModpackError(MODPACK_ERROR_KEYS.pathTraversal);
   }
 
   return segments.join("/");
@@ -89,7 +132,7 @@ function openZipFromBuffer(buffer: Buffer): Promise<yauzl.ZipFile> {
   return new Promise((resolve, reject) => {
     yauzl.fromBuffer(buffer, { lazyEntries: true, autoClose: false }, (error, zipfile) => {
       if (error || !zipfile) {
-        reject(error ?? new Error("无法读取整合包压缩文件"));
+        reject(error ?? new ModpackError(MODPACK_ERROR_KEYS.openZipFailed));
         return;
       }
 
@@ -102,7 +145,7 @@ function readIndexEntry(zipfile: yauzl.ZipFile, entry: yauzl.Entry): Promise<str
   return new Promise((resolve, reject) => {
     zipfile.openReadStream(entry, (error, stream) => {
       if (error || !stream) {
-        reject(error ?? new Error("无法读取 modrinth.index.json"));
+        reject(error ?? new ModpackError(MODPACK_ERROR_KEYS.readIndexFailed));
         return;
       }
 
@@ -112,7 +155,7 @@ function readIndexEntry(zipfile: yauzl.ZipFile, entry: yauzl.Entry): Promise<str
       stream.on("data", (chunk: Buffer) => {
         byteLength += chunk.byteLength;
         if (byteLength > MRPACK_MAX_INDEX_BYTES) {
-          stream.destroy(new Error("modrinth.index.json 文件过大"));
+          stream.destroy(new ModpackError(MODPACK_ERROR_KEYS.indexTooLarge));
           return;
         }
         chunks.push(chunk);
@@ -167,7 +210,11 @@ async function inspectMrpackArchive(
     };
 
     zipfile.on("error", (error) => {
-      finalize(error instanceof Error ? error : new Error("整合包压缩文件损坏"));
+      finalize(
+        error instanceof ModpackError
+          ? error
+          : new ModpackError(MODPACK_ERROR_KEYS.archiveCorrupted),
+      );
     });
 
     zipfile.on("entry", (entry) => {
@@ -177,18 +224,20 @@ async function inspectMrpackArchive(
 
       entryCount += 1;
       if (entryCount > MRPACK_MAX_ENTRY_COUNT) {
-        finalize(new Error(`整合包文件数量超过限制（最多 ${MRPACK_MAX_ENTRY_COUNT} 个）`));
+        finalize(
+          new ModpackError(MODPACK_ERROR_KEYS.entryCountExceeded, {
+            max: MRPACK_MAX_ENTRY_COUNT,
+          }),
+        );
         return;
       }
 
       totalUncompressedBytes += entry.uncompressedSize;
       if (totalUncompressedBytes > MRPACK_MAX_UNCOMPRESSED_BYTES) {
         finalize(
-          new Error(
-            `整合包解压后总大小超过限制（最多 ${Math.floor(
-              MRPACK_MAX_UNCOMPRESSED_BYTES / 1024 / 1024,
-            )} MB）`,
-          ),
+          new ModpackError(MODPACK_ERROR_KEYS.uncompressedExceeded, {
+            maxMb: Math.floor(MRPACK_MAX_UNCOMPRESSED_BYTES / 1024 / 1024),
+          }),
         );
         return;
       }
@@ -197,7 +246,7 @@ async function inspectMrpackArchive(
       try {
         normalizedPath = normalizeArchivePath(entry.fileName);
       } catch (error) {
-        finalize(new Error(parseErrorMessage(error, "整合包包含非法路径")));
+        finalize(wrapAsModpackError(error, MODPACK_ERROR_KEYS.illegalPath));
         return;
       }
 
@@ -213,12 +262,12 @@ async function inspectMrpackArchive(
       if (normalizedPath === "modrinth.index.json") {
         indexFileCount += 1;
         if (indexFileCount > 1) {
-          finalize(new Error("整合包包含多个 modrinth.index.json"));
+          finalize(new ModpackError(MODPACK_ERROR_KEYS.multipleIndex));
           return;
         }
 
         if (entry.uncompressedSize > MRPACK_MAX_INDEX_BYTES) {
-          finalize(new Error("modrinth.index.json 文件过大"));
+          finalize(new ModpackError(MODPACK_ERROR_KEYS.indexTooLarge));
           return;
         }
 
@@ -228,7 +277,7 @@ async function inspectMrpackArchive(
             zipfile.readEntry();
           })
           .catch((error) => {
-            finalize(new Error(parseErrorMessage(error, "读取 modrinth.index.json 失败")));
+            finalize(wrapAsModpackError(error, MODPACK_ERROR_KEYS.indexReadFailed));
           });
         return;
       }
@@ -238,7 +287,7 @@ async function inspectMrpackArchive(
 
     zipfile.on("end", () => {
       if (!indexText) {
-        finalize(new Error("整合包缺少 modrinth.index.json"));
+        finalize(new ModpackError(MODPACK_ERROR_KEYS.missingIndex));
         return;
       }
       finalize();
@@ -282,15 +331,17 @@ function trimOrNull(value: string | undefined): string | null {
 export function validateMrpackFile(fileName: string, fileSize: number): void {
   const lowerName = fileName.trim().toLowerCase();
   if (!lowerName.endsWith(MRPACK_EXTENSION)) {
-    throw new Error("仅支持上传 .mrpack 格式整合包");
+    throw new ModpackError(MODPACK_ERROR_KEYS.unsupportedExtension);
   }
 
   if (fileSize <= 0) {
-    throw new Error("整合包文件不能为空");
+    throw new ModpackError(MODPACK_ERROR_KEYS.emptyFile);
   }
 
   if (fileSize > MRPACK_MAX_FILE_SIZE_BYTES) {
-    throw new Error(`整合包大小不能超过 ${Math.floor(MRPACK_MAX_FILE_SIZE_BYTES / 1024 / 1024)}MB`);
+    throw new ModpackError(MODPACK_ERROR_KEYS.fileTooLarge, {
+      maxMb: Math.floor(MRPACK_MAX_FILE_SIZE_BYTES / 1024 / 1024),
+    });
   }
 }
 
@@ -301,21 +352,21 @@ export async function parseMrpackFile(buffer: Buffer): Promise<ParsedMrpack> {
   try {
     parsedJson = JSON.parse(indexText);
   } catch {
-    throw new Error("modrinth.index.json 不是合法 JSON");
+    throw new ModpackError(MODPACK_ERROR_KEYS.invalidJson);
   }
 
   let indexData: ModrinthIndex;
   try {
     indexData = modrinthIndexSchema.parse(parsedJson);
   } catch (error) {
-    throw new Error(parseErrorMessage(error, "modrinth.index.json 结构不合法"));
+    throw wrapAsModpackError(error, MODPACK_ERROR_KEYS.invalidStructure);
   }
 
   for (const item of indexData.files) {
     try {
       normalizeArchivePath(item.path);
     } catch (error) {
-      throw new Error(parseErrorMessage(error, "modrinth.index.json 包含非法 file.path"));
+      throw wrapAsModpackError(error, MODPACK_ERROR_KEYS.invalidFilePath);
     }
   }
 
@@ -342,10 +393,15 @@ export function hashFileBuffer(buffer: Buffer): { sha1: string; sha512: string }
   };
 }
 
+/**
+ * Returns the fallback modpack name derived from the uploaded filename.
+ * Returns an empty string when the filename has no usable base; the caller
+ * is expected to fall back to a translated default.
+ */
 export function getFallbackModpackName(fileName: string): string {
   const trimmed = fileName.trim();
   const base = path.basename(trimmed, path.extname(trimmed)).trim();
-  return base || "未命名整合包";
+  return base;
 }
 
 export const mrpackUploadConstraints = {

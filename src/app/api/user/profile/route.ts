@@ -2,8 +2,12 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
+import { translateImageValidationError } from "@/lib/i18nImage";
+import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { moderateFields } from "@/lib/moderation";
 import { getClientIp } from "@/lib/request-ip";
@@ -37,9 +41,12 @@ function hasOwnProperty<T extends object>(value: T, key: string): boolean {
 
 /**
  * GET /api/user/profile
- * 获取当前登录用户资料。
+ * Returns the current authenticated user's profile.
  */
 export async function GET() {
+  const locale = await getRequestLocale();
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tUsers = await getTranslations({ locale, namespace: "errors.api.users" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -60,7 +67,7 @@ export async function GET() {
     });
 
     if (!user) {
-      return NextResponse.json({ error: "用户不存在" }, { status: 404 });
+      return NextResponse.json({ error: tUsers("notFound") }, { status: 404 });
     }
 
     const data: ProfileResponseData = {
@@ -75,15 +82,19 @@ export async function GET() {
     return NextResponse.json({ data });
   } catch (error) {
     logger.error("[api/user/profile] Unexpected GET error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
 
 /**
  * PATCH /api/user/profile
- * 更新当前登录用户资料（昵称、简介、头像）。
+ * Updates the current authenticated user's profile (name, bio, avatar).
  */
 export async function PATCH(request: Request) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tUsers = await getTranslations({ locale, namespace: "errors.api.users" });
+  const tUploads = await getTranslations({ locale, namespace: "errors.api.uploads" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -104,7 +115,7 @@ export async function PATCH(request: Request) {
     });
 
     if (!existingUser) {
-      return NextResponse.json({ error: "用户不存在" }, { status: 404 });
+      return NextResponse.json({ error: tUsers("notFound") }, { status: 404 });
     }
 
     const formData = await request.formData();
@@ -119,18 +130,20 @@ export async function PATCH(request: Request) {
       payload.bio = bio;
     }
 
-    const parsed = updateProfileSchema.safeParse(payload);
+    const parsed = updateProfileSchema.safeParse(payload, {
+      errorMap: getZodErrorMap(locale),
+    });
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
         { status: 400 },
       );
     }
 
-    // ─── 内容审查 ───
+    // ─── Content moderation ───
     const fieldsToCheck: Record<string, string> = {};
-    if (parsed.data.name) fieldsToCheck["用户名"] = parsed.data.name;
-    if (parsed.data.bio) fieldsToCheck["简介"] = parsed.data.bio;
+    if (parsed.data.name) fieldsToCheck[tUsers("usernameFieldLabel")] = parsed.data.name;
+    if (parsed.data.bio) fieldsToCheck[tUsers("bioFieldLabel")] = parsed.data.bio;
 
     if (Object.keys(fieldsToCheck).length > 0) {
       const modResult = await moderateFields(fieldsToCheck, "username", {
@@ -139,7 +152,7 @@ export async function PATCH(request: Request) {
       });
       if (!modResult.passed) {
         return NextResponse.json(
-          { error: "用户名或简介包含违规内容", details: modResult.reason },
+          { error: tUsers("profileModerated"), details: modResult.reason },
           { status: 422 },
         );
       }
@@ -165,10 +178,13 @@ export async function PATCH(request: Request) {
             code: error.code,
             claimedType: avatarMimeType,
           });
-          return NextResponse.json({ error: error.message }, { status: error.status });
+          return NextResponse.json(
+            { error: translateImageValidationError(error, tUploads) },
+            { status: error.status },
+          );
         }
 
-        return NextResponse.json({ error: "头像文件格式或大小无效" }, { status: 400 });
+        return NextResponse.json({ error: tUsers("avatarInvalid") }, { status: 400 });
       }
     }
 
@@ -192,11 +208,14 @@ export async function PATCH(request: Request) {
         data.image = nextImageKey;
       } catch (error) {
         if (error instanceof ImageValidationError) {
-          return NextResponse.json({ error: error.message }, { status: error.status });
+          return NextResponse.json(
+            { error: translateImageValidationError(error, tUploads) },
+            { status: error.status },
+          );
         }
         if (error instanceof ImageModerationError) {
           return NextResponse.json(
-            { error: "头像包含违规内容，请更换图片", details: error.message },
+            { error: tUsers("avatarModerated"), details: error.category ?? null },
             { status: error.status },
           );
         }
@@ -204,7 +223,7 @@ export async function PATCH(request: Request) {
           userId: existingUser.id,
           reason: error instanceof Error ? error.message : "unknown",
         });
-        return NextResponse.json({ error: "头像上传失败，请稍后重试" }, { status: 500 });
+        return NextResponse.json({ error: tUsers("avatarUploadFailed") }, { status: 500 });
       }
     }
 
@@ -262,6 +281,6 @@ export async function PATCH(request: Request) {
     });
   } catch (error) {
     logger.error("[api/user/profile] Unexpected PATCH error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

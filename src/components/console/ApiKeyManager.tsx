@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useState } from "react";
 
 interface ApiKeyManagerProps {
@@ -29,10 +30,11 @@ function parseGenerateResponse(raw: unknown): GenerateResponse {
 }
 
 /**
- * API Key 管理组件。
- * 服主可以在此生成或重置插件 API Key，密钥仅展示一次。
+ * API Key management component.
+ * Owners can generate or regenerate the plugin API key; the key is shown once.
  */
 export function ApiKeyManager({ serverId, hasApiKey: initialHasApiKey }: ApiKeyManagerProps) {
+  const t = useTranslations("console.apiKey");
   const [hasApiKey, setHasApiKey] = useState(initialHasApiKey);
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -52,22 +54,22 @@ export function ApiKeyManager({ serverId, hasApiKey: initialHasApiKey }: ApiKeyM
       const payload = parseGenerateResponse(await response.json().catch(() => ({})));
 
       if (!response.ok || !payload.success) {
-        throw new Error(payload.error ?? "生成 API Key 失败");
+        throw new Error(payload.error ?? t("generateFailed"));
       }
 
       if (!payload.apiKey) {
-        throw new Error("未收到 API Key");
+        throw new Error(t("keyMissing"));
       }
 
       setGeneratedKey(payload.apiKey);
       setHasApiKey(true);
     } catch (fetchError) {
-      const message = fetchError instanceof Error ? fetchError.message : "生成 API Key 失败";
+      const message = fetchError instanceof Error ? fetchError.message : t("generateFailed");
       setError(message);
     } finally {
       setIsGenerating(false);
     }
-  }, [serverId]);
+  }, [serverId, t]);
 
   const handleCopy = useCallback(async () => {
     if (!generatedKey) return;
@@ -80,9 +82,9 @@ export function ApiKeyManager({ serverId, hasApiKey: initialHasApiKey }: ApiKeyM
       }, 2000);
     } catch {
       // Fallback: select text for manual copy
-      setError("复制失败，请手动复制");
+      setError(t("copyFailed"));
     }
-  }, [generatedKey]);
+  }, [generatedKey, t]);
 
   const handleRequestGenerate = useCallback(() => {
     if (hasApiKey) {
@@ -95,7 +97,7 @@ export function ApiKeyManager({ serverId, hasApiKey: initialHasApiKey }: ApiKeyM
   return (
     <section className="m3-surface p-4 sm:p-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-warm-800">插件 API Key</h2>
+        <h2 className="text-lg font-semibold text-warm-800">{t("title")}</h2>
         <span
           className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
             hasApiKey
@@ -103,22 +105,18 @@ export function ApiKeyManager({ serverId, hasApiKey: initialHasApiKey }: ApiKeyM
               : "bg-warm-100 text-warm-500 ring-1 ring-warm-200"
           }`}
         >
-          {hasApiKey ? "已生成" : "未生成"}
+          {hasApiKey ? t("badgeGenerated") : t("badgeNotGenerated")}
         </span>
       </div>
 
-      <p className="mt-2 text-sm text-warm-500">
-        生成 API Key 后，可在 Minecraft 插件中配置，实现白名单自动同步。
-      </p>
+      <p className="mt-2 text-sm text-warm-500">{t("description")}</p>
 
       {error && <p className="mt-3 text-sm text-accent-hover">{error}</p>}
 
       {/* Confirm dialog for reset */}
       {showConfirm && (
         <div className="mt-3 rounded-xl border border-accent-hover/20 bg-accent-muted px-4 py-3">
-          <p className="text-sm font-medium text-warm-800">
-            生成新密钥将使旧密钥失效，确定继续？
-          </p>
+          <p className="text-sm font-medium text-warm-800">{t("resetConfirm")}</p>
           <div className="mt-2 flex gap-2">
             <button
               type="button"
@@ -126,14 +124,14 @@ export function ApiKeyManager({ serverId, hasApiKey: initialHasApiKey }: ApiKeyM
               disabled={isGenerating}
               className="m3-btn m3-btn-primary text-sm"
             >
-              {isGenerating ? "生成中..." : "确定"}
+              {isGenerating ? t("generating") : t("confirm")}
             </button>
             <button
               type="button"
               onClick={() => setShowConfirm(false)}
               className="m3-btn m3-btn-tonal text-sm"
             >
-              取消
+              {t("cancel")}
             </button>
           </div>
         </div>
@@ -143,9 +141,7 @@ export function ApiKeyManager({ serverId, hasApiKey: initialHasApiKey }: ApiKeyM
       {generatedKey && (
         <div className="mt-4 space-y-3">
           <div className="rounded-xl border border-accent/30 bg-accent-muted px-4 py-3">
-            <p className="mb-2 text-xs font-medium text-accent-hover">
-              此密钥仅显示一次，请妥善保存
-            </p>
+            <p className="mb-2 text-xs font-medium text-accent-hover">{t("keyOnceWarning")}</p>
             <div className="flex items-center gap-2">
               <code className="min-w-0 flex-1 break-all rounded-lg bg-surface px-3 py-2 font-mono text-sm text-warm-800 ring-1 ring-warm-200">
                 {generatedKey}
@@ -155,14 +151,14 @@ export function ApiKeyManager({ serverId, hasApiKey: initialHasApiKey }: ApiKeyM
                 onClick={() => void handleCopy()}
                 className="m3-btn m3-btn-tonal shrink-0 text-sm"
               >
-                {copied ? "已复制" : "复制"}
+                {copied ? t("copied") : t("copy")}
               </button>
             </div>
           </div>
 
           {/* Plugin config hint */}
           <div className="rounded-xl border border-warm-200 bg-warm-50 px-4 py-3">
-            <p className="mb-2 text-xs font-medium text-warm-500">插件配置示例</p>
+            <p className="mb-2 text-xs font-medium text-warm-500">{t("configExampleTitle")}</p>
             <pre className="overflow-x-auto whitespace-pre rounded-lg bg-surface px-3 py-2 font-mono text-xs text-warm-800 ring-1 ring-warm-200">
               {`platformUrl: https://your-domain.com\napiKey: ${generatedKey}`}
             </pre>
@@ -178,7 +174,7 @@ export function ApiKeyManager({ serverId, hasApiKey: initialHasApiKey }: ApiKeyM
           disabled={isGenerating}
           className="m3-btn m3-btn-primary mt-4 text-sm"
         >
-          {isGenerating ? "生成中..." : hasApiKey ? "重新生成密钥" : "生成密钥"}
+          {isGenerating ? t("generating") : hasApiKey ? t("regenerate") : t("generate")}
         </button>
       )}
 
@@ -192,7 +188,7 @@ export function ApiKeyManager({ serverId, hasApiKey: initialHasApiKey }: ApiKeyM
           }}
           className="m3-btn m3-btn-tonal mt-3 text-sm"
         >
-          完成
+          {t("done")}
         </button>
       )}
     </section>

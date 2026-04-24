@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
+  const t = await getTranslations("admin.entry");
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
@@ -24,17 +26,17 @@ export default async function AdminDashboardPage() {
   ]);
 
   const stats = [
-    { label: "总用户数", value: userCount, color: "text-coral" },
-    { label: "总服务器", value: serverCount, color: "text-coral-amber" },
-    { label: "今日评论", value: todayCommentCount, color: "text-forest" },
-    { label: "待审核", value: pendingCount, color: "text-warm-800" },
-    { label: "在线服务器", value: onlineServerCount, color: "text-forest-dark" },
-    { label: "封禁用户", value: bannedUserCount, color: "text-coral-hover" },
+    { label: t("statsTotalUsers"), value: userCount, color: "text-coral" },
+    { label: t("statsTotalServers"), value: serverCount, color: "text-coral-amber" },
+    { label: t("statsTodayComments"), value: todayCommentCount, color: "text-forest" },
+    { label: t("statsPending"), value: pendingCount, color: "text-warm-800" },
+    { label: t("statsOnlineServers"), value: onlineServerCount, color: "text-forest-dark" },
+    { label: t("statsBannedUsers"), value: bannedUserCount, color: "text-coral-hover" },
   ];
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold tracking-tight text-warm-700">管理后台</h1>
+      <h1 className="mb-6 text-2xl font-bold tracking-tight text-warm-700">{t("heading")}</h1>
 
       <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3">
         {stats.map((stat) => (
@@ -50,7 +52,7 @@ export default async function AdminDashboardPage() {
           href="/admin/servers"
           className="m3-btn m3-btn-primary inline-flex items-center gap-2"
         >
-          服务器管理
+          {t("actionServers")}
           {pendingCount > 0 && (
             <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-coral-amber/10 px-1.5 py-0.5 text-xs font-semibold text-coral-amber">
               {pendingCount}
@@ -58,7 +60,7 @@ export default async function AdminDashboardPage() {
           )}
         </Link>
         <Link href="/admin/users" className="m3-btn m3-btn-tonal">
-          用户管理
+          {t("actionUsers")}
         </Link>
       </div>
     </div>

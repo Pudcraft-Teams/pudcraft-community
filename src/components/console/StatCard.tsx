@@ -1,3 +1,7 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+
 interface StatCardProps {
   label: string;
   value: string;
@@ -21,11 +25,12 @@ function resolveTrendStyle(trend: StatCardProps["trend"]): {
 }
 
 /**
- * 控制台统计卡片。
- * 展示核心指标值，并可选显示趋势和补充说明。
+ * Console stats card.
+ * Displays a core metric with optional trend indicator and caption.
  */
 export function StatCard({ label, value, subtext, trend = "neutral" }: StatCardProps) {
   const trendStyle = resolveTrendStyle(trend);
+  const t = useTranslations("console.stats");
 
   return (
     <div className="m3-surface p-4">
@@ -34,7 +39,7 @@ export function StatCard({ label, value, subtext, trend = "neutral" }: StatCardP
       {(subtext || trend !== "neutral") && (
         <p className={`mt-2 flex items-center gap-1 text-xs ${trendStyle.className}`}>
           <span>{trendStyle.icon}</span>
-          <span>{subtext ?? "趋势稳定"}</span>
+          <span>{subtext ?? t("trendDefault")}</span>
         </p>
       )}
     </div>

@@ -1,8 +1,11 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
+import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { resolveServerCuid } from "@/lib/lookup";
 import { queryServerStatsSchema, serverLookupIdSchema } from "@/lib/validation";
@@ -42,7 +45,9 @@ interface StatsDataPoint {
 interface StatsSummary {
   avgPlayers: number;
   peakPlayers: number;
-  peakTime: string;
+  // Raw peak-hour label (e.g. "14:00") or null when there is no data.
+  // The client translates the label via the `console.stats.peakTime*` keys.
+  peakTime: string | null;
   uptimePercent: number;
   totalChecks: number;
   onlineChecks: number;
@@ -189,7 +194,7 @@ function buildSummary(dataPoints: StatsDataPoint[], statuses: StatusRecord[]): S
     return {
       avgPlayers: 0,
       peakPlayers: 0,
-      peakTime: "暂无数据",
+      peakTime: null,
       uptimePercent: 0,
       totalChecks,
       onlineChecks,
@@ -232,6 +237,9 @@ function buildHourlyAverages(statuses: StatusRecord[]): HourlyAveragePoint[] {
  * 获取指定服务器在目标周期内的聚合统计，仅服主可访问。
  */
 export async function GET(request: Request, { params }: RouteContext) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -242,21 +250,27 @@ export async function GET(request: Request, { params }: RouteContext) {
     const { id } = await params;
     const parsedServerId = serverLookupIdSchema.safeParse(id);
     if (!parsedServerId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const serverId = await resolveServerCuid(parsedServerId.data);
     if (!serverId) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const { searchParams } = new URL(request.url);
-    const parsedQuery = queryServerStatsSchema.safeParse({
-      period: searchParams.get("period") ?? undefined,
-    });
+    const parsedQuery = queryServerStatsSchema.safeParse(
+      {
+        period: searchParams.get("period") ?? undefined,
+      },
+      { errorMap: getZodErrorMap(locale) },
+    );
     if (!parsedQuery.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsedQuery.error.flatten() },
+        {
+          error: tCommon("validationFailed"),
+          details: flattenZodErrorWithLocale(parsedQuery.error, locale),
+        },
         { status: 400 },
       );
     }
@@ -270,11 +284,11 @@ export async function GET(request: Request, { params }: RouteContext) {
     });
 
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     if (!server.ownerId || server.ownerId !== userId) {
-      return NextResponse.json({ error: "无权限查看该服务器统计" }, { status: 403 });
+      return NextResponse.json({ error: tServers("statsForbidden") }, { status: 403 });
     }
 
     const period: StatsPeriod = parsedQuery.data.period;
@@ -310,6 +324,6 @@ export async function GET(request: Request, { params }: RouteContext) {
     });
   } catch (error) {
     logger.error("[api/servers/[id]/stats] Unexpected GET error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

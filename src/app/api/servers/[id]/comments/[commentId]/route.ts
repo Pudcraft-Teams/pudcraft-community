@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -13,7 +15,12 @@ interface RouteContext {
  * DELETE /api/servers/:id/comments/:commentId
  * 删除评论（评论作者或管理员可删除）。
  */
-export async function DELETE(_request: Request, { params }: RouteContext) {
+export async function DELETE(request: Request, { params }: RouteContext) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tAuth = await getTranslations({ locale, namespace: "errors.api.auth" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
+  const tComments = await getTranslations({ locale, namespace: "errors.api.comments" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -25,17 +32,17 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
     const { id, commentId } = await params;
     const parsedServerId = serverLookupIdSchema.safeParse(id);
     if (!parsedServerId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const serverId = await resolveServerCuid(parsedServerId.data);
     if (!serverId) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const parsedCommentId = serverIdSchema.safeParse(commentId);
     if (!parsedCommentId.success) {
-      return NextResponse.json({ error: "无效的评论 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tComments("invalidIdFormat") }, { status: 400 });
     }
 
     const comment = await prisma.serverComment.findUnique({
@@ -49,12 +56,12 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
     });
 
     if (!comment || comment.serverId !== serverId) {
-      return NextResponse.json({ error: "评论不存在" }, { status: 404 });
+      return NextResponse.json({ error: tComments("notFound") }, { status: 404 });
     }
 
     const isAdmin = userRole === "admin";
     if (!isAdmin && comment.authorId !== userId) {
-      return NextResponse.json({ error: "无权限" }, { status: 403 });
+      return NextResponse.json({ error: tAuth("forbidden") }, { status: 403 });
     }
 
     const relatedCommentIds = await prisma.serverComment.findMany({
@@ -80,6 +87,6 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
     return NextResponse.json({ success: true });
   } catch (error) {
     logger.error("[api/servers/[id]/comments/[commentId]] Unexpected DELETE error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

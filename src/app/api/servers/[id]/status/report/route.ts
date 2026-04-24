@@ -1,7 +1,10 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { prisma } from "@/lib/db";
+import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { authenticatePlugin } from "@/lib/plugin-auth";
 import { getRedisConnection } from "@/lib/redis";
@@ -14,36 +17,41 @@ const PLUGIN_CONNECTED_TTL = 60;
 
 /**
  * POST /api/servers/:id/status/report
- * 插件状态上报：更新服务器在线状态、玩家数等信息。
- * Auth via API key (Bearer token).
+ * Plugin status report: updates the server's online state, player counts,
+ * and related info. Auth via API key (Bearer token).
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
   try {
     const { id } = await params;
     const parsedId = serverLookupIdSchema.safeParse(id);
     if (!parsedId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const cuid = await resolveServerCuid(parsedId.data);
     if (!cuid) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const authenticated = await authenticatePlugin(request, cuid);
     if (!authenticated) {
-      return NextResponse.json({ error: "未授权" }, { status: 401 });
+      return NextResponse.json({ error: tServers("unauthorized") }, { status: 401 });
     }
 
     const body: unknown = await request.json().catch(() => null);
-    const parsed = statusReportSchema.safeParse(body);
+    const parsed = statusReportSchema.safeParse(body, {
+      errorMap: getZodErrorMap(locale),
+    });
     if (!parsed.success) {
       logger.warn("[api/servers/[id]/status/report] Validation failed", {
         body,
-        errors: parsed.error.flatten(),
+        errors: flattenZodErrorWithLocale(parsed.error, locale),
       });
       return NextResponse.json(
-        { error: "校验失败", details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
         { status: 400 },
       );
     }
@@ -104,13 +112,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ success: true });
   } catch (err) {
     logger.error("[api/servers/[id]/status/report] Unexpected POST error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
 
 /**
- * 服务器上线通知（从 ping-worker 复用逻辑，1 小时冷却）。
- * 副作用失败只记日志，不阻塞主操作。
+ * Server-online notification (mirrors the ping-worker logic with a 1-hour
+ * cooldown). Side-effect failures are logged only and never block the main
+ * operation.
  */
 async function notifyServerOnline(
   serverId: string,
@@ -132,16 +141,18 @@ async function notifyServerOnline(
 
     if (favorites.length === 0) return;
 
-    await prisma.serverNotification.createMany({
-      data: favorites.map((f) => ({
+    const { createTranslatedBulkNotifications } = await import("@/lib/notification");
+    await createTranslatedBulkNotifications(
+      favorites.map((f) => ({
         userId: f.userId,
         type: "server_online",
-        title: "服务器已上线",
-        message: `你收藏的「${serverName}」已上线`,
+        titleKey: "serverOnlineTitle",
+        bodyKey: "serverOnlineBody",
+        params: { serverName },
         link: `/servers/${serverPsid}`,
         serverId,
       })),
-    });
+    );
   } catch (error) {
     logger.error("[status/report] Failed to create server online notifications", {
       serverId,

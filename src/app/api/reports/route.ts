@@ -3,23 +3,49 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
+import { getZodErrorMap } from "@/lib/i18nZod";
 import { createReportSchema } from "@/lib/validation";
 import { logger } from "@/lib/logger";
+import type { Locale } from "@/i18n/config";
+import { createTranslator } from "next-intl";
+import zhMessages from "../../../../messages/zh.json";
+import enMessages from "../../../../messages/en.json";
 
-export function buildCreateReportSuccessPayload() {
+const REPORT_MESSAGES: Record<Locale, typeof zhMessages> = {
+  zh: zhMessages,
+  en: enMessages,
+};
+
+/**
+ * Success payload factory used by both the Route Handler and unit tests.
+ * Kept as a synchronous helper so the route test can call it without a
+ * Next.js runtime. Locale defaults to `zh` to preserve the legacy string
+ * the test pins to.
+ */
+export function buildCreateReportSuccessPayload(locale: Locale = "zh") {
+  const t = createTranslator({
+    locale,
+    namespace: "errors.api.reports",
+    messages: REPORT_MESSAGES[locale],
+  });
   return {
     success: true,
-    message: "举报已提交，感谢你的反馈",
+    message: t("submitSuccess"),
   };
 }
 
 /**
  * POST /api/reports
- * 用户提交举报（服务器、评论、用户）。
+ * Submits a user report against a server, comment, or user.
  */
 export async function POST(request: NextRequest) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tReports = await getTranslations({ locale, namespace: "errors.api.reports" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -27,34 +53,36 @@ export async function POST(request: NextRequest) {
     }
     const userId = authResult.user.id;
 
-    // ── 解析 & 校验请求体 ──
+    // Parse & validate the body.
     const body: unknown = await request.json();
-    const parsed = createReportSchema.safeParse(body);
+    const parsed = createReportSchema.safeParse(body, {
+      errorMap: getZodErrorMap(locale),
+    });
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.errors[0]?.message ?? "请求参数错误" },
+        { error: parsed.error.errors[0]?.message ?? tReports("invalidRequest") },
         { status: 400 },
       );
     }
 
     const { targetType, targetId, category, description } = parsed.data;
 
-    // ── 禁止举报自己 ──
+    // Cannot report yourself.
     if (targetType === "user" && targetId === userId) {
-      return NextResponse.json({ error: "不能举报自己" }, { status: 400 });
+      return NextResponse.json({ error: tReports("cannotReportSelf") }, { status: 400 });
     }
 
-    // ── 验证目标存在 & 禁止举报自己的内容 ──
+    // Validate target exists & disallow reporting your own content.
     if (targetType === "server") {
       const server = await prisma.server.findUnique({
         where: { id: targetId },
         select: { id: true, ownerId: true },
       });
       if (!server) {
-        return NextResponse.json({ error: "举报的服务器不存在" }, { status: 404 });
+        return NextResponse.json({ error: tReports("targetServerNotFound") }, { status: 404 });
       }
       if (server.ownerId === userId) {
-        return NextResponse.json({ error: "不能举报自己的服务器" }, { status: 400 });
+        return NextResponse.json({ error: tReports("cannotReportSelfServer") }, { status: 400 });
       }
     } else if (targetType === "comment") {
       const comment = await prisma.serverComment.findUnique({
@@ -62,10 +90,10 @@ export async function POST(request: NextRequest) {
         select: { id: true, authorId: true },
       });
       if (!comment) {
-        return NextResponse.json({ error: "举报的评论不存在" }, { status: 404 });
+        return NextResponse.json({ error: tReports("targetCommentNotFound") }, { status: 404 });
       }
       if (comment.authorId === userId) {
-        return NextResponse.json({ error: "不能举报自己的评论" }, { status: 400 });
+        return NextResponse.json({ error: tReports("cannotReportSelfComment") }, { status: 400 });
       }
     } else if (targetType === "user") {
       const targetUser = await prisma.user.findUnique({
@@ -73,11 +101,11 @@ export async function POST(request: NextRequest) {
         select: { id: true },
       });
       if (!targetUser) {
-        return NextResponse.json({ error: "举报的用户不存在" }, { status: 404 });
+        return NextResponse.json({ error: tReports("targetUserNotFound") }, { status: 404 });
       }
     }
 
-    // ── 基于信誉的频率限制 ──
+    // Reputation-aware rate limit.
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -110,12 +138,12 @@ export async function POST(request: NextRequest) {
 
     if (todayReportCount >= dailyLimit) {
       return NextResponse.json(
-        { error: "今日举报次数已达上限，请明天再试" },
+        { error: tReports("dailyLimit") },
         { status: 429 },
       );
     }
 
-    // ── 重复举报检测 ──
+    // Duplicate-report detection.
     const existingReport = await prisma.report.findUnique({
       where: {
         reporterId_targetType_targetId: {
@@ -129,12 +157,12 @@ export async function POST(request: NextRequest) {
 
     if (existingReport) {
       return NextResponse.json(
-        { error: "你已经举报过该内容，无需重复提交" },
+        { error: tReports("duplicate") },
         { status: 409 },
       );
     }
 
-    // ── 创建举报记录 ──
+    // Create the report row.
     try {
       await prisma.report.create({
         data: {
@@ -146,19 +174,19 @@ export async function POST(request: NextRequest) {
         },
       });
     } catch (error) {
-      // 并发场景下唯一约束冲突，按重复举报处理
+      // Concurrent uniq-constraint violations are treated as duplicates.
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         return NextResponse.json(
-          { error: "你已经举报过该内容，无需重复提交" },
+          { error: tReports("duplicate") },
           { status: 409 },
         );
       }
       throw error;
     }
 
-    return NextResponse.json(buildCreateReportSuccessPayload(), { status: 201 });
+    return NextResponse.json(buildCreateReportSuccessPayload(locale), { status: 201 });
   } catch (error) {
     logger.error("[api/reports] Unexpected POST error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

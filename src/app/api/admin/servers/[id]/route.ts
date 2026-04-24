@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { prisma } from "@/lib/db";
+import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { resolveServerCuid } from "@/lib/lookup";
-import { createNotification } from "@/lib/notification";
-import { requireAdmin, isAdminError } from "@/lib/admin";
+import { createTranslatedNotification } from "@/lib/notification";
+import { requireAdmin, isAdminError, translateAdminError } from "@/lib/admin";
 import { serverLookupIdSchema, adminServerActionSchema } from "@/lib/validation";
 import { deleteFile, deleteObject } from "@/lib/storage";
 
@@ -26,22 +29,29 @@ async function createReviewNotification({
 }: ReviewNotificationParams): Promise<void> {
   try {
     if (action === "approve") {
-      await createNotification({
+      await createTranslatedNotification({
         userId: ownerId,
         type: "server_approved",
-        title: "服务器审核通过",
-        message: `你的服务器「${serverName}」已通过审核，现在所有人都可以看到了`,
+        titleKey: "serverApprovedTitle",
+        bodyKey: "serverApprovedBody",
+        params: { serverName },
         link: `/servers/${serverPsid}`,
         serverId,
       });
       return;
     }
 
-    await createNotification({
+    // Translated body key carries `{reason}`; when the admin skipped the
+    // reason we use `serverRejectedBodyFallbackReason` as a placeholder so
+    // the final sentence still reads naturally in the recipient's locale.
+    const resolvedReason =
+      reason ?? (await resolveRejectFallbackReason(ownerId));
+    await createTranslatedNotification({
       userId: ownerId,
       type: "server_rejected",
-      title: "服务器审核未通过",
-      message: `你的服务器「${serverName}」未通过审核：${reason ?? "请联系管理员了解详情"}`,
+      titleKey: "serverRejectedTitle",
+      bodyKey: "serverRejectedBody",
+      params: { serverName, reason: resolvedReason },
       link: "/my-servers",
       serverId,
     });
@@ -50,37 +60,58 @@ async function createReviewNotification({
   }
 }
 
+async function resolveRejectFallbackReason(ownerId: string): Promise<string> {
+  const user = await prisma.user.findUnique({
+    where: { id: ownerId },
+    select: { locale: true },
+  });
+  const locale = user?.locale === "en" ? "en" : "zh";
+  const t = await getTranslations({ locale, namespace: "notifications.system" });
+  return t("serverRejectedBodyFallbackReason");
+}
+
 /**
- * PATCH /api/admin/servers/:id — 审核服务器（通过/拒绝）。
+ * PATCH /api/admin/servers/:id — review a server (approve / reject / mark reviewed).
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
+  const tAdmin = await getTranslations({ locale, namespace: "errors.api.admin" });
   try {
     const adminResult = await requireAdmin();
     if (isAdminError(adminResult)) {
-      return NextResponse.json({ error: adminResult.error }, { status: adminResult.status });
+      return NextResponse.json(
+        { error: translateAdminError(locale, adminResult.errorKey) },
+        { status: adminResult.status },
+      );
     }
 
     const { id } = await params;
-    const parsedId = serverLookupIdSchema.safeParse(id);
+    const parsedId = serverLookupIdSchema.safeParse(id, {
+      errorMap: getZodErrorMap(locale),
+    });
     if (!parsedId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const resolvedId = await resolveServerCuid(parsedId.data);
     if (!resolvedId) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     let body: unknown;
     try {
       body = await request.json();
     } catch {
-      return NextResponse.json({ error: "请求体必须是合法 JSON" }, { status: 400 });
+      return NextResponse.json({ error: tCommon("invalidJson") }, { status: 400 });
     }
-    const parsed = adminServerActionSchema.safeParse(body);
+    const parsed = adminServerActionSchema.safeParse(body, {
+      errorMap: getZodErrorMap(locale),
+    });
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
         { status: 400 },
       );
     }
@@ -93,7 +124,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     });
 
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     if (action === "approve") {
@@ -112,7 +143,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         });
       }
 
-      return NextResponse.json({ success: true, message: "服务器已通过审核" });
+      return NextResponse.json({ success: true, message: tAdmin("serverApproved") });
     }
 
     if (action === "review") {
@@ -124,12 +155,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           reviewedBy: adminResult.userId,
         },
       });
-      return NextResponse.json({ success: true, message: "已标记为已巡检" });
+      return NextResponse.json({ success: true, message: tAdmin("serverReviewed") });
     }
 
     if (action === "reject") {
       if (!reason) {
-        return NextResponse.json({ error: "拒绝时必须填写原因" }, { status: 400 });
+        return NextResponse.json({ error: tAdmin("rejectReasonRequired") }, { status: 400 });
       }
 
       await prisma.server.update({
@@ -148,35 +179,44 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         });
       }
 
-      return NextResponse.json({ success: true, message: "服务器已拒绝" });
+      return NextResponse.json({ success: true, message: tAdmin("serverRejected") });
     }
 
-    return NextResponse.json({ error: "未知操作" }, { status: 400 });
+    return NextResponse.json({ error: tAdmin("unknownAction") }, { status: 400 });
   } catch (err) {
     logger.error("[api/admin/servers/[id]] Unexpected PATCH error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
 
 /**
- * DELETE /api/admin/servers/:id — 删除服务器。
+ * DELETE /api/admin/servers/:id — permanently delete a server.
  */
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const locale = await getRequestLocale();
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
+  const tAdmin = await getTranslations({ locale, namespace: "errors.api.admin" });
   try {
     const adminResult = await requireAdmin();
     if (isAdminError(adminResult)) {
-      return NextResponse.json({ error: adminResult.error }, { status: adminResult.status });
+      return NextResponse.json(
+        { error: translateAdminError(locale, adminResult.errorKey) },
+        { status: adminResult.status },
+      );
     }
 
     const { id } = await params;
-    const parsedId = serverLookupIdSchema.safeParse(id);
+    const parsedId = serverLookupIdSchema.safeParse(id, {
+      errorMap: getZodErrorMap(locale),
+    });
     if (!parsedId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const resolvedId = await resolveServerCuid(parsedId.data);
     if (!resolvedId) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const server = await prisma.server.findUnique({
@@ -192,7 +232,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     });
 
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     await prisma.$transaction([
@@ -230,9 +270,9 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
       }
     }
 
-    return NextResponse.json({ success: true, message: "服务器已删除" });
+    return NextResponse.json({ success: true, message: tAdmin("serverDeleted") });
   } catch (err) {
     logger.error("[api/admin/servers/[id]] Unexpected DELETE error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

@@ -2,7 +2,10 @@ import { randomInt } from "crypto";
 import { z } from "zod";
 import { getRedisConnection } from "@/lib/redis";
 
-const codeSchema = z.string().regex(/^\d{6}$/, "验证码必须是 6 位数字");
+// Internal schemas: `parse()` throws on bad input and is only invoked
+// with already-sanitized data, so these messages never reach the client.
+// Kept as English developer-facing strings.
+const codeSchema = z.string().regex(/^\d{6}$/, "verification code must be 6 digits");
 const emailSchema = z
   .string()
   .trim()
@@ -14,7 +17,7 @@ const keyPrefixSchema = z
   .trim()
   .min(1)
   .max(32)
-  .regex(/^[a-z0-9-]+$/i, "前缀格式不合法")
+  .regex(/^[a-z0-9-]+$/i, "invalid key prefix format")
   .transform((value) => value.toLowerCase());
 
 const CODE_TTL_SECONDS = 600;
@@ -42,18 +45,18 @@ function getFailedAttemptsKey(email: string, attemptsPrefix: string): string {
 }
 
 /**
- * 生成 6 位数字验证码。
+ * Generate a 6-digit numeric verification code.
  */
 export function generateCode(): string {
   return String(randomInt(100_000, 1_000_000));
 }
 
 /**
- * 存储验证码（有效期 10 分钟）。
+ * Store a verification code (valid for 10 minutes).
  *
- * @param email - 邮箱
- * @param code - 6 位验证码
- * @param prefix - 验证码用途前缀（默认 `verify`）
+ * @param email - recipient email
+ * @param code - 6-digit verification code
+ * @param prefix - use-case prefix for the key (defaults to `verify`)
  */
 export async function storeCode(email: string, code: string, prefix = "verify"): Promise<void> {
   const validatedEmail = emailSchema.parse(email);
@@ -70,11 +73,12 @@ export async function storeCode(email: string, code: string, prefix = "verify"):
 }
 
 /**
- * 检查当前邮箱是否可以发送验证码（冷却 60 秒）。
+ * Check whether the email is currently allowed to request a new code
+ * (60-second cooldown).
  *
- * @param email - 邮箱
- * @param prefix - 验证码用途前缀（默认 `verify`）
- * @returns `true` 可发送；`false` 冷却中
+ * @param email - recipient email
+ * @param prefix - use-case prefix (defaults to `verify`)
+ * @returns `true` if a new code may be sent; `false` if still cooling down
  */
 export async function canSendCode(email: string, prefix = "verify"): Promise<boolean> {
   const validatedEmail = emailSchema.parse(email);
@@ -85,10 +89,10 @@ export async function canSendCode(email: string, prefix = "verify"): Promise<boo
 }
 
 /**
- * 设置邮箱发送冷却（60 秒）。
+ * Set the email send-cooldown flag (60 seconds).
  *
- * @param email - 邮箱
- * @param prefix - 验证码用途前缀（默认 `verify`）
+ * @param email - recipient email
+ * @param prefix - use-case prefix (defaults to `verify`)
  */
 export async function setSendCooldown(email: string, prefix = "verify"): Promise<void> {
   const validatedEmail = emailSchema.parse(email);
@@ -99,10 +103,10 @@ export async function setSendCooldown(email: string, prefix = "verify"): Promise
 }
 
 /**
- * 记录并检查 IP 每日发送上限。
+ * Record and check the per-IP daily send quota.
  *
- * @param ip - 请求 IP
- * @returns `true` 未超限；`false` 已超过每日 10 次
+ * @param ip - request IP
+ * @returns `true` if under quota; `false` once the daily cap (10) is exceeded
  */
 export async function checkIpLimit(ip: string): Promise<boolean> {
   const validatedIp = ipSchema.parse(ip);
@@ -118,10 +122,10 @@ export async function checkIpLimit(ip: string): Promise<boolean> {
 }
 
 /**
- * 记录验证码验证失败次数（15 分钟窗口）。
+ * Record a failed verification attempt (15-minute window).
  *
- * @param email - 邮箱
- * @param attemptsPrefix - 失败次数用途前缀（默认 `verify-attempts`）
+ * @param email - recipient email
+ * @param attemptsPrefix - use-case prefix (defaults to `verify-attempts`)
  */
 export async function recordFailedAttempt(
   email: string,
@@ -139,11 +143,11 @@ export async function recordFailedAttempt(
 }
 
 /**
- * 检查邮箱是否已被验证码错误次数锁定。
+ * Check whether the email is locked out after repeated failed attempts.
  *
- * @param email - 邮箱
- * @param attemptsPrefix - 失败次数用途前缀（默认 `verify-attempts`）
- * @returns `true` 已锁定；`false` 未锁定
+ * @param email - recipient email
+ * @param attemptsPrefix - use-case prefix (defaults to `verify-attempts`)
+ * @returns `true` if locked out; `false` otherwise
  */
 export async function isLocked(
   email: string,
@@ -161,13 +165,13 @@ export async function isLocked(
 }
 
 /**
- * 校验验证码，成功后一次性删除。
- * 校验失败会累计次数，超过上限将锁定。
+ * Verify a code; delete it on success (single-use). Failed attempts are
+ * counted, and the caller is locked out once the limit is reached.
  *
- * @param email - 邮箱
- * @param code - 6 位验证码
- * @param prefix - 验证码用途前缀（默认 `verify`）
- * @returns `true` 校验成功；`false` 校验失败或已锁定
+ * @param email - recipient email
+ * @param code - 6-digit verification code
+ * @param prefix - use-case prefix (defaults to `verify`)
+ * @returns `true` on success; `false` if invalid, expired, or locked
  */
 export async function verifyCode(email: string, code: string, prefix = "verify"): Promise<boolean> {
   const validatedEmail = emailSchema.parse(email);

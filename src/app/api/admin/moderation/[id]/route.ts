@@ -1,17 +1,26 @@
 import { NextResponse } from "next/server";
-import { requireAdmin, isAdminError } from "@/lib/admin";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
+import { requireAdmin, isAdminError, translateAdminError } from "@/lib/admin";
 import { prisma } from "@/lib/db";
+import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { adminModerationLogActionSchema } from "@/lib/validation";
 
 /**
- * PATCH /api/admin/moderation/:id — 管理员标记已阅 / 添加备注。
+ * PATCH /api/admin/moderation/:id — mark a log entry reviewed or add a note.
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tAdmin = await getTranslations({ locale, namespace: "errors.api.admin" });
   try {
     const adminResult = await requireAdmin();
     if (isAdminError(adminResult)) {
-      return NextResponse.json({ error: adminResult.error }, { status: adminResult.status });
+      return NextResponse.json(
+        { error: translateAdminError(locale, adminResult.errorKey) },
+        { status: adminResult.status },
+      );
     }
 
     const { id } = await params;
@@ -20,13 +29,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     try {
       body = await request.json();
     } catch {
-      return NextResponse.json({ error: "请求体必须是合法 JSON" }, { status: 400 });
+      return NextResponse.json({ error: tCommon("invalidJson") }, { status: 400 });
     }
 
-    const parsed = adminModerationLogActionSchema.safeParse(body);
+    const parsed = adminModerationLogActionSchema.safeParse(body, {
+      errorMap: getZodErrorMap(locale),
+    });
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
         { status: 400 },
       );
     }
@@ -37,7 +48,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     });
 
     if (!existing) {
-      return NextResponse.json({ error: "日志不存在" }, { status: 404 });
+      return NextResponse.json({ error: tAdmin("moderationLogNotFound") }, { status: 404 });
     }
 
     const data: { reviewed?: boolean; adminNote?: string } = {};
@@ -49,7 +60,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     }
 
     if (Object.keys(data).length === 0) {
-      return NextResponse.json({ error: "没有可更新的字段" }, { status: 400 });
+      return NextResponse.json({ error: tAdmin("moderationNoFields") }, { status: 400 });
     }
 
     await prisma.moderationLog.update({
@@ -60,6 +71,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ success: true });
   } catch (err) {
     logger.error("[api/admin/moderation/[id]] Unexpected PATCH error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

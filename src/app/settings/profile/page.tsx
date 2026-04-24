@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { ImageUpload } from "@/components/ImageUpload";
 import { PageLoading } from "@/components/PageLoading";
@@ -22,13 +23,13 @@ function extractApiError(payload: unknown): string | undefined {
   return typeof maybeError === "string" ? maybeError : undefined;
 }
 /**
- * 用户资料编辑页。
- * 支持修改昵称、简介和头像。
+ * Profile editor page — edit display name, bio, and avatar.
  */
 export default function ProfileSettingsPage() {
   const router = useRouter();
   const { data: session, status, update } = useSession();
   const { toast } = useToast();
+  const t = useTranslations("user.settings");
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -64,7 +65,7 @@ export default function ProfileSettingsPage() {
 
         if (!response.ok || !payload.data) {
           if (!cancelled) {
-            toast.error(extractApiError(payload) ?? "资料加载失败");
+            toast.error(extractApiError(payload) ?? t("loadFailed"));
           }
           return;
         }
@@ -78,7 +79,7 @@ export default function ProfileSettingsPage() {
         }
       } catch {
         if (!cancelled) {
-          toast.error("网络异常，资料加载失败");
+          toast.error(t("networkLoadFailed"));
         }
       } finally {
         if (!cancelled) {
@@ -92,7 +93,7 @@ export default function ProfileSettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [status, toast]);
+  }, [status, t, toast]);
 
   const handleSaveProfile = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -101,12 +102,12 @@ export default function ProfileSettingsPage() {
     }
 
     if (name.trim().length < 2 || name.trim().length > 20) {
-      toast.error("昵称长度需在 2-20 个字符之间");
+      toast.error(t("nameRange"));
       return;
     }
 
     if (bio.trim().length > 200) {
-      toast.error("简介最多 200 字");
+      toast.error(t("bioMax"));
       return;
     }
 
@@ -127,7 +128,7 @@ export default function ProfileSettingsPage() {
         ApiErrorPayload;
 
       if (!response.ok || !payload.data) {
-        toast.error(extractApiError(payload) ?? "保存失败，请稍后重试");
+        toast.error(extractApiError(payload) ?? t("saveFailed"));
         return;
       }
 
@@ -136,7 +137,7 @@ export default function ProfileSettingsPage() {
       setSavedImageUrl(payload.data.image);
       setAvatarFile(null);
       setAvatarUploadResetKey((prev) => prev + 1);
-      toast.success("资料已更新");
+      toast.success(t("saveSuccess"));
 
       await update({
         name: payload.data.name ?? null,
@@ -144,30 +145,30 @@ export default function ProfileSettingsPage() {
       });
       router.refresh();
     } catch {
-      toast.error("网络异常，保存失败");
+      toast.error(t("networkSaveFailed"));
     } finally {
       setIsSaving(false);
     }
   };
 
   if (status === "loading" || isLoading) {
-    return <PageLoading text="资料加载中..." />;
+    return <PageLoading text={t("loadingText")} />;
   }
 
   if (status === "unauthenticated") {
-    return <div className="py-12 text-center text-sm text-warm-500">正在跳转到登录页...</div>;
+    return <div className="py-12 text-center text-sm text-warm-500">{t("redirectingToLogin")}</div>;
   }
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4">
       <div className="m3-surface p-6">
-        <h1 className="text-2xl font-semibold text-warm-800">个人资料设置</h1>
-        <p className="mt-2 text-sm text-warm-600">设置头像、昵称和一句话简介。</p>
+        <h1 className="text-2xl font-semibold text-warm-800">{t("heading")}</h1>
+        <p className="mt-2 text-sm text-warm-600">{t("subtitle")}</p>
 
         <form className="mt-6 space-y-5" onSubmit={handleSaveProfile} noValidate>
           <fieldset disabled={isSaving} className="space-y-5 disabled:opacity-90">
             <div>
-              <p className="text-sm text-warm-700">头像</p>
+              <p className="text-sm text-warm-700">{t("avatarLabel")}</p>
               <div className="mt-2">
                 <ImageUpload
                   key={`profile-avatar-upload-${avatarUploadResetKey}`}
@@ -191,19 +192,19 @@ export default function ProfileSettingsPage() {
             </div>
 
             <label className="block text-sm text-warm-700">
-              昵称
+              {t("nameLabel")}
               <input
                 type="text"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 className="m3-input mt-2 w-full"
-                placeholder="输入昵称（2-20 字）"
+                placeholder={t("namePlaceholder")}
                 maxLength={20}
               />
             </label>
 
             <label className="block text-sm text-warm-700">
-              邮箱（不可修改）
+              {t("emailLabel")}
               <input
                 type="text"
                 value={email}
@@ -213,16 +214,16 @@ export default function ProfileSettingsPage() {
             </label>
 
             <label className="block text-sm text-warm-700">
-              个人简介
+              {t("bioLabel")}
               <textarea
                 value={bio}
                 onChange={(event) => setBio(event.target.value)}
                 maxLength={200}
                 rows={4}
                 className="m3-input mt-2 min-h-[120px] w-full"
-                placeholder="一句话介绍自己..."
+                placeholder={t("bioPlaceholder")}
               />
-              <p className="mt-1 text-right text-xs text-warm-500">{bio.length}/200</p>
+              <p className="mt-1 text-right text-xs text-warm-500">{t("bioCounter", { count: bio.length })}</p>
             </label>
 
             <div className="flex justify-end">
@@ -231,7 +232,7 @@ export default function ProfileSettingsPage() {
                 disabled={isSaving}
                 className="m3-btn m3-btn-primary disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isSaving ? "保存中..." : "保存修改"}
+                {isSaving ? t("saving") : t("save")}
               </button>
             </div>
           </fieldset>

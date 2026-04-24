@@ -23,8 +23,8 @@ interface EmptyStateProps {
 }
 
 /**
- * 统一空状态组件。
- * 用于列表无数据时展示统一文案和引导动作。
+ * Shared empty-state component.
+ * Use it to show a unified message and CTA when a list has no data.
  */
 export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (

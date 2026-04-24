@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -40,6 +41,8 @@ export default function EditServerPage() {
   const { id } = useParams<{ id: string }>();
   const { data: session, status } = useSession();
   const { toast } = useToast();
+  const t = useTranslations("servers.edit");
+  const tCommon = useTranslations("servers.common");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isForbidden, setIsForbidden] = useState(false);
@@ -60,7 +63,7 @@ export default function EditServerPage() {
     }
 
     if (!id) {
-      setError("无效的服务器 ID");
+      setError(t("invalidServerId"));
       setIsLoading(false);
       return;
     }
@@ -78,7 +81,7 @@ export default function EditServerPage() {
 
         if (!response.ok) {
           if (!cancelled) {
-            setError(payload.error ?? "加载服务器信息失败");
+            setError(payload.error ?? t("loadFailed"));
           }
           return;
         }
@@ -86,7 +89,7 @@ export default function EditServerPage() {
         const data = payload.data;
         if (!data) {
           if (!cancelled) {
-            setError("服务器数据异常，请稍后重试");
+            setError(t("dataCorrupted"));
           }
           return;
         }
@@ -123,7 +126,7 @@ export default function EditServerPage() {
         }
       } catch {
         if (!cancelled) {
-          setError("加载服务器信息失败");
+          setError(t("loadFailed"));
         }
       } finally {
         if (!cancelled) {
@@ -136,7 +139,7 @@ export default function EditServerPage() {
     return () => {
       cancelled = true;
     };
-  }, [id, router, session?.user?.id, status]);
+  }, [id, router, session?.user?.id, status, t]);
 
   const handleUpdateServer = async (formData: FormData): Promise<ServerFormSubmitResult> => {
     try {
@@ -148,7 +151,7 @@ export default function EditServerPage() {
 
       if (response.status === 401) {
         router.replace(`/login?callbackUrl=${encodeURIComponent(`/servers/${id}/edit`)}`);
-        return { success: false, error: "请先登录" };
+        return { success: false, error: t("loginRequired") };
       }
 
       if (response.status === 403) {
@@ -156,17 +159,17 @@ export default function EditServerPage() {
         window.setTimeout(() => {
           router.replace(`/servers/${id}`);
         }, 1200);
-        return { success: false, error: "无权限编辑此服务器" };
+        return { success: false, error: t("forbidden") };
       }
 
       if (!response.ok) {
         return {
           success: false,
-          error: payload.error ?? "保存失败，请稍后重试",
+          error: payload.error ?? t("saveFailed"),
         };
       }
 
-      toast.success(payload.resubmittedForReview ? "已重新提交审核" : "保存成功");
+      toast.success(payload.resubmittedForReview ? t("resubmittedForReview") : t("saveSuccess"));
       router.push(`/servers/${id}`);
       router.refresh();
       return {
@@ -174,7 +177,7 @@ export default function EditServerPage() {
         warning: payload.warning,
       };
     } catch {
-      return { success: false, error: "网络异常，请稍后重试" };
+      return { success: false, error: tCommon("networkError") };
     }
   };
 
@@ -183,13 +186,13 @@ export default function EditServerPage() {
   }
 
   if (status === "unauthenticated") {
-    return <div className="py-12 text-center text-sm text-warm-500">正在跳转到登录页...</div>;
+    return <div className="py-12 text-center text-sm text-warm-500">{tCommon("redirectingToLogin")}</div>;
   }
 
   if (isForbidden) {
     return (
       <div className="m3-alert-error mx-auto max-w-2xl px-4 py-3">
-        无权限编辑此服务器，正在返回详情页...
+        {t("forbiddenRedirecting")}
       </div>
     );
   }
@@ -197,7 +200,7 @@ export default function EditServerPage() {
   if (error || !initialData) {
     return (
       <div className="m3-alert-error mx-auto max-w-2xl px-4 py-3">
-        {error ?? "服务器不存在或已被删除"}
+        {error ?? t("notFoundOrDeleted")}
       </div>
     );
   }
@@ -207,14 +210,14 @@ export default function EditServerPage() {
       <div className="m3-surface p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold text-warm-800">编辑服务器</h1>
-            <p className="mt-2 text-sm text-warm-600">更新服务器信息并保存修改</p>
+            <h1 className="text-2xl font-semibold text-warm-800">{t("heading")}</h1>
+            <p className="mt-2 text-sm text-warm-600">{t("description")}</p>
           </div>
           <Link
             href={`/servers/${id}/modpacks`}
             className="rounded-xl border border-coral px-3 py-1.5 text-xs font-medium text-coral transition-colors hover:bg-coral-light"
           >
-            管理整合包
+            {t("manageModpacksLink")}
           </Link>
         </div>
         <ServerForm

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   createContext,
   useCallback,
@@ -49,6 +50,7 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
 }
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
+  const t = useTranslations("common.confirm");
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const confirmBtnRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -180,7 +182,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 onClick={handleCancel}
                 className="m3-btn m3-btn-tonal px-4 py-2 text-sm"
               >
-                {dialog.cancelText ?? "取消"}
+                {dialog.cancelText ?? t("defaultCancel")}
               </button>
               <button
                 ref={confirmBtnRef}
@@ -190,7 +192,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                   dialog.danger ? "m3-btn-danger" : "m3-btn-primary"
                 }`}
               >
-                {dialog.confirmText ?? "确定"}
+                {dialog.confirmText ?? t("defaultConfirm")}
               </button>
             </div>
           </div>

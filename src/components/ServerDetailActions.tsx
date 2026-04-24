@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { ReportDialog } from "@/components/ReportDialog";
@@ -17,6 +18,7 @@ export function ServerDetailActions({
   isOwner,
   isLoggedIn,
 }: ServerDetailActionsProps) {
+  const t = useTranslations("servers.common");
   const [reportOpen, setReportOpen] = useState(false);
 
   return (
@@ -27,7 +29,7 @@ export function ServerDetailActions({
           type="button"
           onClick={() => setReportOpen(true)}
           className="rounded-full p-2 text-warm-400 transition-colors hover:bg-warm-100 hover:text-accent"
-          title="举报"
+          title={t("reportTitle")}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

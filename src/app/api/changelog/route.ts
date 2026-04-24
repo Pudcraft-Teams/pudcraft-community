@@ -1,25 +1,33 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { prisma } from "@/lib/db";
+import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { queryChangelogsSchema } from "@/lib/validation";
 import type { ChangelogItem } from "@/lib/types";
 
 /**
- * GET /api/changelog — 获取已发布的更新日志列表。
+ * GET /api/changelog — returns the published changelog entries.
  */
 export async function GET(request: Request) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
   try {
     const { searchParams } = new URL(request.url);
-    const parsed = queryChangelogsSchema.safeParse({
-      page: searchParams.get("page") ?? undefined,
-      limit: searchParams.get("limit") ?? undefined,
-    });
+    const parsed = queryChangelogsSchema.safeParse(
+      {
+        page: searchParams.get("page") ?? undefined,
+        limit: searchParams.get("limit") ?? undefined,
+      },
+      { errorMap: getZodErrorMap(locale) },
+    );
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsed.error.flatten() },
+        { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
         { status: 400 },
       );
     }
@@ -62,6 +70,6 @@ export async function GET(request: Request) {
     });
   } catch (err) {
     logger.error("[api/changelog] Unexpected error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

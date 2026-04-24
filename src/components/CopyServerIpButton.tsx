@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 interface CopyServerIpButtonProps {
@@ -11,6 +12,7 @@ interface CopyServerIpButtonProps {
  * 优先使用 Clipboard API，失败时降级为手动复制提示。
  */
 export function CopyServerIpButton({ address }: CopyServerIpButtonProps) {
+  const t = useTranslations("servers.common");
   const [status, setStatus] = useState<"idle" | "copied" | "manual">("idle");
 
   useEffect(() => {
@@ -31,13 +33,17 @@ export function CopyServerIpButton({ address }: CopyServerIpButtonProps) {
     }
 
     if (typeof window !== "undefined") {
-      window.prompt("浏览器不支持自动复制，请手动复制：", address);
+      window.prompt(t("copyManualPrompt"), address);
     }
     setStatus("manual");
   };
 
   const buttonText =
-    status === "copied" ? "已复制！" : status === "manual" ? "请手动复制地址" : "复制 IP";
+    status === "copied"
+      ? t("copyIpSuccess")
+      : status === "manual"
+        ? t("copyIpManual")
+        : t("copyIp");
   const buttonClass =
     status === "copied"
       ? "m3-btn-primary"

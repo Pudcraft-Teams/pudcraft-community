@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 const MOBILE_HEADER_OVERLAY_EVENT = "pudcraft-mobile-header-overlay";
@@ -16,6 +17,7 @@ export function HeaderSearch({
 }: HeaderSearchProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const t = useTranslations("servers.list");
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
 
@@ -66,20 +68,20 @@ export function HeaderSearch({
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="搜索服务器..."
+              placeholder={t("headerSearchPlaceholder")}
               className="m3-input min-w-0 flex-1"
-              aria-label="搜索服务器"
+              aria-label={t("headerSearchInputAriaLabel")}
               autoFocus
             />
             <button type="submit" className="m3-btn m3-btn-primary px-3 py-2 text-xs">
-              搜索
+              {t("headerSearchSubmit")}
             </button>
             <button
               type="button"
               className="m3-btn m3-btn-tonal px-3 py-2 text-xs"
               onClick={() => setOpen(false)}
             >
-              取消
+              {t("headerSearchCancel")}
             </button>
           </form>
         </div>
@@ -98,7 +100,7 @@ export function HeaderSearch({
           );
           setOpen(true);
         }}
-        aria-label="打开搜索"
+        aria-label={t("headerSearchOpenAriaLabel")}
         aria-expanded={open}
       >
         <svg
@@ -113,7 +115,7 @@ export function HeaderSearch({
             clipRule="evenodd"
           />
         </svg>
-        <span className="text-sm text-warm-500">搜索</span>
+        <span className="text-sm text-warm-500">{t("headerSearchTriggerLabel")}</span>
       </button>
     );
   }
@@ -131,7 +133,7 @@ export function HeaderSearch({
         type="search"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="搜索服务器"
+        placeholder={t("headerSearchPlaceholderShort")}
         className="m3-input w-28 py-1.5 pl-7 pr-2 text-xs sm:w-36"
       />
       <svg

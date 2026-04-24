@@ -2,10 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { PageLoading } from "@/components/PageLoading";
 import { useToast } from "@/hooks/useToast";
+import { defaultLocale, isLocale } from "@/i18n/config";
 import { timeAgo } from "@/lib/time";
 import type {
   MarkNotificationsReadResponse,
@@ -46,12 +48,15 @@ function markNotificationReadLocally(
 }
 
 /**
- * 通知中心页面。
+ * Notification center page.
  */
 export default function NotificationsPage() {
   const router = useRouter();
   const { status } = useSession();
   const { toast } = useToast();
+  const t = useTranslations("notifications.page");
+  const rawLocale = useLocale();
+  const appLocale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [total, setTotal] = useState(0);
@@ -80,7 +85,7 @@ export default function NotificationsPage() {
       try {
         const response = await fetch(`/api/notifications?page=${targetPage}&limit=${PAGE_SIZE}`);
         if (!response.ok) {
-          throw new Error("通知加载失败");
+          throw new Error(t("loadFailed"));
         }
 
         const payload = (await response.json()) as NotificationsResponse;
@@ -92,7 +97,7 @@ export default function NotificationsPage() {
         setPage(payload.page ?? targetPage);
         setTotalPages(Math.max(1, payload.totalPages ?? 1));
       } catch (err) {
-        const message = err instanceof Error ? err.message : "通知加载失败";
+        const message = err instanceof Error ? err.message : t("loadFailed");
         if (append) {
           toast.error(message);
         } else {
@@ -106,7 +111,7 @@ export default function NotificationsPage() {
         }
       }
     },
-    [toast],
+    [t, toast],
   );
 
   useEffect(() => {
@@ -128,7 +133,7 @@ export default function NotificationsPage() {
     });
     const data = (await response.json().catch(() => null)) as MarkNotificationsReadResponse | null;
     if (!response.ok || !data) {
-      throw new Error(data?.error ?? "通知状态更新失败");
+      throw new Error(data?.error ?? t("markFailed"));
     }
 
     setUnreadCount(data.unreadCount);
@@ -145,9 +150,9 @@ export default function NotificationsPage() {
       await markAsRead({ all: true });
       const readAt = new Date().toISOString();
       setNotifications((prev) => prev.map((item) => ({ ...item, readAt })));
-      toast.success("已全部标记为已读");
+      toast.success(t("markAllSuccess"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "操作失败");
+      toast.error(err instanceof Error ? err.message : t("actionFailed"));
     } finally {
       setIsMarkingAll(false);
     }
@@ -159,7 +164,7 @@ export default function NotificationsPage() {
         await markAsRead({ ids: [notification.id] });
         setNotifications((prev) => markNotificationReadLocally(prev, [notification.id]));
       } catch {
-        // 标记失败不阻断跳转。
+        // Mark-read failure must not block navigation.
       }
     }
 
@@ -169,20 +174,20 @@ export default function NotificationsPage() {
   };
 
   if (status === "loading") {
-    return <PageLoading text="正在加载登录状态..." />;
+    return <PageLoading text={t("loadingAuth")} />;
   }
 
   if (status === "unauthenticated") {
-    return <div className="py-12 text-center text-sm text-warm-500">正在跳转到登录页...</div>;
+    return <div className="py-12 text-center text-sm text-warm-500">{t("redirectingToLogin")}</div>;
   }
 
   return (
     <div className="mx-auto max-w-3xl">
       <section className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-warm-800">通知中心</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-warm-800">{t("heading")}</h1>
           <p className="mt-1 text-sm text-warm-600">
-            共 {total} 条通知，未读 {unreadCount} 条
+            {t("summary", { total, unread: unreadCount })}
           </p>
         </div>
         <button
@@ -191,7 +196,7 @@ export default function NotificationsPage() {
           disabled={isMarkingAll || unreadCount === 0}
           className="m3-btn m3-btn-tonal disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isMarkingAll ? "处理中..." : "全部标记已读"}
+          {isMarkingAll ? t("marking") : t("markAllRead")}
         </button>
       </section>
 
@@ -201,8 +206,8 @@ export default function NotificationsPage() {
         <div className="m3-alert-error">{error}</div>
       ) : notifications.length === 0 ? (
         <EmptyState
-          title="暂无通知"
-          description="当你的服务器状态变化、审核有结果或收藏的服务器重新上线时，会显示在这里"
+          title={t("emptyTitle")}
+          description={t("emptyDescription")}
         />
       ) : (
         <>
@@ -233,7 +238,7 @@ export default function NotificationsPage() {
                       {notification.message}
                     </span>
                     <span className="mt-1 block text-xs text-warm-400">
-                      {timeAgo(notification.createdAt)}
+                      {timeAgo(notification.createdAt, appLocale)}
                     </span>
                   </span>
                 </button>
@@ -251,7 +256,7 @@ export default function NotificationsPage() {
                 disabled={isLoadingMore}
                 className="m3-btn m3-btn-tonal disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isLoadingMore ? "加载中..." : "加载更多"}
+                {isLoadingMore ? t("loadingMore") : t("loadMore")}
               </button>
             </div>
           )}

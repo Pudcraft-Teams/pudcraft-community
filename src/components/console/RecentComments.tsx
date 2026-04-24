@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { UserAvatar } from "@/components/UserAvatar";
+import { defaultLocale, isLocale } from "@/i18n/config";
 import { timeAgo } from "@/lib/time";
 import type { ServerComment } from "@/lib/types";
 
@@ -27,20 +29,26 @@ function parseCommentsPayload(raw: unknown): CommentsResponse {
   };
 }
 
-function resolveAuthorName(comment: ServerComment): string {
+function resolveAuthorName(
+  comment: ServerComment,
+  t: ReturnType<typeof useTranslations>,
+): string {
   const name = comment.author.name?.trim();
   if (name) {
     return name;
   }
 
-  return "匿名用户";
+  return t("anonymousUser");
 }
 
 /**
- * 最近评论摘要。
- * 拉取该服务器最新 5 条评论并提供"查看全部评论"入口。
+ * Recent-comments preview.
+ * Fetches the latest five comments for the server and links to the public comment section.
  */
 export function RecentComments({ serverId }: RecentCommentsProps) {
+  const t = useTranslations("console.recentComments");
+  const rawLocale = useLocale();
+  const appLocale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const [comments, setComments] = useState<ServerComment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +67,7 @@ export function RecentComments({ serverId }: RecentCommentsProps) {
         const payload = parseCommentsPayload(await response.json().catch(() => ({})));
 
         if (!response.ok) {
-          throw new Error(payload.error ?? "评论加载失败");
+          throw new Error(payload.error ?? t("loadFailed"));
         }
 
         if (!cancelled) {
@@ -67,7 +75,7 @@ export function RecentComments({ serverId }: RecentCommentsProps) {
         }
       } catch (fetchError) {
         if (!cancelled) {
-          const message = fetchError instanceof Error ? fetchError.message : "评论加载失败";
+          const message = fetchError instanceof Error ? fetchError.message : t("loadFailed");
           setError(message);
         }
       } finally {
@@ -82,18 +90,18 @@ export function RecentComments({ serverId }: RecentCommentsProps) {
     return () => {
       cancelled = true;
     };
-  }, [serverId]);
+  }, [serverId, t]);
 
   return (
     <section className="m3-surface p-4 sm:p-5">
-      <h2 className="text-lg font-semibold text-warm-800">最近评论</h2>
+      <h2 className="text-lg font-semibold text-warm-800">{t("title")}</h2>
 
       {isLoading ? (
-        <p className="mt-4 text-sm text-warm-500">评论加载中...</p>
+        <p className="mt-4 text-sm text-warm-500">{t("loading")}</p>
       ) : error ? (
         <p className="mt-4 text-sm text-coral-hover">{error}</p>
       ) : comments.length === 0 ? (
-        <p className="mt-4 text-sm text-warm-500">暂无评论，欢迎引导玩家留下第一条反馈。</p>
+        <p className="mt-4 text-sm text-warm-500">{t("empty")}</p>
       ) : (
         <div className="mt-4 space-y-3">
           {comments.map((comment) => (
@@ -109,18 +117,18 @@ export function RecentComments({ serverId }: RecentCommentsProps) {
                   fallbackClassName="bg-gradient-to-br from-coral to-coral-amber text-white"
                 />
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-warm-800">{resolveAuthorName(comment)}</p>
+                  <p className="text-sm font-medium text-warm-800">{resolveAuthorName(comment, t)}</p>
                   <p className="line-clamp-1 text-sm text-warm-600">{comment.content}</p>
                 </div>
               </div>
-              <span className="shrink-0 text-xs text-warm-500">{timeAgo(comment.createdAt)}</span>
+              <span className="shrink-0 text-xs text-warm-500">{timeAgo(comment.createdAt, appLocale)}</span>
             </div>
           ))}
         </div>
       )}
 
       <Link href={`/servers/${serverId}`} className="m3-link mt-4 inline-flex items-center text-sm">
-        查看全部评论 →
+        {t("viewAll")}
       </Link>
     </section>
   );

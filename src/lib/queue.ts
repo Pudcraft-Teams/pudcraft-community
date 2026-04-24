@@ -17,8 +17,39 @@ export interface VerifyJobData {
   token: string;
 }
 
+export const VERIFY_JOB_REASON_KEYS = [
+  "serverNotFound",
+  "tokenUpdated",
+  "tokenMissingClaimer",
+  "tokenExpired",
+  "serverOffline",
+  "tokenNotInMotd",
+] as const;
+
+export type VerifyJobReasonKey = (typeof VERIFY_JOB_REASON_KEYS)[number];
+
+const VERIFY_JOB_REASON_KEY_SET: ReadonlySet<VerifyJobReasonKey> = new Set(
+  VERIFY_JOB_REASON_KEYS,
+);
+
+export function isVerifyJobReasonKey(value: unknown): value is VerifyJobReasonKey {
+  return (
+    typeof value === "string" &&
+    VERIFY_JOB_REASON_KEY_SET.has(value as VerifyJobReasonKey)
+  );
+}
+
 export interface VerifyJobResult {
   success: boolean;
+  /**
+   * Machine-readable failure key (preferred). The API layer maps it to
+   * the recipient's locale via the `errors.api.servers.verify*` namespace.
+   */
+  reasonKey?: VerifyJobReasonKey;
+  /**
+   * Legacy / fallback reason text. New callers should set `reasonKey`
+   * instead so the API layer can localize the message.
+   */
   reason?: string;
 }
 

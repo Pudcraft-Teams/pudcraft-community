@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
 interface SearchBarProps {
@@ -12,6 +13,7 @@ interface SearchBarProps {
  * 用于服务器列表页的名称/描述搜索。
  */
 export function SearchBar({ onSearch, initialValue = "" }: SearchBarProps) {
+  const t = useTranslations("servers.list");
   const [value, setValue] = useState(initialValue);
   const isFirstRender = useRef(true);
 
@@ -36,7 +38,7 @@ export function SearchBar({ onSearch, initialValue = "" }: SearchBarProps) {
         type="text"
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        placeholder="搜索服务器名称、描述，或输入 PSID / UID 直达..."
+        placeholder={t("searchBarPlaceholder")}
         className="m3-input w-full px-4"
       />
       {value && (
@@ -44,7 +46,7 @@ export function SearchBar({ onSearch, initialValue = "" }: SearchBarProps) {
           type="button"
           onClick={() => setValue("")}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-warm-400 transition-colors hover:text-warm-800"
-          aria-label="清空搜索"
+          aria-label={t("searchBarClearLabel")}
         >
           &times;
         </button>

@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import zhMessages from "../../../messages/zh.json";
 import {
   handleMobileLoginPost,
   handleMobileSessionDelete,
@@ -12,6 +13,9 @@ import {
   toMobileSessionUser,
   toRequestCookieHeader,
 } from "./sessionFacade";
+
+const zhAuthErrors = zhMessages.errors.api.auth;
+const zhValidationErrors = zhMessages.errors.validation;
 
 function readRequestHeaders(init?: RequestInit): Headers {
   return new Headers(init?.headers);
@@ -162,7 +166,7 @@ test("toMobileLoginError returns structured banned and invalid credential respon
   assert.deepEqual(toMobileLoginError("invalid_credentials"), {
     status: 401,
     body: {
-      error: "邮箱或密码错误",
+      error: zhAuthErrors.credentials,
       code: "credentials",
     },
   });
@@ -170,7 +174,7 @@ test("toMobileLoginError returns structured banned and invalid credential respon
   assert.deepEqual(toMobileLoginError("banned"), {
     status: 403,
     body: {
-      error: "账号已被封禁",
+      error: zhAuthErrors.banned,
       code: "banned",
     },
   });
@@ -259,6 +263,39 @@ test("handleMobileLoginPost falls back to a localhost request origin when auth b
   assert.equal(calls[0]?.url, "http://localhost:3000/api/auth/csrf");
   assert.equal(calls[1]?.url, "http://localhost:3000/api/auth/callback/credentials");
   assert.equal(calls[2]?.url, "http://localhost:3000/api/mobile/session");
+});
+
+test("handleMobileLoginPost localizes default Zod field errors", async () => {
+  const response = await handleMobileLoginPost(
+    new Request("http://localhost:3000/api/mobile/session/login", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-locale": "zh",
+      },
+      body: JSON.stringify({
+        email: "not-an-email",
+        password: "",
+      }),
+    }),
+    {
+      fetchImpl: async () => {
+        throw new Error("validation failure should not call fetch");
+      },
+    },
+  );
+
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), {
+    error: zhMessages.errors.api.validationFailed,
+    details: {
+      formErrors: [],
+      fieldErrors: {
+        email: [zhValidationErrors.invalidEmail],
+        password: [zhValidationErrors.auth.passwordRequired],
+      },
+    },
+  });
 });
 
 test("resolveTrustedAuthBaseUrl rejects non-local request origins when auth base env vars are missing", async () => {
@@ -509,7 +546,7 @@ test("handleMobileSessionGet rejects stale JWTs for deleted users", async () => 
   });
 
   assert.equal(response.status, 401);
-  assert.deepEqual(await response.json(), { error: "用户不存在" });
+  assert.deepEqual(await response.json(), { error: zhAuthErrors.userNotFound });
 });
 
 test("handleMobileSessionGet rejects stale JWTs for banned users", async () => {
@@ -531,5 +568,5 @@ test("handleMobileSessionGet rejects stale JWTs for banned users", async () => {
   });
 
   assert.equal(response.status, 403);
-  assert.deepEqual(await response.json(), { error: "账号已被封禁" });
+  assert.deepEqual(await response.json(), { error: zhAuthErrors.banned });
 });

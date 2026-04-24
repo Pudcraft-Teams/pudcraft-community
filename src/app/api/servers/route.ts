@@ -2,10 +2,14 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
+import { getTranslations } from "next-intl/server";
 import { ZodError } from "zod";
+import { getRequestLocale } from "@/i18n/locale";
 import { auth } from "@/lib/auth";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
+import { translateImageValidationError } from "@/lib/i18nImage";
+import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { generateAndReservePsid } from "@/lib/numeric-id";
 import { getClientIp } from "@/lib/request-ip";
@@ -51,14 +55,17 @@ function resolveErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-function duplicateServerResponse(existing: { id: string; psid: number; name: string | null }) {
+function duplicateServerResponse(
+  existing: { id: string; psid: number; name: string | null },
+  messages: { error: string; hint: string },
+) {
   return NextResponse.json(
     {
-      error: "该服务器地址已被收录",
+      error: messages.error,
       existingServerId: existing.id,
       existingServerPsid: existing.psid,
       existingServerName: existing.name,
-      hint: "如果你是这个服务器的管理员，可以去认领它",
+      hint: messages.hint,
     },
     { status: 409 },
   );
@@ -69,29 +76,37 @@ function duplicateServerResponse(existing: { id: string; psid: number; name: str
  * 支持分页、标签过滤、关键词搜索与排序。
  */
 export async function GET(request: Request) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
   try {
     const clientIp = getClientIp(request);
     const searchRate = await rateLimit(`search:${clientIp}`, 60, 60);
     if (!searchRate.allowed) {
-      return NextResponse.json({ error: "请求过于频繁，请稍后再试" }, { status: 429 });
+      return NextResponse.json({ error: tCommon("rateLimited") }, { status: 429 });
     }
 
     const { searchParams } = new URL(request.url);
 
     // ─── Zod 输入校验 ───
-    const parsed = queryServersSchema.safeParse({
-      page: searchParams.get("page") ?? undefined,
-      limit: searchParams.get("limit") ?? undefined,
-      pageSize: searchParams.get("pageSize") ?? undefined,
-      tag: searchParams.get("tag") ?? undefined,
-      search: searchParams.get("search") ?? undefined,
-      sort: searchParams.get("sort") ?? undefined,
-      ownerId: searchParams.get("ownerId") ?? undefined,
-    });
+    const parsed = queryServersSchema.safeParse(
+      {
+        page: searchParams.get("page") ?? undefined,
+        limit: searchParams.get("limit") ?? undefined,
+        pageSize: searchParams.get("pageSize") ?? undefined,
+        tag: searchParams.get("tag") ?? undefined,
+        search: searchParams.get("search") ?? undefined,
+        sort: searchParams.get("sort") ?? undefined,
+        ownerId: searchParams.get("ownerId") ?? undefined,
+      },
+      { errorMap: getZodErrorMap(locale) },
+    );
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsed.error.flatten() },
+        {
+          error: tCommon("validationFailed"),
+          details: flattenZodErrorWithLocale(parsed.error, locale),
+        },
         { status: 400 },
       );
     }
@@ -218,7 +233,7 @@ export async function GET(request: Request) {
     });
   } catch (err) {
     logger.error("[api/servers] Unexpected error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
 
@@ -227,6 +242,10 @@ export async function GET(request: Request) {
  * 需登录用户访问，图标上传失败时降级为无图标。
  */
 export async function POST(request: Request) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
+  const tUploads = await getTranslations({ locale, namespace: "errors.api.uploads" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -236,28 +255,34 @@ export async function POST(request: Request) {
 
     const submitRate = await rateLimit(`server-submit:${userId}`, 5, 24 * 60 * 60);
     if (!submitRate.allowed) {
-      return NextResponse.json({ error: "今日提交次数已达上限，请明天再试" }, { status: 429 });
+      return NextResponse.json({ error: tServers("submitRateLimited") }, { status: 429 });
     }
 
     const formData = await request.formData();
     const maxPlayersRaw = extractOptionalTextField(formData, "maxPlayers");
 
-    const parsed = createServerSchema.safeParse({
-      name: extractTextField(formData, "name"),
-      address: extractTextField(formData, "address"),
-      port: extractTextField(formData, "port"),
-      version: extractTextField(formData, "version"),
-      tags: extractTextField(formData, "tags"),
-      description: extractTextField(formData, "description") ?? "",
-      content: extractTextField(formData, "content") ?? "",
-      maxPlayers: maxPlayersRaw,
-      qqGroup: extractTextField(formData, "qqGroup") ?? "",
-      visibility: extractOptionalTextField(formData, "visibility"),
-    });
+    const parsed = createServerSchema.safeParse(
+      {
+        name: extractTextField(formData, "name"),
+        address: extractTextField(formData, "address"),
+        port: extractTextField(formData, "port"),
+        version: extractTextField(formData, "version"),
+        tags: extractTextField(formData, "tags"),
+        description: extractTextField(formData, "description") ?? "",
+        content: extractTextField(formData, "content") ?? "",
+        maxPlayers: maxPlayersRaw,
+        qqGroup: extractTextField(formData, "qqGroup") ?? "",
+        visibility: extractOptionalTextField(formData, "visibility"),
+      },
+      { errorMap: getZodErrorMap(locale) },
+    );
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsed.error.flatten() },
+        {
+          error: tCommon("validationFailed"),
+          details: flattenZodErrorWithLocale(parsed.error, locale),
+        },
         { status: 400 },
       );
     }
@@ -281,7 +306,7 @@ export async function POST(request: Request) {
     });
     if (!modResult.passed) {
       return NextResponse.json(
-        { error: "内容包含违规信息，请修改后重新提交", details: modResult.reason },
+        { error: tServers("contentModerated"), details: modResult.reason },
         { status: 422 },
       );
     }
@@ -303,7 +328,10 @@ export async function POST(request: Request) {
       },
     });
     if (existingServer) {
-      return duplicateServerResponse(existingServer);
+      return duplicateServerResponse(existingServer, {
+        error: tServers("duplicateAddress"),
+        hint: tServers("duplicateAddressHint"),
+      });
     }
 
     const iconField = formData.get("icon");
@@ -318,10 +346,13 @@ export async function POST(request: Request) {
         validateImageFile(iconBuffer, iconMimeType);
       } catch (error) {
         if (error instanceof ImageValidationError) {
-          return NextResponse.json({ error: error.message }, { status: error.status });
+          return NextResponse.json(
+            { error: translateImageValidationError(error, tUploads) },
+            { status: error.status },
+          );
         }
 
-        return NextResponse.json({ error: "图标文件格式或大小无效" }, { status: 400 });
+        return NextResponse.json({ error: tServers("iconInvalid") }, { status: 400 });
       }
     }
 
@@ -368,10 +399,13 @@ export async function POST(request: Request) {
           },
         });
         if (duplicated) {
-          return duplicateServerResponse(duplicated);
+          return duplicateServerResponse(duplicated, {
+            error: tServers("duplicateAddress"),
+            hint: tServers("duplicateAddressHint"),
+          });
         }
 
-        return NextResponse.json({ error: "该服务器地址已被收录" }, { status: 409 });
+        return NextResponse.json({ error: tServers("duplicateAddress") }, { status: 409 });
       }
 
       throw error;
@@ -391,14 +425,14 @@ export async function POST(request: Request) {
         });
       } catch (error) {
         if (error instanceof ImageValidationError) {
-          iconWarning = error.message;
+          iconWarning = translateImageValidationError(error, tUploads);
           logger.info("[api/servers] Server icon failed validation", {
             serverId: server.id,
             reason: error.message,
           });
         } else
         if (error instanceof ImageModerationError) {
-          iconWarning = "图标包含违规内容，已跳过上传";
+          iconWarning = tServers("iconModeratedSkipped");
           logger.info("[api/servers] Server icon rejected by moderation", {
             serverId: server.id,
             reason: error.message,
@@ -415,7 +449,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         success: true,
-        message: "服务器已提交，等待审核",
+        message: tServers("submitted"),
         warning: iconWarning,
         data: {
           id: server.id,
@@ -434,6 +468,6 @@ export async function POST(request: Request) {
     );
   } catch (err) {
     logger.error("[api/servers] Unexpected POST error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

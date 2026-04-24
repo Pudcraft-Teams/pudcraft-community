@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 interface CopyIdBadgeProps {
@@ -12,6 +13,7 @@ interface CopyIdBadgeProps {
  * 用于展示 PSID / UID 并支持复制。
  */
 export function CopyIdBadge({ label, value }: CopyIdBadgeProps) {
+  const t = useTranslations("servers.common");
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -32,7 +34,7 @@ export function CopyIdBadge({ label, value }: CopyIdBadgeProps) {
     }
 
     if (typeof window !== "undefined") {
-      window.prompt("浏览器不支持自动复制，请手动复制：", value);
+      window.prompt(t("copyManualPrompt"), value);
     }
   };
 
@@ -41,7 +43,7 @@ export function CopyIdBadge({ label, value }: CopyIdBadgeProps) {
       type="button"
       onClick={handleCopy}
       className="inline-flex items-center gap-1.5 rounded-full bg-coral-light px-2.5 py-1 text-xs font-medium text-coral ring-1 ring-coral-light transition-colors hover:bg-coral-light/80"
-      title={`点击复制 ${label}`}
+      title={t("copyIdTitle", { label })}
     >
       <span>
         {label}: {value}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 interface LiveFavoriteCountProps {
@@ -15,6 +16,7 @@ interface FavoriteChangeDetail {
 const EVENT_NAME = "pudcraft:favorite-change";
 
 export function LiveFavoriteCount({ initialCount, serverId }: LiveFavoriteCountProps) {
+  const t = useTranslations("servers.common");
   const [count, setCount] = useState(initialCount);
 
   useEffect(() => {
@@ -31,5 +33,5 @@ export function LiveFavoriteCount({ initialCount, serverId }: LiveFavoriteCountP
     return () => window.removeEventListener(EVENT_NAME, handler as EventListener);
   }, [serverId]);
 
-  return <>{count} 人收藏</>;
+  return <>{t("favoriteCount", { count })}</>;
 }

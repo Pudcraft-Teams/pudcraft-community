@@ -212,6 +212,13 @@ The repository may still contain historical design drafts, superpowers documents
 - Old forum documents must not bleed back into live descriptions
 - Dependency pins and upgrade limits are recorded in `docs/dependency-pins.md`
 
+### 6.4 Internationalization
+
+- The platform is Chinese-first today; English is a drafted locale at parity with the Chinese key set (`messages/zh.json` and `messages/en.json`), and `User.locale` persists the per-user preference. Real English translations are deferred — the product decision is to keep keys populated with Chinese placeholders until a translator pass lands.
+- `next-intl` owns locale resolution (request headers / cookie / fallback) and render-time formatting.
+- Path-based locale routing (`/en/...`), in-app language switcher UI, and localized date / number formatting are explicit follow-ups, not live features.
+- Full extraction policy, server-side helpers, and residual exemptions are documented in `docs/i18n.md`.
+
 ## 7. Current constraints and known boundaries
 
 - The product today is scoped around the server system only; it no longer hosts a forum.

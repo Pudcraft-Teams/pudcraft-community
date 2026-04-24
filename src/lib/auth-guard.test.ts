@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import zhMessages from "../../messages/zh.json";
 
 function applyAuthGuardTestEnv() {
   process.env.DATABASE_URL = "postgresql://user:pass@localhost:5432/pudcraft_test";
@@ -7,11 +8,15 @@ function applyAuthGuardTestEnv() {
   process.env.AUTH_SECRET = "test-secret-value";
 }
 
+const zhAuthErrors = zhMessages.errors.api.auth;
+
 test("resolveActiveUserResult returns 401 when there is no authenticated user id", async () => {
   applyAuthGuardTestEnv();
-  const { isActiveUserError, resolveActiveUserResult } = await import("@/lib/auth-guard");
+  const { getAuthGuardTranslator, isActiveUserError, resolveActiveUserResult } = await import(
+    "@/lib/auth-guard"
+  );
 
-  const result = resolveActiveUserResult(null, null);
+  const result = resolveActiveUserResult(null, null, getAuthGuardTranslator("zh"));
 
   assert.equal(isActiveUserError(result), true);
   if (!isActiveUserError(result)) {
@@ -19,19 +24,25 @@ test("resolveActiveUserResult returns 401 when there is no authenticated user id
   }
 
   assert.equal(result.response.status, 401);
-  assert.deepEqual(await result.response.json(), { error: "请先登录" });
+  assert.deepEqual(await result.response.json(), { error: zhAuthErrors.notAuthenticated });
 });
 
 test("resolveActiveUserResult returns 403 for banned users", async () => {
   applyAuthGuardTestEnv();
-  const { isActiveUserError, resolveActiveUserResult } = await import("@/lib/auth-guard");
+  const { getAuthGuardTranslator, isActiveUserError, resolveActiveUserResult } = await import(
+    "@/lib/auth-guard"
+  );
 
-  const result = resolveActiveUserResult("user-1", {
-    id: "user-1",
-    role: "user",
-    name: "Banned",
-    isBanned: true,
-  });
+  const result = resolveActiveUserResult(
+    "user-1",
+    {
+      id: "user-1",
+      role: "user",
+      name: "Banned",
+      isBanned: true,
+    },
+    getAuthGuardTranslator("zh"),
+  );
 
   assert.equal(isActiveUserError(result), true);
   if (!isActiveUserError(result)) {
@@ -39,19 +50,25 @@ test("resolveActiveUserResult returns 403 for banned users", async () => {
   }
 
   assert.equal(result.response.status, 403);
-  assert.deepEqual(await result.response.json(), { error: "账号已被封禁" });
+  assert.deepEqual(await result.response.json(), { error: zhAuthErrors.banned });
 });
 
 test("resolveActiveUserResult returns the active user payload for unbanned users", async () => {
   applyAuthGuardTestEnv();
-  const { isActiveUserError, resolveActiveUserResult } = await import("@/lib/auth-guard");
+  const { getAuthGuardTranslator, isActiveUserError, resolveActiveUserResult } = await import(
+    "@/lib/auth-guard"
+  );
 
-  const result = resolveActiveUserResult("user-1", {
-    id: "user-1",
-    role: "admin",
-    name: "Active",
-    isBanned: false,
-  });
+  const result = resolveActiveUserResult(
+    "user-1",
+    {
+      id: "user-1",
+      role: "admin",
+      name: "Active",
+      isBanned: false,
+    },
+    getAuthGuardTranslator("zh"),
+  );
 
   assert.equal(isActiveUserError(result), false);
   if (isActiveUserError(result)) {

@@ -1,8 +1,10 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { defaultLocale, isLocale } from "@/i18n/config";
 import { timeAgo } from "@/lib/time";
 import type { ServerInviteItem } from "@/lib/types";
 
@@ -30,15 +32,18 @@ interface CreateInviteResponse {
   error?: string;
 }
 
-const EXPIRY_OPTIONS = [
-  { label: "1 小时", value: 1 },
-  { label: "6 小时", value: 6 },
-  { label: "24 小时", value: 24 },
-  { label: "3 天", value: 72 },
-  { label: "7 天", value: 168 },
-  { label: "30 天", value: 720 },
-  { label: "永不过期", value: 0 },
-] as const;
+const EXPIRY_OPTION_KEYS: ReadonlyArray<{
+  value: number;
+  label: "expiry1h" | "expiry6h" | "expiry24h" | "expiry3d" | "expiry7d" | "expiry30d" | "expiryNever";
+}> = [
+  { value: 1, label: "expiry1h" },
+  { value: 6, label: "expiry6h" },
+  { value: 24, label: "expiry24h" },
+  { value: 72, label: "expiry3d" },
+  { value: 168, label: "expiry7d" },
+  { value: 720, label: "expiry30d" },
+  { value: 0, label: "expiryNever" },
+];
 
 function parseInvitesPayload(raw: unknown): InvitesResponse {
   if (typeof raw !== "object" || raw === null) {
@@ -64,14 +69,17 @@ function parseCreateResponse(raw: unknown): CreateInviteResponse {
   };
 }
 
-function formatExpiry(expiresAt: string | null): string {
+function formatExpiry(
+  expiresAt: string | null,
+  t: ReturnType<typeof useTranslations>,
+): string {
   if (!expiresAt) {
-    return "永不过期";
+    return t("expiryNeverBadge");
   }
 
   const expiry = new Date(expiresAt);
   if (expiry.getTime() <= Date.now()) {
-    return "已过期";
+    return t("expiredBadge");
   }
 
   const diffMs = expiry.getTime() - Date.now();
@@ -79,12 +87,12 @@ function formatExpiry(expiresAt: string | null): string {
   const days = Math.floor(hours / 24);
 
   if (days > 0) {
-    return `${days} 天后过期`;
+    return t("daysUntilExpiry", { days });
   }
   if (hours > 0) {
-    return `${hours} 小时后过期`;
+    return t("hoursUntilExpiry", { hours });
   }
-  return "即将过期";
+  return t("aboutToExpire");
 }
 
 function isExpired(expiresAt: string | null): boolean {
@@ -95,10 +103,13 @@ function isExpired(expiresAt: string | null): boolean {
 }
 
 /**
- * 邀请码管理组件。
- * 支持创建、查看、复制链接和撤销邀请码。
+ * Invite-code management component.
+ * Supports creation, listing, copy link, and revocation of invite codes.
  */
 export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
+  const t = useTranslations("console.invites");
+  const rawLocale = useLocale();
+  const appLocale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const confirm = useConfirm();
   const [invites, setInvites] = useState<ServerInviteItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -122,17 +133,17 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
       const payload = parseInvitesPayload(await response.json().catch(() => ({})));
 
       if (!response.ok) {
-        throw new Error(payload.error ?? "邀请码加载失败");
+        throw new Error(payload.error ?? t("loadFailed"));
       }
 
       setInvites(payload.data ?? []);
     } catch (fetchError) {
-      const message = fetchError instanceof Error ? fetchError.message : "邀请码加载失败";
+      const message = fetchError instanceof Error ? fetchError.message : t("loadFailed");
       setError(message);
     } finally {
       setIsLoading(false);
     }
-  }, [serverId]);
+  }, [serverId, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -148,7 +159,7 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
         const payload = parseInvitesPayload(await response.json().catch(() => ({})));
 
         if (!response.ok) {
-          throw new Error(payload.error ?? "邀请码加载失败");
+          throw new Error(payload.error ?? t("loadFailed"));
         }
 
         if (!cancelled) {
@@ -156,7 +167,7 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
         }
       } catch (fetchError) {
         if (!cancelled) {
-          const message = fetchError instanceof Error ? fetchError.message : "邀请码加载失败";
+          const message = fetchError instanceof Error ? fetchError.message : t("loadFailed");
           setError(message);
         }
       } finally {
@@ -171,7 +182,7 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
     return () => {
       cancelled = true;
     };
-  }, [serverId]);
+  }, [serverId, t]);
 
   async function handleCreate() {
     setIsCreating(true);
@@ -195,14 +206,14 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
       const payload = parseCreateResponse(await response.json().catch(() => ({})));
 
       if (!response.ok) {
-        throw new Error(payload.error ?? "创建邀请码失败");
+        throw new Error(payload.error ?? t("createFailed"));
       }
 
       setMaxUses("");
       setExpiresInHours(24);
       await fetchInvites();
     } catch (createError) {
-      const message = createError instanceof Error ? createError.message : "创建邀请码失败";
+      const message = createError instanceof Error ? createError.message : t("createFailed");
       setError(message);
     } finally {
       setIsCreating(false);
@@ -211,8 +222,8 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
 
   async function handleRevoke(code: string) {
     const confirmed = await confirm({
-      title: "撤销邀请码",
-      message: "确定要撤销该邀请码吗？撤销后将无法使用。",
+      title: t("revokeConfirmTitle"),
+      message: t("revokeConfirmMessage"),
     });
     if (!confirmed) {
       return;
@@ -230,13 +241,13 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
         const payload = await response.json().catch(() => ({}));
         const errorPayload = payload as Record<string, unknown>;
         throw new Error(
-          typeof errorPayload.error === "string" ? errorPayload.error : "撤销邀请码失败",
+          typeof errorPayload.error === "string" ? errorPayload.error : t("revokeFailed"),
         );
       }
 
       await fetchInvites();
     } catch (revokeError) {
-      const message = revokeError instanceof Error ? revokeError.message : "撤销邀请码失败";
+      const message = revokeError instanceof Error ? revokeError.message : t("revokeFailed");
       setError(message);
     } finally {
       setRevokingCode(null);
@@ -258,7 +269,7 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
 
   return (
     <section className="m3-surface p-4 sm:p-5">
-      <h2 className="text-lg font-semibold text-warm-800">邀请码管理</h2>
+      <h2 className="text-lg font-semibold text-warm-800">{t("title")}</h2>
 
       {error && (
         <div className="mt-3 rounded-lg border border-accent-hover/20 bg-accent-muted px-3 py-2 text-sm text-accent-hover">
@@ -268,18 +279,18 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
 
       {/* Create invite form */}
       <div className="mt-4 rounded-xl border border-warm-200 bg-warm-50 p-4">
-        <h3 className="text-sm font-medium text-warm-800">创建邀请码</h3>
+        <h3 className="text-sm font-medium text-warm-800">{t("createHeading")}</h3>
         <div className="mt-3 flex flex-wrap items-end gap-3">
           <div className="min-w-[120px]">
             <label htmlFor="invite-max-uses" className="block text-xs text-warm-500">
-              最大使用次数
+              {t("maxUsesLabel")}
             </label>
             <input
               id="invite-max-uses"
               type="number"
               min={1}
               max={1000}
-              placeholder="不限"
+              placeholder={t("maxUsesPlaceholder")}
               value={maxUses}
               onChange={(e) => setMaxUses(e.target.value)}
               className="m3-input mt-1 w-full"
@@ -287,7 +298,7 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
           </div>
           <div className="min-w-[140px]">
             <label htmlFor="invite-expiry" className="block text-xs text-warm-500">
-              有效期
+              {t("expiryLabel")}
             </label>
             <select
               id="invite-expiry"
@@ -295,9 +306,9 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
               onChange={(e) => setExpiresInHours(Number(e.target.value))}
               className="m3-input mt-1 w-full"
             >
-              {EXPIRY_OPTIONS.map((option) => (
+              {EXPIRY_OPTION_KEYS.map((option) => (
                 <option key={option.value} value={option.value}>
-                  {option.label}
+                  {t(option.label)}
                 </option>
               ))}
             </select>
@@ -309,9 +320,9 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
             className="m3-btn m3-btn-primary"
           >
             {isCreating ? (
-              <LoadingSpinner size="sm" text="创建中..." />
+              <LoadingSpinner size="sm" text={t("creating")} />
             ) : (
-              "创建邀请码"
+              t("createAction")
             )}
           </button>
         </div>
@@ -320,15 +331,15 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
       {/* Active invites list */}
       <div className="mt-4">
         <h3 className="text-sm font-medium text-warm-800">
-          有效邀请码 ({activeInvites.length})
+          {t("activeHeading", { count: activeInvites.length })}
         </h3>
 
         {isLoading ? (
           <div className="mt-3 flex justify-center py-6">
-            <LoadingSpinner text="加载中..." />
+            <LoadingSpinner text={t("loading")} />
           </div>
         ) : activeInvites.length === 0 ? (
-          <p className="mt-3 text-sm text-warm-500">暂无有效邀请码</p>
+          <p className="mt-3 text-sm text-warm-500">{t("emptyActive")}</p>
         ) : (
           <div className="mt-3 space-y-2">
             {activeInvites.map((invite) => (
@@ -342,13 +353,18 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
                       {invite.code}
                     </code>
                     <span className="text-xs text-warm-500">
-                      {invite.usedCount}/{invite.maxUses ?? "\u221E"} 次使用
+                      {t("usageCount", {
+                        used: invite.usedCount,
+                        max: invite.maxUses ?? "\u221E",
+                      })}
                     </span>
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-warm-500">
-                    {invite.creatorName && <span>创建者: {invite.creatorName}</span>}
-                    <span>{formatExpiry(invite.expiresAt)}</span>
-                    <span>{timeAgo(invite.createdAt)} 创建</span>
+                    {invite.creatorName && (
+                      <span>{t("creator", { name: invite.creatorName })}</span>
+                    )}
+                    <span>{formatExpiry(invite.expiresAt, t)}</span>
+                    <span>{t("createdAgo", { time: timeAgo(invite.createdAt, appLocale) })}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -357,7 +373,7 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
                     onClick={() => handleCopy(invite.code)}
                     className="m3-btn rounded-lg border border-warm-200 bg-surface px-3 py-1.5 text-xs text-warm-800 transition-colors hover:bg-warm-50"
                   >
-                    {copiedCode === invite.code ? "已复制 \u2713" : "复制链接"}
+                    {copiedCode === invite.code ? t("copied") : t("copyAction")}
                   </button>
                   <button
                     type="button"
@@ -365,7 +381,7 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
                     disabled={revokingCode === invite.code}
                     className="m3-btn rounded-lg border border-accent-hover/20 bg-surface px-3 py-1.5 text-xs text-accent-hover transition-colors hover:bg-accent-muted"
                   >
-                    {revokingCode === invite.code ? "撤销中..." : "撤销"}
+                    {revokingCode === invite.code ? t("revoking") : t("revokeAction")}
                   </button>
                 </div>
               </div>
@@ -378,7 +394,7 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
       {expiredInvites.length > 0 && (
         <div className="mt-4">
           <h3 className="text-sm font-medium text-warm-500">
-            已过期 ({expiredInvites.length})
+            {t("expiredHeading", { count: expiredInvites.length })}
           </h3>
           <div className="mt-2 space-y-2 opacity-60">
             {expiredInvites.map((invite) => (
@@ -392,11 +408,14 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
                       {invite.code}
                     </code>
                     <span className="text-xs text-warm-400">
-                      {invite.usedCount}/{invite.maxUses ?? "\u221E"} 次使用
+                      {t("usageCount", {
+                        used: invite.usedCount,
+                        max: invite.maxUses ?? "\u221E",
+                      })}
                     </span>
                   </div>
                   <div className="mt-1 text-xs text-warm-400">
-                    已过期 · {timeAgo(invite.createdAt)} 创建
+                    {t("expiredSummary", { time: timeAgo(invite.createdAt, appLocale) })}
                   </div>
                 </div>
                 <button
@@ -405,7 +424,7 @@ export function InviteManager({ serverId, serverPsid }: InviteManagerProps) {
                   disabled={revokingCode === invite.code}
                   className="m3-btn rounded-lg border border-warm-200 bg-surface px-3 py-1.5 text-xs text-warm-500 transition-colors hover:bg-warm-50"
                 >
-                  {revokingCode === invite.code ? "删除中..." : "删除"}
+                  {revokingCode === invite.code ? t("deleting") : t("deleteAction")}
                 </button>
               </div>
             ))}

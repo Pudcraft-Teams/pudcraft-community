@@ -22,6 +22,7 @@ model User {
   passwordHash  String    @map("password_hash")
   image         String?
   bio           String?   @db.Text
+  locale        String    @default("zh")
   role          String    @default("user") // user | admin | moderator
   isBanned      Boolean   @default(false) @map("is_banned")
   banReason     String?   @map("ban_reason")
@@ -316,7 +317,7 @@ model ReservedNumericId {
   numericId Int      @map("numeric_id")
   createdAt DateTime @default(now()) @map("created_at")
 
-  @@unique([type, numericId], name: "unique_type_numeric_id")
+  @@unique([type, numericId], name: "unique_type_numeric_id", map: "unique_type_numeric_id")
   @@index([type])
   @@map("reserved_numeric_ids")
 }

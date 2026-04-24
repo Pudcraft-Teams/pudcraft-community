@@ -1,6 +1,7 @@
 "use client";
 
 import type Cropper from "cropperjs";
+import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ReactCropper, { type ReactCropperElement } from "react-cropper";
 
@@ -17,6 +18,7 @@ interface ImageCropDialogProps {
 async function getCroppedFile(
   cropper: Cropper,
   outputSize: number,
+  errorMessages: { cropFailed: string; blobFailed: string },
 ): Promise<File> {
   const canvas = cropper.getCroppedCanvas({
     width: outputSize,
@@ -26,14 +28,14 @@ async function getCroppedFile(
   });
 
   if (!canvas) {
-    throw new Error("裁切失败，请重试");
+    throw new Error(errorMessages.cropFailed);
   }
 
   const blob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
       (nextBlob) => {
         if (!nextBlob) {
-          reject(new Error("无法生成图片，请重试"));
+          reject(new Error(errorMessages.blobFailed));
           return;
         }
 
@@ -56,8 +58,10 @@ export function ImageCropDialog({
   imageFile,
   aspectRatio = 1,
   outputSize = 512,
-  title = "裁切图片",
+  title,
 }: ImageCropDialogProps) {
+  const t = useTranslations("servers.common.imageCrop");
+  const resolvedTitle = title ?? t("title");
   const cropperRef = useRef<ReactCropperElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +110,7 @@ export function ImageCropDialog({
   const handleConfirm = async () => {
     const cropper = cropperRef.current?.cropper;
     if (!cropper) {
-      setError("裁切器未就绪，请稍后再试");
+      setError(t("cropperNotReady"));
       return;
     }
 
@@ -114,10 +118,13 @@ export function ImageCropDialog({
     setIsSubmitting(true);
 
     try {
-      const file = await getCroppedFile(cropper, outputSize);
+      const file = await getCroppedFile(cropper, outputSize, {
+        cropFailed: t("cropFailed"),
+        blobFailed: t("blobFailed"),
+      });
       onConfirm(file);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "裁切失败，请重试");
+      setError(nextError instanceof Error ? nextError.message : t("cropFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -138,12 +145,12 @@ export function ImageCropDialog({
         aria-labelledby="crop-dialog-title"
       >
         <div className="mb-4 flex items-center justify-between">
-          <h3 id="crop-dialog-title" className="text-lg font-semibold text-warm-800">{title}</h3>
+          <h3 id="crop-dialog-title" className="text-lg font-semibold text-warm-800">{resolvedTitle}</h3>
           <button
             type="button"
             onClick={onClose}
             className="rounded-md p-1 text-warm-400 transition-colors hover:bg-warm-100 hover:text-warm-800"
-            aria-label="关闭"
+            aria-label={t("closeLabel")}
           >
             ✕
           </button>
@@ -171,12 +178,12 @@ export function ImageCropDialog({
           />
         </div>
 
-        <p className="mt-3 text-xs text-warm-400">提示：拖动图片调整显示区域</p>
+        <p className="mt-3 text-xs text-warm-400">{t("tip")}</p>
         {error && <p className="mt-2 text-sm text-accent-hover">{error}</p>}
 
         <div className="sticky bottom-0 mt-5 flex justify-end gap-2 bg-surface pt-2">
           <button type="button" onClick={onClose} className="m3-btn m3-btn-tonal">
-            取消
+            {t("cancel")}
           </button>
           <button
             type="button"
@@ -184,7 +191,7 @@ export function ImageCropDialog({
             disabled={isSubmitting}
             className="m3-btn m3-btn-primary disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSubmitting ? "处理中..." : "确认裁切"}
+            {isSubmitting ? t("processing") : t("confirm")}
           </button>
         </div>
       </div>

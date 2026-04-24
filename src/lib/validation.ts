@@ -1,13 +1,19 @@
 /**
- * Zod Schema 集合 —— 全部输入校验集中管理。
- * API Route / Worker / 工具函数统一引用此处的 Schema。
+ * Central collection of Zod schemas — all input validation lives here.
+ * API routes / workers / utility helpers all reference these schemas.
+ *
+ * Field-specific validation messages use `errors.validation.<area>.<key>`
+ * paths; the Route Handler serializes them via
+ * `flattenZodErrorWithLocale` (or `translateZodIssues`) from
+ * `@/lib/i18nZod`. Inline messages bypass Zod's `errorMap`, so translation
+ * happens at serialization time.
  */
 
 import { z } from "zod";
 
-// ─── 基础字段 Schema ─────────────────────────
+// ─── Base field schemas ─────────────────────────
 
-/** 禁止的主机名模式（防 SSRF：禁止 localhost / 内网 IP / IPv6 回环） */
+/** Host patterns that must be rejected (SSRF defense: blocks localhost / private IPs / IPv6 loopback). */
 const BLOCKED_HOST_PATTERNS = [
   /^localhost$/i,
   /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,
@@ -21,43 +27,49 @@ const BLOCKED_HOST_PATTERNS = [
   /^\[?fd[0-9a-f]{2}:/i,
 ];
 
-/** Minecraft 服务器主机地址校验（防 SSRF，限制格式） */
+/** Minecraft server host validation (SSRF defense + format restriction). */
 export const serverHostSchema = z
   .string()
-  .min(1, "主机地址不能为空")
-  .max(253, "主机地址过长")
+  .min(1, "errors.validation.servers.hostRequired")
+  .max(253, "errors.validation.servers.hostTooLong")
   .regex(
     /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*$/,
-    "无效的主机地址格式",
+    "errors.validation.servers.hostFormat",
   )
   .refine(
     (host) => !BLOCKED_HOST_PATTERNS.some((pattern) => pattern.test(host)),
-    "不允许使用本地或内网地址",
+    "errors.validation.servers.hostBlocked",
   );
 
-/** 端口号校验（1 - 65535） */
+/** Port validation (1 – 65535). */
 export const serverPortSchema = z
   .number()
   .int()
-  .min(1, "端口号最小为 1")
-  .max(65535, "端口号最大为 65535");
+  .min(1, "errors.validation.servers.portMin")
+  .max(65535, "errors.validation.servers.portMax");
 
-/** 服务器 ID 校验（cuid 格式，内部使用） */
+/** Server ID validation (cuid; internal use). */
 export const serverIdSchema = z.string().cuid();
-/** 用户 ID 校验（cuid 格式，内部使用） */
+/** User ID validation (cuid; internal use). */
 export const userIdSchema = z.string().cuid();
-/** 整合包 ID 校验（cuid 格式） */
+/** Modpack ID validation (cuid). */
 export const modpackIdSchema = z.string().cuid();
 
-/** 服务器 URL 参数校验（CUID 或 6 位 PSID） */
+/** Server URL parameter validation (CUID or 6-digit PSID). */
 export const serverLookupIdSchema = z
   .string()
-  .refine((v) => /^\d{6}$/.test(v) || z.string().cuid().safeParse(v).success, "无效的服务器 ID");
+  .refine(
+    (v) => /^\d{6}$/.test(v) || z.string().cuid().safeParse(v).success,
+    "errors.validation.servers.invalidId",
+  );
 
-/** 用户 URL 参数校验（CUID 或 9 位 UID） */
+/** User URL parameter validation (CUID or 9-digit UID). */
 export const userLookupIdSchema = z
   .string()
-  .refine((v) => /^\d{9}$/.test(v) || z.string().cuid().safeParse(v).success, "无效的用户 ID");
+  .refine(
+    (v) => /^\d{9}$/.test(v) || z.string().cuid().safeParse(v).success,
+    "errors.validation.servers.invalidUserId",
+  );
 
 const optionalTrimmedText = (max: number, message: string) =>
   z.preprocess((value) => {
@@ -71,14 +83,17 @@ const optionalTrimmedText = (max: number, message: string) =>
 
 export const modpackLoaderSchema = z.enum(["fabric", "forge", "neoforge", "quilt"]);
 
-// ─── 复合 Schema ─────────────────────────────
+// ─── Composite schemas ─────────────────────────────
 
-/** 创建服务器请求体 */
+/** Create server request body. */
 export const createServerSchema = z.object({
-  name: z.string().min(2, "名称至少 2 个字符").max(50, "名称最多 50 个字符"),
+  name: z
+    .string()
+    .min(2, "errors.validation.servers.nameMin")
+    .max(50, "errors.validation.servers.nameMax"),
   address: serverHostSchema.transform((value) => value.toLowerCase().trim()),
   port: z.coerce.number().int().min(1).max(65535).default(25565),
-  version: z.string().trim().min(1, "请输入游戏版本"),
+  version: z.string().trim().min(1, "errors.validation.servers.versionRequired"),
   tags: z
     .string()
     .trim()
@@ -88,34 +103,47 @@ export const createServerSchema = z.object({
         .map((tag) => tag.trim())
         .filter(Boolean),
     )
-    .refine((tags) => tags.length > 0, "至少选择 1 个服务器类型")
-    .refine((tags) => tags.length <= 10, "服务器类型最多 10 个")
-    .refine((tags) => tags.every((tag) => tag.length <= 20), "服务器类型长度不能超过 20"),
-  description: z.string().trim().max(200, "简介最多 200 字").optional().or(z.literal("")),
-  content: z.string().trim().max(10000, "详细介绍最多 10000 字").optional().or(z.literal("")),
+    .refine((tags) => tags.length > 0, "errors.validation.servers.tagsMin")
+    .refine((tags) => tags.length <= 10, "errors.validation.servers.tagsMax")
+    .refine(
+      (tags) => tags.every((tag) => tag.length <= 20),
+      "errors.validation.servers.tagLengthMax",
+    ),
+  description: z
+    .string()
+    .trim()
+    .max(200, "errors.validation.servers.descriptionMax")
+    .optional()
+    .or(z.literal("")),
+  content: z
+    .string()
+    .trim()
+    .max(10000, "errors.validation.servers.contentMax")
+    .optional()
+    .or(z.literal("")),
   maxPlayers: z.coerce.number().int().min(1).max(10000).optional(),
   qqGroup: z
     .string()
-    .regex(/^\d{5,11}$/, "QQ 群号格式不正确")
+    .regex(/^\d{5,11}$/, "errors.validation.servers.qqGroupFormat")
     .optional()
     .or(z.literal("")),
   visibility: z.enum(["public", "private"]).optional(),
 });
 
-/** 编辑服务器请求体 */
+/** Edit server request body. */
 export const updateServerSchema = createServerSchema.omit({ visibility: true }).partial().extend({
   removeIcon: z.coerce.boolean().optional().default(false),
 });
 
-// ─── 私域服务器 Schema ──────────────────────────
+// ─── Private server schemas ──────────────────────────
 
-/** 服务器可见性 */
+/** Server visibility. */
 export const serverVisibilitySchema = z.enum(["public", "private", "unlisted"]);
 
-/** 服务器加入模式 */
+/** Server join mode. */
 export const serverJoinModeSchema = z.enum(["open", "apply", "invite", "apply_and_invite"]);
 
-/** 申请表单字段配置（单个字段） */
+/** Application form field config (single field). */
 const applicationFormFieldSchema = z.object({
   key: z.string().min(1).max(50),
   label: z.string().min(1).max(100),
@@ -125,7 +153,7 @@ const applicationFormFieldSchema = z.object({
   placeholder: z.string().max(200).optional(),
 });
 
-/** 服务器私域设置 */
+/** Server private settings. */
 export const updateServerSettingsSchema = z.object({
   visibility: serverVisibilitySchema.optional(),
   discoverable: z.boolean().optional(),
@@ -133,44 +161,44 @@ export const updateServerSettingsSchema = z.object({
   applicationForm: z.array(applicationFormFieldSchema).max(10).nullable().optional(),
 });
 
-/** 提交入服申请 */
+/** Submit join application. */
 export const createApplicationSchema = z.object({
   formData: z.record(z.string(), z.union([z.string(), z.array(z.string())])).optional(),
   mcUsername: z
     .string()
-    .min(3, "MC 用户名至少 3 个字符")
-    .max(16, "MC 用户名最多 16 个字符")
-    .regex(/^[a-zA-Z0-9_]+$/, "MC 用户名只能包含字母、数字和下划线"),
+    .min(3, "errors.validation.servers.mcUsernameMin")
+    .max(16, "errors.validation.servers.mcUsernameMax")
+    .regex(/^[a-zA-Z0-9_]+$/, "errors.validation.servers.mcUsernameFormat"),
 });
 
-/** 审批申请 */
+/** Review application. */
 export const reviewApplicationSchema = z.object({
   action: z.enum(["approve", "reject"]),
   reviewNote: z.string().max(500).optional(),
 });
 
-/** 生成邀请码 */
+/** Generate invite code. */
 export const createInviteSchema = z.object({
   maxUses: z.number().int().min(1).max(1000).nullable().optional(),
   expiresInHours: z.number().int().min(1).max(720).nullable().optional(),
 });
 
-/** 使用邀请码加入 */
+/** Join by invite code. */
 export const joinByInviteSchema = z.object({
   mcUsername: z
     .string()
-    .min(3, "MC 用户名至少 3 个字符")
-    .max(16, "MC 用户名最多 16 个字符")
-    .regex(/^[a-zA-Z0-9_]+$/, "MC 用户名只能包含字母、数字和下划线"),
+    .min(3, "errors.validation.servers.mcUsernameMin")
+    .max(16, "errors.validation.servers.mcUsernameMax")
+    .regex(/^[a-zA-Z0-9_]+$/, "errors.validation.servers.mcUsernameFormat"),
 });
 
-/** 插件握手 */
+/** Plugin handshake. */
 export const syncHandshakeSchema = z.object({
   apiKey: z.string().min(1),
   pluginVersion: z.string().max(50).optional(),
 });
 
-/** 插件状态上报 */
+/** Plugin status report. */
 export const statusReportSchema = z.object({
   online: z.boolean(),
   playerCount: z.number().int().min(0),
@@ -181,20 +209,20 @@ export const statusReportSchema = z.object({
   version: z.string().max(128).optional(),
 });
 
-/** 申请列表查询参数 */
+/** Application list query params. */
 export const queryApplicationsSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
   status: z.enum(["all", "pending", "approved", "rejected"]).default("pending"),
 });
 
-/** 成员列表查询参数 */
+/** Member list query params. */
 export const queryMembersSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
 
-/** 服务器列表查询参数 */
+/** Server list query params. */
 export const queryServersSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(12),
@@ -205,29 +233,29 @@ export const queryServersSchema = z.object({
   ownerId: z.string().cuid().optional(),
 });
 
-/** 注册请求体 */
+/** Register request body. */
 export const registerSchema = z.object({
   email: z
     .string()
     .email()
     .transform((value) => value.toLowerCase().trim()),
-  password: z.string().min(8, "密码至少 8 位"),
+  password: z.string().min(8, "errors.validation.auth.passwordMin"),
   code: z
     .string()
-    .length(6, "验证码为 6 位数字")
+    .length(6, "errors.validation.auth.codeLength")
     .regex(/^\d{6}$/),
 });
 
-/** 登录请求体 */
+/** Login request body. */
 export const loginSchema = z.object({
   email: z
     .string()
     .email()
     .transform((value) => value.toLowerCase().trim()),
-  password: z.string().min(1, "请输入密码"),
+  password: z.string().min(1, "errors.validation.auth.passwordRequired"),
 });
 
-/** 发送验证码请求体 */
+/** Send verification code request body. */
 export const sendCodeSchema = z.object({
   email: z
     .string()
@@ -235,7 +263,7 @@ export const sendCodeSchema = z.object({
     .transform((value) => value.toLowerCase().trim()),
 });
 
-/** 发送重置密码验证码请求体 */
+/** Send password reset code request body. */
 export const sendResetCodeSchema = z.object({
   email: z
     .string()
@@ -243,7 +271,7 @@ export const sendResetCodeSchema = z.object({
     .transform((value) => value.toLowerCase().trim()),
 });
 
-/** 重置密码请求体 */
+/** Reset password request body. */
 export const resetPasswordSchema = z.object({
   email: z
     .string()
@@ -251,26 +279,30 @@ export const resetPasswordSchema = z.object({
     .transform((value) => value.toLowerCase().trim()),
   code: z
     .string()
-    .length(6, "验证码为 6 位数字")
+    .length(6, "errors.validation.auth.codeLength")
     .regex(/^\d{6}$/),
-  newPassword: z.string().min(8, "密码至少 8 位"),
+  newPassword: z.string().min(8, "errors.validation.auth.passwordMin"),
 });
 
-/** 发表评论/回复请求体 */
+/** Post a comment / reply. */
 export const createCommentSchema = z.object({
-  content: z.string().trim().min(1, "评论内容不能为空").max(1000, "评论最多 1000 字"),
+  content: z
+    .string()
+    .trim()
+    .min(1, "errors.validation.comments.contentRequired")
+    .max(1000, "errors.validation.comments.contentMax"),
   parentId: z.string().cuid().optional(),
 });
 
-/** 评论列表查询参数 */
+/** Comment list query params. */
 export const queryCommentsSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
 
-/** 上传整合包请求体（multipart 文本字段） */
+/** Upload modpack request body (multipart text fields). */
 export const uploadModpackSchema = z.object({
-  version: optionalTrimmedText(64, "版本号最多 64 个字符"),
+  version: optionalTrimmedText(64, "errors.validation.modpacks.versionMax"),
   loader: z.preprocess((value) => {
     if (typeof value !== "string") {
       return undefined;
@@ -278,10 +310,10 @@ export const uploadModpackSchema = z.object({
     const trimmed = value.trim();
     return trimmed.length > 0 ? trimmed : undefined;
   }, modpackLoaderSchema.optional()),
-  gameVersion: optionalTrimmedText(32, "游戏版本最多 32 个字符"),
+  gameVersion: optionalTrimmedText(32, "errors.validation.modpacks.gameVersionMax"),
 });
 
-/** 通知列表查询参数 */
+/** Notification list query params. */
 export const queryNotificationsSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
@@ -291,28 +323,33 @@ export const queryNotificationsSchema = z.object({
     .transform((value) => value === true || value === "true"),
 });
 
-/** 批量标记通知已读 */
+/** Batch mark notifications read. */
 export const markNotificationsReadSchema = z.union([
   z.object({
     all: z.literal(true),
   }),
   z.object({
-    ids: z.array(z.string().cuid()).min(1, "至少传入一条通知 ID"),
+    ids: z.array(z.string().cuid()).min(1, "errors.validation.notifications.idsRequired"),
   }),
 ]);
 
-/** 服务器统计查询参数 */
+/** Server stats query params. */
 export const queryServerStatsSchema = z.object({
   period: z.enum(["24h", "7d", "30d"]).default("24h"),
 });
 
-/** 资料更新请求体 */
+/** Profile update request body. */
 export const updateProfileSchema = z.object({
-  name: z.string().trim().min(2, "昵称至少 2 个字符").max(20, "昵称最多 20 个字符").optional(),
-  bio: z.string().trim().max(200, "简介最多 200 字").optional(),
+  name: z
+    .string()
+    .trim()
+    .min(2, "errors.validation.user.nameMin")
+    .max(20, "errors.validation.user.nameMax")
+    .optional(),
+  bio: z.string().trim().max(200, "errors.validation.user.bioMax").optional(),
 });
 
-/** Ping 结果（Worker 输出校验） */
+/** Ping result (Worker output validation). */
 export const pingResultSchema = z.object({
   online: z.boolean(),
   playerCount: z.number().int().nullable(),
@@ -322,9 +359,9 @@ export const pingResultSchema = z.object({
   latencyMs: z.number().int().nullable(),
 });
 
-// ─── 管理后台 Schema ────────────────────────────
+// ─── Admin-console schemas ────────────────────────────
 
-/** 管理后台服务器列表查询参数 */
+/** Admin console server list query params. */
 export const adminQueryServersSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
@@ -332,13 +369,13 @@ export const adminQueryServersSchema = z.object({
   search: z.string().max(100).optional(),
 });
 
-/** 管理后台服务器审核操作 */
+/** Admin console server review action. */
 export const adminServerActionSchema = z.object({
   action: z.enum(["approve", "reject", "review"]),
   reason: z.string().max(500).optional(),
 });
 
-/** 管理后台用户列表查询参数 */
+/** Admin console user list query params. */
 export const adminQueryUsersSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
@@ -346,13 +383,13 @@ export const adminQueryUsersSchema = z.object({
   search: z.string().max(100).optional(),
 });
 
-/** 管理后台用户封禁/解封操作 */
+/** Admin console user ban / unban action. */
 export const adminUserActionSchema = z.object({
   action: z.enum(["ban", "unban"]),
   reason: z.string().max(500).optional(),
 });
 
-/** 管理后台审查日志列表查询参数 */
+/** Admin console moderation log list query params. */
 export const adminQueryModerationLogsSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
@@ -360,42 +397,50 @@ export const adminQueryModerationLogsSchema = z.object({
   type: z.enum(["all", "server", "modpack", "username", "comment"]).default("all"),
 });
 
-/** 管理后台审查日志操作 */
+/** Admin console moderation log action. */
 export const adminModerationLogActionSchema = z.object({
   reviewed: z.boolean().optional(),
   adminNote: z.string().max(500).optional(),
 });
 
-// ─── 更新日志 Schema ────────────────────────────
+// ─── Changelog schemas ────────────────────────────
 
-/** 更新日志类型枚举 */
+/** Changelog type enum. */
 export const changelogTypeSchema = z.enum(["feature", "fix", "improvement", "other"]);
 
-/** 公开更新日志列表查询参数 */
+/** Public changelog list query params. */
 export const queryChangelogsSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
 
-/** 管理后台更新日志列表查询参数 */
+/** Admin console changelog list query params. */
 export const adminQueryChangelogsSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
   published: z.enum(["all", "published", "draft"]).default("all"),
 });
 
-/** 创建更新日志请求体 */
+/** Create changelog request body. */
 export const createChangelogSchema = z.object({
-  title: z.string().trim().min(1, "标题不能为空").max(100, "标题最多 100 字"),
-  content: z.string().trim().min(1, "内容不能为空").max(20000, "内容最多 20000 字"),
+  title: z
+    .string()
+    .trim()
+    .min(1, "errors.validation.changelog.titleRequired")
+    .max(100, "errors.validation.changelog.titleMax"),
+  content: z
+    .string()
+    .trim()
+    .min(1, "errors.validation.changelog.contentRequired")
+    .max(20000, "errors.validation.changelog.contentMax"),
   type: changelogTypeSchema.default("feature"),
   published: z.boolean().default(false),
 });
 
-/** 更新更新日志请求体 */
+/** Update changelog request body. */
 export const updateChangelogSchema = createChangelogSchema.partial();
 
-// ─── 类型导出 ────────────────────────────────
+// ─── Type exports ────────────────────────────────
 
 export type CreateServerInput = z.infer<typeof createServerSchema>;
 export type UpdateServerInput = z.infer<typeof updateServerSchema>;
@@ -435,9 +480,7 @@ export type StatusReportInput = z.infer<typeof statusReportSchema>;
 export type QueryApplicationsInput = z.infer<typeof queryApplicationsSchema>;
 export type QueryMembersInput = z.infer<typeof queryMembersSchema>;
 
-// ─── 管理后台话题 Schema ─────────────────────────
-
-// ─── 举报 ───
+// ─── Report schemas ─────────────────────────
 
 export const reportCategoryEnum = z.enum([
   "misinformation",

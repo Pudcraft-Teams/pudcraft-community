@@ -1,8 +1,10 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { Pagination } from "@/components/Pagination";
 import { UserAvatar } from "@/components/UserAvatar";
+import { defaultLocale, isLocale } from "@/i18n/config";
 import { timeAgo } from "@/lib/time";
 import type { ApplicationStatus, ServerApplicationItem } from "@/lib/types";
 
@@ -35,30 +37,38 @@ function parsePayload(raw: unknown): ApplicationsPayload {
   };
 }
 
-const TABS: { key: TabStatus; label: string }[] = [
-  { key: "pending", label: "待审核" },
-  { key: "approved", label: "已通过" },
-  { key: "rejected", label: "已拒绝" },
-];
+const TAB_KEYS: TabStatus[] = ["pending", "approved", "rejected"];
 
-function statusBadge(status: ApplicationStatus) {
+function resolveTabLabel(tab: TabStatus, t: ReturnType<typeof useTranslations>): string {
+  if (tab === "pending") return t("tabPending");
+  if (tab === "approved") return t("tabApproved");
+  return t("tabRejected");
+}
+
+function StatusBadge({
+  status,
+  t,
+}: {
+  status: ApplicationStatus;
+  t: ReturnType<typeof useTranslations>;
+}) {
   switch (status) {
     case "pending":
       return (
         <span className="inline-flex items-center rounded-full bg-accent-muted px-2.5 py-0.5 text-xs font-medium text-accent-hover ring-1 ring-accent-hover/20">
-          待审核
+          {t("statusPending")}
         </span>
       );
     case "approved":
       return (
         <span className="inline-flex items-center rounded-full bg-forest-light px-2.5 py-0.5 text-xs font-medium text-forest-dark ring-1 ring-forest/20">
-          已通过
+          {t("statusApproved")}
         </span>
       );
     case "rejected":
       return (
         <span className="inline-flex items-center rounded-full bg-accent-muted px-2.5 py-0.5 text-xs font-medium text-accent-hover ring-1 ring-accent-hover/20">
-          已拒绝
+          {t("statusRejected")}
         </span>
       );
     default:
@@ -66,15 +76,21 @@ function statusBadge(status: ApplicationStatus) {
   }
 }
 
-function resolveUserName(app: ServerApplicationItem): string {
-  return app.userName?.trim() || "匿名用户";
+function resolveUserName(
+  app: ServerApplicationItem,
+  t: ReturnType<typeof useTranslations>,
+): string {
+  return app.userName?.trim() || t("anonymousUser");
 }
 
 /**
- * 入服申请管理列表。
- * 服主可以查看、审核（通过 / 拒绝）玩家提交的入服申请。
+ * Application review list.
+ * Owners can view and moderate (approve / reject) player join applications.
  */
 export function ApplicationList({ serverId }: ApplicationListProps) {
+  const t = useTranslations("console.applications");
+  const rawLocale = useLocale();
+  const appLocale = isLocale(rawLocale) ? rawLocale : defaultLocale;
   const [activeTab, setActiveTab] = useState<TabStatus>("pending");
   const [page, setPage] = useState(1);
   const [applications, setApplications] = useState<ServerApplicationItem[]>([]);
@@ -101,20 +117,20 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
         const payload = parsePayload(await response.json().catch(() => ({})));
 
         if (!response.ok) {
-          throw new Error(payload.error ?? "申请列表加载失败");
+          throw new Error(payload.error ?? t("loadFailed"));
         }
 
         setApplications(payload.data ?? []);
         setTotalPages(payload.totalPages ?? 1);
       } catch (fetchError) {
-        const message = fetchError instanceof Error ? fetchError.message : "申请列表加载失败";
+        const message = fetchError instanceof Error ? fetchError.message : t("loadFailed");
         setError(message);
         setApplications([]);
       } finally {
         setIsLoading(false);
       }
     },
-    [serverId],
+    [serverId, t],
   );
 
   const fetchPendingCount = useCallback(async () => {
@@ -159,13 +175,13 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
 
       if (!response.ok) {
         const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-        throw new Error(typeof body.error === "string" ? body.error : "操作失败");
+        throw new Error(typeof body.error === "string" ? body.error : t("actionFailed"));
       }
 
       // Refresh list and pending count
       await Promise.all([fetchApplications(activeTab, page), fetchPendingCount()]);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "操作失败";
+      const message = err instanceof Error ? err.message : t("actionFailed");
       setError(message);
     } finally {
       setActionLoading(null);
@@ -184,7 +200,7 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
 
       if (!response.ok) {
         const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-        throw new Error(typeof body.error === "string" ? body.error : "操作失败");
+        throw new Error(typeof body.error === "string" ? body.error : t("actionFailed"));
       }
 
       setRejectingId(null);
@@ -193,7 +209,7 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
       // Refresh list and pending count
       await Promise.all([fetchApplications(activeTab, page), fetchPendingCount()]);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "操作失败";
+      const message = err instanceof Error ? err.message : t("actionFailed");
       setError(message);
     } finally {
       setActionLoading(null);
@@ -202,23 +218,23 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
 
   return (
     <section className="m3-surface p-4 sm:p-5">
-      <h2 className="text-lg font-semibold text-warm-800">入服申请管理</h2>
+      <h2 className="text-lg font-semibold text-warm-800">{t("title")}</h2>
 
       {/* Status tabs */}
       <div className="mt-4 flex gap-1 border-b border-warm-200">
-        {TABS.map((tab) => (
+        {TAB_KEYS.map((tab) => (
           <button
-            key={tab.key}
+            key={tab}
             type="button"
-            onClick={() => handleTabChange(tab.key)}
+            onClick={() => handleTabChange(tab)}
             className={`relative px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === tab.key
+              activeTab === tab
                 ? "border-b-2 border-accent text-accent"
                 : "text-warm-500 hover:text-warm-800"
             }`}
           >
-            {tab.label}
-            {tab.key === "pending" && pendingCount > 0 && (
+            {resolveTabLabel(tab, t)}
+            {tab === "pending" && pendingCount > 0 && (
               <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-hover px-1.5 text-[11px] font-semibold text-white">
                 {pendingCount > 99 ? "99+" : pendingCount}
               </span>
@@ -236,9 +252,9 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
 
       {/* Loading */}
       {isLoading ? (
-        <p className="mt-6 text-center text-sm text-warm-500">加载中...</p>
+        <p className="mt-6 text-center text-sm text-warm-500">{t("loading")}</p>
       ) : applications.length === 0 ? (
-        <p className="mt-6 text-center text-sm text-warm-500">暂无申请</p>
+        <p className="mt-6 text-center text-sm text-warm-500">{t("empty")}</p>
       ) : (
         <div className="mt-4 space-y-3">
           {applications.map((app) => (
@@ -257,11 +273,11 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
                   />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-warm-800">
-                      {resolveUserName(app)}
+                      {resolveUserName(app, t)}
                     </p>
                     {app.mcUsername && (
                       <p className="mt-0.5 text-xs text-warm-500">
-                        MC 用户名：
+                        {t("mcUsername")}
                         <span className="font-mono text-warm-800">{app.mcUsername}</span>
                       </p>
                     )}
@@ -269,8 +285,8 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
-                  {statusBadge(app.status)}
-                  <span className="text-xs text-warm-400">{timeAgo(app.createdAt)}</span>
+                  <StatusBadge status={app.status} t={t} />
+                  <span className="text-xs text-warm-400">{timeAgo(app.createdAt, appLocale)}</span>
                 </div>
               </div>
 
@@ -291,7 +307,7 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
               {/* Review note (for reviewed applications) */}
               {app.status !== "pending" && app.reviewNote && (
                 <div className="mt-3 rounded-lg border border-warm-100 bg-warm-50 p-3 text-sm">
-                  <span className="font-medium text-warm-500">审核备注：</span>
+                  <span className="font-medium text-warm-500">{t("reviewNote")}</span>
                   <span className="text-warm-800">{app.reviewNote}</span>
                   {app.reviewerName && (
                     <span className="ml-2 text-xs text-warm-400">
@@ -309,7 +325,7 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
                       <textarea
                         value={rejectNote}
                         onChange={(e) => setRejectNote(e.target.value)}
-                        placeholder="填写拒绝原因（可选）"
+                        placeholder={t("rejectNotePlaceholder")}
                         rows={2}
                         className="w-full rounded-lg border border-warm-200 bg-surface px-3 py-2 text-sm text-warm-800 placeholder:text-warm-400 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                       />
@@ -320,7 +336,7 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
                           disabled={actionLoading === app.id}
                           className="rounded-lg bg-accent-hover px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-accent-dark disabled:opacity-50"
                         >
-                          {actionLoading === app.id ? "处理中..." : "确认拒绝"}
+                          {actionLoading === app.id ? t("processing") : t("rejectConfirm")}
                         </button>
                         <button
                           type="button"
@@ -331,7 +347,7 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
                           disabled={actionLoading === app.id}
                           className="rounded-lg border border-warm-200 bg-surface px-3 py-1.5 text-sm font-medium text-warm-500 transition-colors hover:bg-warm-50 disabled:opacity-50"
                         >
-                          取消
+                          {t("cancelReject")}
                         </button>
                       </div>
                     </div>
@@ -343,7 +359,7 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
                         disabled={actionLoading === app.id}
                         className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
                       >
-                        {actionLoading === app.id ? "处理中..." : "通过"}
+                        {actionLoading === app.id ? t("processing") : t("approveAction")}
                       </button>
                       <button
                         type="button"
@@ -351,7 +367,7 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
                         disabled={actionLoading !== null}
                         className="rounded-lg border border-accent-hover/20 bg-surface px-3 py-1.5 text-sm font-medium text-accent-hover transition-colors hover:bg-accent-muted disabled:opacity-50"
                       >
-                        拒绝
+                        {t("rejectAction")}
                       </button>
                     </div>
                   )}

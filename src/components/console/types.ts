@@ -10,7 +10,9 @@ export interface ConsoleStatsDataPoint {
 export interface ConsoleStatsSummary {
   avgPlayers: number;
   peakPlayers: number;
-  peakTime: string;
+  // Raw peak-hour label (e.g. "14:00") or null when there is no data.
+  // The console client translates this via `console.stats.peakTime*` keys.
+  peakTime: string | null;
   uptimePercent: number;
   totalChecks: number;
   onlineChecks: number;

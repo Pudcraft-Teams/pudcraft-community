@@ -1,16 +1,21 @@
 export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/db";
 import { ChangelogList } from "./ChangelogList";
 import type { ChangelogItem, ChangelogType } from "@/lib/types";
 
-export const metadata: Metadata = {
-  title: "更新日志",
-  description: "PudCraft Community 平台更新日志，了解最新功能、修复和改进。",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("changelog");
+  return {
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+  };
+}
 
 export default async function ChangelogPage() {
+  const t = await getTranslations("changelog");
   const changelogs = await prisma.changelog.findMany({
     where: { published: true, publishedAt: { not: null } },
     orderBy: { publishedAt: "desc" },
@@ -38,8 +43,8 @@ export default async function ChangelogPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="mb-2 text-2xl font-bold tracking-tight text-warm-800">更新日志</h1>
-      <p className="mb-8 text-sm text-warm-500">了解 PudCraft Community 的最新变化</p>
+      <h1 className="mb-2 text-2xl font-bold tracking-tight text-warm-800">{t("heading")}</h1>
+      <p className="mb-8 text-sm text-warm-500">{t("subtitle")}</p>
       <ChangelogList initialData={data} initialTotal={total} />
     </div>
   );

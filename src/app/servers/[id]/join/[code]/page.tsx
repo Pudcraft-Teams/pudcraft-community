@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -23,6 +24,8 @@ export default function InviteJoinPage() {
   const { id, code } = useParams<{ id: string; code: string }>();
   const { status } = useSession();
   const privateServersEnabled = isPrivateServersEnabled();
+  const t = useTranslations("servers.join");
+  const tCommon = useTranslations("servers.common");
 
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
   const [isLoadingServer, setIsLoadingServer] = useState(true);
@@ -72,12 +75,12 @@ export default function InviteJoinPage() {
       const response = await fetch(`/api/servers/${id}`, { cache: "no-store" });
 
       if (response.status === 404) {
-        setPageError("服务器未找到");
+        setPageError(t("serverNotFound"));
         return;
       }
 
       if (!response.ok) {
-        setPageError("加载服务器信息失败，请稍后重试");
+        setPageError(t("loadFailedRetry"));
         return;
       }
 
@@ -89,17 +92,17 @@ export default function InviteJoinPage() {
             ? (body.data as Record<string, unknown>)
             : body;
         setServerInfo({
-          name: typeof payload.name === "string" ? payload.name : "未知服务器",
+          name: typeof payload.name === "string" ? payload.name : t("unknownServer"),
           psid: typeof payload.psid === "number" ? payload.psid : 0,
           iconUrl: typeof payload.iconUrl === "string" ? payload.iconUrl : null,
         });
       }
     } catch {
-      setPageError("网络异常，无法加载服务器信息");
+      setPageError(t("networkError"));
     } finally {
       setIsLoadingServer(false);
     }
-  }, [id, privateServersEnabled]);
+  }, [id, privateServersEnabled, t]);
 
   useEffect(() => {
     if (!privateServersEnabled) {
@@ -131,16 +134,16 @@ export default function InviteJoinPage() {
   function validateMcUsername(value: string): string | null {
     const trimmed = value.trim();
     if (trimmed.length === 0) {
-      return "请输入 MC 用户名";
+      return t("mcUsernameRequired");
     }
     if (trimmed.length < 3) {
-      return "MC 用户名至少 3 个字符";
+      return t("mcUsernameMin");
     }
     if (trimmed.length > 16) {
-      return "MC 用户名最多 16 个字符";
+      return t("mcUsernameMax");
     }
     if (!/^[a-zA-Z0-9_]+$/.test(trimmed)) {
-      return "MC 用户名只能包含字母、数字和下划线";
+      return t("mcUsernameFormat");
     }
     return null;
   }
@@ -185,34 +188,34 @@ export default function InviteJoinPage() {
 
       if (response.status === 409) {
         setErrorMessage(
-          typeof errorText === "string" ? errorText : "你已经是该服务器的成员",
+          typeof errorText === "string" ? errorText : t("alreadyMember"),
         );
         return;
       }
 
       if (response.status === 404 || response.status === 410) {
         setErrorMessage(
-          typeof errorText === "string" ? errorText : "邀请码无效或已过期",
+          typeof errorText === "string" ? errorText : t("inviteInvalidExpired"),
         );
         return;
       }
 
       if (!response.ok) {
         setErrorMessage(
-          typeof errorText === "string" ? errorText : "加入失败，请稍后重试",
+          typeof errorText === "string" ? errorText : t("submitFailed"),
         );
         return;
       }
 
       // 成功
-      setSuccessMessage("加入成功！即将跳转到服务器详情页...");
+      setSuccessMessage(t("successMessage"));
       const psid = serverInfo?.psid;
       const target = psid ? `/servers/${psid}` : `/servers/${id}`;
       redirectTimerRef.current = window.setTimeout(() => {
         router.push(target);
       }, 2000);
     } catch {
-      setErrorMessage("网络异常，请稍后重试");
+      setErrorMessage(t("networkSubmitError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -228,12 +231,10 @@ export default function InviteJoinPage() {
     return (
       <div className="mx-auto max-w-md px-4">
         <div className="m3-surface p-6 text-center">
-          <h1 className="text-lg font-semibold text-warm-800">当前未开放邀请码加入</h1>
-          <p className="mt-2 text-sm text-warm-500">
-            站点当前未启用私有服务器邀请流程，请从服务器详情页关注后续开放状态。
-          </p>
+          <h1 className="text-lg font-semibold text-warm-800">{t("featureDisabledHeading")}</h1>
+          <p className="mt-2 text-sm text-warm-500">{t("featureDisabledDescription")}</p>
           <Link href={`/servers/${id}`} className="m3-link mt-4 inline-block text-sm">
-            返回服务器详情
+            {t("backToDetail")}
           </Link>
         </div>
       </div>
@@ -243,7 +244,7 @@ export default function InviteJoinPage() {
   if (status === "unauthenticated") {
     return (
       <div className="py-12 text-center text-sm text-warm-500">
-        正在跳转到登录页...
+        {tCommon("redirectingToLogin")}
       </div>
     );
   }
@@ -253,7 +254,7 @@ export default function InviteJoinPage() {
       <div className="mx-auto max-w-md px-4">
         <div className="m3-alert-error py-3">{pageError}</div>
         <Link href="/" className="m3-link mt-4 inline-block text-sm">
-          &larr; 返回首页
+          &larr; {t("backHome")}
         </Link>
       </div>
     );
@@ -263,11 +264,11 @@ export default function InviteJoinPage() {
     <div className="mx-auto max-w-md px-4">
       <div className="m3-surface p-6">
         <h1 className="text-2xl font-semibold text-warm-800">
-          加入服务器
+          {t("heading")}
         </h1>
         {serverInfo && (
           <p className="mt-2 text-sm text-warm-600">
-            你正在通过邀请码加入「{serverInfo.name}」
+            {t("subtitle", { name: serverInfo.name })}
           </p>
         )}
 
@@ -290,7 +291,7 @@ export default function InviteJoinPage() {
           <form className="mt-5 space-y-4" onSubmit={handleSubmit} noValidate>
             <fieldset disabled={isSubmitting} className="space-y-4 disabled:opacity-90">
               <label className="block text-sm text-warm-700">
-                MC 用户名
+                {t("mcUsernameLabel")}
                 <input
                   type="text"
                   value={mcUsername}
@@ -299,7 +300,7 @@ export default function InviteJoinPage() {
                     setFieldError(null);
                   }}
                   className="m3-input mt-2 w-full"
-                  placeholder="输入你的 Minecraft 用户名"
+                  placeholder={t("mcUsernamePlaceholder")}
                   autoComplete="off"
                   maxLength={16}
                 />
@@ -314,7 +315,7 @@ export default function InviteJoinPage() {
               disabled={isSubmitting}
               className="m3-btn m3-btn-primary w-full py-2.5 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? "加入中..." : "加入服务器"}
+              {isSubmitting ? t("submitting") : t("submit")}
             </button>
           </form>
         )}
@@ -325,7 +326,7 @@ export default function InviteJoinPage() {
             href={serverInfo?.psid ? `/servers/${serverInfo.psid}` : `/servers/${id}`}
             className="m3-link text-sm"
           >
-            查看服务器详情
+            {t("viewDetail")}
           </Link>
         </div>
       </div>

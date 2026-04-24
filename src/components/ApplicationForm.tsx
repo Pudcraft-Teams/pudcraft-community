@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useState } from "react";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useToast } from "@/hooks/useToast";
@@ -33,6 +34,7 @@ function extractError(payload: unknown): string | undefined {
  * 始终包含 Minecraft 用户名输入。
  */
 export function ApplicationForm({ serverId, fields, onSuccess }: ApplicationFormProps) {
+  const t = useTranslations("servers.apply");
   const { toast } = useToast();
 
   const [mcUsername, setMcUsername] = useState("");
@@ -76,16 +78,16 @@ export function ApplicationForm({ serverId, fields, onSuccess }: ApplicationForm
     // MC Username validation
     const trimmedUsername = mcUsername.trim();
     if (trimmedUsername.length === 0) {
-      errors.mcUsername = "请输入 Minecraft 用户名";
+      errors.mcUsername = t("mcUsernameRequired");
       valid = false;
     } else if (trimmedUsername.length < 3) {
-      errors.mcUsername = "用户名至少 3 个字符";
+      errors.mcUsername = t("mcUsernameMin");
       valid = false;
     } else if (trimmedUsername.length > 16) {
-      errors.mcUsername = "用户名最多 16 个字符";
+      errors.mcUsername = t("mcUsernameMax");
       valid = false;
     } else if (!MC_USERNAME_REGEX.test(trimmedUsername)) {
-      errors.mcUsername = "用户名只能包含字母、数字和下划线";
+      errors.mcUsername = t("mcUsernameFormat");
       valid = false;
     }
 
@@ -97,18 +99,18 @@ export function ApplicationForm({ serverId, fields, onSuccess }: ApplicationForm
         if (field.required) {
           if (field.type === "multiselect") {
             if (!Array.isArray(value) || value.length === 0) {
-              errors[field.key] = `请选择${field.label}`;
+              errors[field.key] = t("dynamicRequiredSelect", { label: field.label });
               valid = false;
             }
           } else if (typeof value === "string" && value.trim().length === 0) {
-            errors[field.key] = `请填写${field.label}`;
+            errors[field.key] = t("dynamicRequiredFill", { label: field.label });
             valid = false;
           }
         }
 
         // Textarea max length
         if (field.type === "textarea" && typeof value === "string" && value.length > 500) {
-          errors[field.key] = "最多 500 个字符";
+          errors[field.key] = t("textareaMax");
           valid = false;
         }
       }
@@ -116,7 +118,7 @@ export function ApplicationForm({ serverId, fields, onSuccess }: ApplicationForm
 
     setFieldErrors(errors);
     return valid;
-  }, [mcUsername, fields, formData]);
+  }, [mcUsername, fields, formData, t]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -158,7 +160,7 @@ export function ApplicationForm({ serverId, fields, onSuccess }: ApplicationForm
       const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
 
       if (!response.ok) {
-        const errorMessage = extractError(body) ?? "提交失败，请稍后重试";
+        const errorMessage = extractError(body) ?? t("submitFailed");
         if (response.status === 409) {
           toast.error(errorMessage);
         } else {
@@ -170,7 +172,7 @@ export function ApplicationForm({ serverId, fields, onSuccess }: ApplicationForm
       setIsSuccess(true);
       onSuccess?.();
     } catch {
-      toast.error("网络异常，请稍后重试");
+      toast.error(t("networkSubmitError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -191,21 +193,21 @@ export function ApplicationForm({ serverId, fields, onSuccess }: ApplicationForm
             <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
           </svg>
         </div>
-        <h3 className="text-lg font-semibold text-warm-800">申请已提交</h3>
-        <p className="mt-1 text-sm text-warm-500">请等待服主审核，审核结果将通过站内通知告知。</p>
+        <h3 className="text-lg font-semibold text-warm-800">{t("successTitle")}</h3>
+        <p className="mt-1 text-sm text-warm-500">{t("successHint")}</p>
       </div>
     );
   }
 
   return (
     <form className="m3-surface p-6" onSubmit={handleSubmit} noValidate>
-      <h3 className="mb-4 text-lg font-semibold text-warm-800">入服申请</h3>
+      <h3 className="mb-4 text-lg font-semibold text-warm-800">{t("formHeading")}</h3>
 
       <fieldset disabled={isSubmitting} className="space-y-4 disabled:opacity-90">
         {/* MC Username - always shown, always required */}
         <div>
           <label htmlFor="mc-username" className="block text-sm font-medium text-warm-800">
-            Minecraft 用户名
+            {t("mcUsernameLabel")}
             <span className="ml-0.5 text-accent-hover">*</span>
           </label>
           <input
@@ -217,7 +219,7 @@ export function ApplicationForm({ serverId, fields, onSuccess }: ApplicationForm
               setFieldErrors((prev) => ({ ...prev, mcUsername: undefined }));
             }}
             className="m3-input mt-1.5 w-full"
-            placeholder="你的 MC 游戏 ID"
+            placeholder={t("mcUsernamePlaceholder")}
             maxLength={16}
             autoComplete="off"
           />
@@ -272,7 +274,7 @@ export function ApplicationForm({ serverId, fields, onSuccess }: ApplicationForm
                 onChange={(event) => updateField(field.key, event.target.value)}
                 className="m3-input mt-1.5 w-full"
               >
-                <option value="">{field.placeholder ?? "请选择"}</option>
+                <option value="">{field.placeholder ?? t("selectPlaceholder")}</option>
                 {field.options?.map((option) => (
                   <option key={option} value={option}>
                     {option}
@@ -325,10 +327,10 @@ export function ApplicationForm({ serverId, fields, onSuccess }: ApplicationForm
             {isSubmitting ? (
               <span className="inline-flex items-center gap-2">
                 <LoadingSpinner size="sm" />
-                提交中...
+                {t("submitting")}
               </span>
             ) : (
-              "提交申请"
+              t("submit")
             )}
           </button>
         </div>

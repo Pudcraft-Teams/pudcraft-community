@@ -26,7 +26,7 @@ const entityIdSchema = z
   .string()
   .trim()
   .min(1)
-  .regex(/^[a-zA-Z0-9_-]+$/, "实体 ID 格式不合法");
+  .regex(/^[a-zA-Z0-9_-]+$/, "invalid entity ID format");
 const MIME_EXTENSION_MAP: Record<AllowedImageMimeType, string> = {
   "image/png": "png",
   "image/jpeg": "jpg",
@@ -117,7 +117,7 @@ function parseBooleanEnv(value: string | undefined): boolean {
     return false;
   }
 
-  throw new Error("S3_FORCE_PATH_STYLE 必须是 true/false");
+  throw new Error("S3_FORCE_PATH_STYLE must be true/false");
 }
 
 export function getObjectStorageRuntimeConfig(): ObjectStorageRuntimeConfig {
@@ -133,12 +133,12 @@ export function getObjectStorageRuntimeConfig(): ObjectStorageRuntimeConfig {
 
   if (!bucket || !accessKeyId || !accessKeySecret) {
     throw new Error(
-      "对象存储配置不完整：请检查 S3_BUCKET / S3_ACCESS_KEY_ID / S3_ACCESS_KEY_SECRET",
+      "object storage config incomplete: check S3_BUCKET / S3_ACCESS_KEY_ID / S3_ACCESS_KEY_SECRET",
     );
   }
 
   if (!region && !endpoint) {
-    throw new Error("对象存储配置不完整：请提供 S3_REGION 或 S3_ENDPOINT");
+    throw new Error("object storage config incomplete: supply S3_REGION or S3_ENDPOINT");
   }
 
   return {
@@ -205,7 +205,7 @@ async function streamBodyToBuffer(
   }
 
   if (!(Symbol.asyncIterator in body)) {
-    throw new Error("对象存储返回了不支持的响应体类型");
+    throw new Error("object storage returned an unsupported body type");
   }
 
   const chunks: Buffer[] = [];
@@ -332,7 +332,7 @@ export function resolveLocalStorageTarget(key: string): {
   const absolutePath = path.resolve(baseDir, localKey);
 
   if (!isPathInsideRoot(absolutePath, baseDir)) {
-    throw new Error("存储对象路径非法");
+    throw new Error("invalid storage object path");
   }
 
   return {
@@ -353,12 +353,15 @@ export class ImageValidationError extends Error {
   readonly code: "FILE_TOO_LARGE" | "INVALID_IMAGE_TYPE" | "INVALID_IMAGE_DIMENSIONS";
 
   constructor(code: "FILE_TOO_LARGE" | "INVALID_IMAGE_TYPE" | "INVALID_IMAGE_DIMENSIONS") {
+    // The message is a developer-facing description, not UI copy.
+    // Route handlers translate via `error.code` through the
+    // `errors.api.uploads.*` namespace so the user never sees this string.
     super(
       code === "FILE_TOO_LARGE"
-        ? "图片大小不能超过 5MB"
+        ? "image exceeds size limit"
         : code === "INVALID_IMAGE_TYPE"
-          ? "图片格式不受支持"
-          : `图片尺寸过大（最大 ${MAX_IMAGE_WIDTH_PX}x${MAX_IMAGE_HEIGHT_PX}，像素上限 ${MAX_IMAGE_PIXELS.toLocaleString()}）`,
+          ? "unsupported image type"
+          : `image exceeds dimension limit (max ${MAX_IMAGE_WIDTH_PX}x${MAX_IMAGE_HEIGHT_PX}, ${MAX_IMAGE_PIXELS.toLocaleString()} pixels)`,
     );
     this.name = "ImageValidationError";
     this.code = code;
@@ -445,12 +448,12 @@ export function hashBuffer(buffer: Buffer, algorithm: "sha256" | "sha1" = "sha25
 function normalizeObjectKey(objectKey: string): string {
   const normalized = objectKey.replace(/\\/g, "/").trim().replace(/^\/+/, "");
   if (!normalized) {
-    throw new Error("无效的存储对象 key");
+    throw new Error("invalid storage object key");
   }
 
   const segments = normalized.split("/");
   if (segments.some((segment) => !segment || segment === "." || segment === "..")) {
-    throw new Error("存储对象 key 非法");
+    throw new Error("illegal storage object key");
   }
 
   return segments.join("/");
@@ -641,7 +644,7 @@ export async function getSignedUrl(
     );
   }
 
-  throw new Error("getSignedUrl 仅支持 STORAGE_DRIVER=s3，请在调用方按 driver 分流");
+  throw new Error("getSignedUrl only supports STORAGE_DRIVER=s3; branch by driver in the caller");
 }
 
 /**
@@ -691,7 +694,7 @@ export function createObjectReadStream(key: string): nodeFs.ReadStream {
 
   if (driver === "s3") {
     // 对象存储模式下不应使用本地流——改用 getObjectBuffer 或 getSignedUrl
-    throw new Error("STORAGE_DRIVER=s3 时请使用 getObjectBuffer 或 getSignedUrl 下载");
+    throw new Error("use getObjectBuffer or getSignedUrl when STORAGE_DRIVER=s3");
   }
 
   const localKey = toLocalObjectKey(normalizedKey);
@@ -730,7 +733,7 @@ export async function getObjectBuffer(key: string): Promise<Buffer> {
     );
 
     if (!result.Body) {
-      throw new Error("存储对象不存在");
+      throw new Error("storage object not found");
     }
 
     return streamBodyToBuffer(
@@ -883,7 +886,14 @@ async function uploadImage(
     if (!modResult.passed) {
       // 审查不通过，删除已上传文件
       await deleteObject(key).catch(() => {});
-      throw new ImageModerationError(modResult.reason ?? "图片包含违规内容", modResult.category);
+      // `reason` ends up on the thrown Error's .message, which is logger
+      // / developer facing — callers translate the user-visible copy via
+      // the `errors.api.uploads.*` namespace (modResult.reason itself is
+      // AI classification output and should be treated as audit metadata).
+      throw new ImageModerationError(
+        modResult.reason ?? "image moderation rejected",
+        modResult.category,
+      );
     }
   }
 

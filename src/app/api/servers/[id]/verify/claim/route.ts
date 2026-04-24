@@ -4,6 +4,8 @@ import { resolve4, resolve6 } from "dns/promises";
 import { isIP } from "net";
 
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { hashApiKey } from "@/lib/api-key";
@@ -52,22 +54,25 @@ async function resolveHostIps(host: string): Promise<string[]> {
  * 2. 已有 owner 的 API Key 流程 — 无需 IP 校验，直接标记已验证
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
   try {
     const { id } = await params;
     const parsedId = serverLookupIdSchema.safeParse(id);
     if (!parsedId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const cuid = await resolveServerCuid(parsedId.data);
     if (!cuid) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     // 验证 Bearer token
     const authHeader = request.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "未授权" }, { status: 401 });
+      return NextResponse.json({ error: tServers("unauthorized") }, { status: 401 });
     }
 
     const rawKey = authHeader.slice(7);
@@ -86,17 +91,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     });
 
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     if (server.apiKeyHash !== keyHash) {
-      return NextResponse.json({ error: "未授权" }, { status: 401 });
+      return NextResponse.json({ error: tServers("unauthorized") }, { status: 401 });
     }
 
     // ── 场景 1: 认领密钥流程（有 verifyUserId）──
     if (server.verifyUserId) {
       if (!server.verifyExpiresAt || server.verifyExpiresAt < new Date()) {
-        return NextResponse.json({ error: "认领密钥已过期，请重新生成" }, { status: 410 });
+        return NextResponse.json({ error: tServers("claimKeyExpired") }, { status: 410 });
       }
 
       // IP 校验：请求来源必须与服务器 host 一致
@@ -116,7 +121,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           serverHost: server.host,
           resolvedIps: serverIps,
         });
-        return NextResponse.json({ error: "请求来源 IP 与服务器地址不匹配" }, { status: 403 });
+        return NextResponse.json({ error: tServers("claimIpMismatch") }, { status: 403 });
       }
 
       await prisma.server.update({
@@ -146,6 +151,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ success: true });
   } catch (err) {
     logger.error("[api/servers/[id]/verify/claim] Unexpected POST error", err);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

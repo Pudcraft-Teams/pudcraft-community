@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { useToast } from "@/hooks/useToast";
@@ -12,14 +13,6 @@ interface LoginFieldErrors {
   password?: string;
 }
 
-const loginFormSchema = z.object({
-  email: z
-    .string()
-    .email("请输入有效邮箱")
-    .transform((value) => value.toLowerCase().trim()),
-  password: z.string().min(1, "请输入密码"),
-});
-
 /**
  * 登录页面。
  * 使用 NextAuth Credentials 登录，成功后跳转首页。
@@ -27,12 +20,21 @@ const loginFormSchema = z.object({
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslations("auth.login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<LoginFieldErrors>({});
   const [showPassword, setShowPassword] = useState(false);
   const [callbackUrl, setCallbackUrl] = useState("/");
+
+  const loginFormSchema = z.object({
+    email: z
+      .string()
+      .email(t("errors.invalidEmail"))
+      .transform((value) => value.toLowerCase().trim()),
+    password: z.string().min(1, t("errors.passwordRequired")),
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -45,16 +47,16 @@ export default function LoginPage() {
     const callback = params.get("callbackUrl");
 
     if (registered === "true") {
-      toast.success("注册成功，请登录");
+      toast.success(t("toasts.registered"));
     }
     if (reset === "true") {
-      toast.success("密码已重置，请用新密码登录");
+      toast.success(t("toasts.reset"));
     }
 
     if (callback && callback.startsWith("/") && !callback.startsWith("//")) {
       setCallbackUrl(callback);
     }
-  }, [toast]);
+  }, [toast, t]);
 
   const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -70,7 +72,7 @@ export default function LoginPage() {
         email: errors.email?.[0],
         password: errors.password?.[0],
       });
-      toast.error("请检查邮箱和密码格式");
+      toast.error(t("errors.formInvalid"));
       return;
     }
 
@@ -85,17 +87,17 @@ export default function LoginPage() {
 
       if (!result || result.error) {
         if (result?.code === "banned" || result?.error === "banned") {
-          toast.error("账号已被封禁");
+          toast.error(t("errors.banned"));
           return;
         }
-        toast.error("邮箱或密码错误");
+        toast.error(t("errors.credentials"));
         return;
       }
 
       router.push(callbackUrl);
       router.refresh();
     } catch {
-      toast.error("登录失败，请稍后重试");
+      toast.error(t("errors.generic"));
     } finally {
       setIsSubmitting(false);
     }
@@ -106,19 +108,19 @@ export default function LoginPage() {
   return (
     <div className="mx-auto w-full max-w-md px-4">
       <div className="m3-surface p-6">
-        <h1 className="text-2xl font-semibold text-warm-800">登录 PudCraft</h1>
-        <p className="mt-2 text-sm text-warm-600">使用邮箱和密码登录你的账号</p>
+        <h1 className="text-2xl font-semibold text-warm-800">{t("title")}</h1>
+        <p className="mt-2 text-sm text-warm-600">{t("subtitle")}</p>
 
         <form className="mt-5 space-y-4" onSubmit={handleLogin} noValidate>
           <fieldset disabled={isSubmitting} className="space-y-4 disabled:opacity-90">
             <label className="block text-sm text-warm-700">
-              邮箱
+              {t("emailLabel")}
               <input
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 className={inputClass}
-                placeholder="you@example.com"
+                placeholder={t("emailPlaceholder")}
                 autoComplete="email"
               />
               {fieldErrors.email && (
@@ -127,7 +129,7 @@ export default function LoginPage() {
             </label>
 
             <label className="block text-sm text-warm-700">
-              密码
+              {t("passwordLabel")}
               <div className="relative mt-2">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -141,7 +143,7 @@ export default function LoginPage() {
                   onClick={() => setShowPassword((prev) => !prev)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs text-warm-500 hover:bg-warm-100 hover:text-warm-700"
                 >
-                  {showPassword ? "隐藏" : "显示"}
+                  {showPassword ? t("hidePassword") : t("showPassword")}
                 </button>
               </div>
               {fieldErrors.password && (
@@ -152,7 +154,7 @@ export default function LoginPage() {
 
           <div className="-mt-2 text-right">
             <Link href="/forgot-password" className="m3-link text-xs">
-              忘记密码？
+              {t("forgotLink")}
             </Link>
           </div>
 
@@ -161,14 +163,14 @@ export default function LoginPage() {
             disabled={isSubmitting}
             className="m3-btn m3-btn-primary w-full py-2.5 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSubmitting ? "登录中..." : "登录"}
+            {isSubmitting ? t("submitting") : t("submit")}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-warm-600">
-          没有账号？
+          {t("noAccount")}
           <Link href="/register" className="m3-link ml-1">
-            去注册
+            {t("registerLink")}
           </Link>
         </p>
       </div>

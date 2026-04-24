@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { useToast } from "@/hooks/useToast";
@@ -17,29 +18,6 @@ interface ForgotPasswordFieldErrors {
   newPassword?: string;
   confirmPassword?: string;
 }
-
-const emailSchema = z.object({
-  email: z
-    .string()
-    .email("请输入有效邮箱")
-    .transform((value) => value.toLowerCase().trim()),
-});
-
-const resetSchema = z
-  .object({
-    code: z.string().regex(/^\d{6}$/, "验证码必须是 6 位数字"),
-    newPassword: z.string().min(8, "密码至少 8 位"),
-    confirmPassword: z.string().min(1, "请再次输入密码"),
-  })
-  .superRefine(({ newPassword, confirmPassword }, ctx) => {
-    if (newPassword !== confirmPassword) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "两次输入的密码不一致",
-        path: ["confirmPassword"],
-      });
-    }
-  });
 
 function toApiPayload(raw: unknown): ApiResponsePayload {
   if (typeof raw !== "object" || raw === null) {
@@ -60,6 +38,7 @@ function toApiPayload(raw: unknown): ApiResponsePayload {
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslations("auth.forgot");
   const [step, setStep] = useState<1 | 2>(1);
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -71,6 +50,29 @@ export default function ForgotPasswordPage() {
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<ForgotPasswordFieldErrors>({});
+
+  const emailSchema = z.object({
+    email: z
+      .string()
+      .email(t("errors.invalidEmail"))
+      .transform((value) => value.toLowerCase().trim()),
+  });
+
+  const resetSchema = z
+    .object({
+      code: z.string().regex(/^\d{6}$/, t("errors.codeFormat")),
+      newPassword: z.string().min(8, t("errors.passwordMin")),
+      confirmPassword: z.string().min(1, t("errors.confirmPasswordRequired")),
+    })
+    .superRefine(({ newPassword, confirmPassword }, ctx) => {
+      if (newPassword !== confirmPassword) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: t("errors.passwordMismatch"),
+          path: ["confirmPassword"],
+        });
+      }
+    });
 
   useEffect(() => {
     if (cooldown <= 0) {
@@ -95,7 +97,7 @@ export default function ForgotPasswordPage() {
     if (!parsed.success) {
       const errors = parsed.error.flatten().fieldErrors;
       setFieldErrors({ email: errors.email?.[0] });
-      toast.error("请输入有效邮箱");
+      toast.error(t("errors.invalidEmail"));
       return;
     }
 
@@ -109,16 +111,16 @@ export default function ForgotPasswordPage() {
 
       const payload = toApiPayload(await response.json().catch(() => ({})));
       if (!response.ok) {
-        toast.error(payload.error ?? "验证码发送失败，请稍后再试");
+        toast.error(payload.error ?? t("errors.sendFailed"));
         return;
       }
 
       setEmail(parsed.data.email);
       setStep(2);
       setCooldown(60);
-      toast.success(payload.message ?? "如果该邮箱已注册，验证码已发送");
+      toast.success(payload.message ?? t("toasts.codeSentIfRegistered"));
     } catch {
-      toast.error("网络异常，请稍后重试");
+      toast.error(t("errors.network"));
     } finally {
       setIsSendingCode(false);
     }
@@ -145,7 +147,7 @@ export default function ForgotPasswordPage() {
         newPassword: errors.newPassword?.[0],
         confirmPassword: errors.confirmPassword?.[0],
       }));
-      toast.error("请检查验证码和密码输入");
+      toast.error(t("errors.resetFormInvalid"));
       return;
     }
 
@@ -163,13 +165,13 @@ export default function ForgotPasswordPage() {
 
       const payload = toApiPayload(await response.json().catch(() => ({})));
       if (!response.ok) {
-        toast.error(payload.error ?? "密码重置失败，请稍后重试");
+        toast.error(payload.error ?? t("errors.submitFailed"));
         return;
       }
 
       router.push("/login?reset=true");
     } catch {
-      toast.error("网络异常，请稍后重试");
+      toast.error(t("errors.network"));
     } finally {
       setIsResetting(false);
     }
@@ -191,14 +193,14 @@ export default function ForgotPasswordPage() {
 
       const payload = toApiPayload(await response.json().catch(() => ({})));
       if (!response.ok) {
-        toast.error(payload.error ?? "验证码发送失败，请稍后再试");
+        toast.error(payload.error ?? t("errors.sendFailed"));
         return;
       }
 
       setCooldown(60);
-      toast.success(payload.message ?? "如果该邮箱已注册，验证码已发送");
+      toast.success(payload.message ?? t("toasts.codeSentIfRegistered"));
     } catch {
-      toast.error("网络异常，请稍后重试");
+      toast.error(t("errors.network"));
     } finally {
       setIsSendingCode(false);
     }
@@ -210,25 +212,23 @@ export default function ForgotPasswordPage() {
     <div className="mx-auto w-full max-w-md px-4">
       <div className="m3-surface p-6">
         <h1 className="text-2xl font-semibold text-warm-800">
-          {step === 1 ? "找回密码" : "重置密码"}
+          {step === 1 ? t("titleStepOne") : t("titleStepTwo")}
         </h1>
         <p className="mt-2 text-sm text-warm-600">
-          {step === 1
-            ? "请输入你的注册邮箱，我们会发送验证码帮你重置密码。"
-            : `验证码已发送到 ${email}`}
+          {step === 1 ? t("subtitleStepOne") : t("subtitleStepTwo", { email })}
         </p>
 
         {step === 1 ? (
           <form className="mt-5 space-y-4" onSubmit={handleSendCode} noValidate>
             <fieldset disabled={isSendingCode} className="space-y-4 disabled:opacity-90">
               <label className="block text-sm text-warm-700">
-                邮箱
+                {t("emailLabel")}
                 <input
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   className={inputClass}
-                  placeholder="you@example.com"
+                  placeholder={t("emailPlaceholder")}
                   autoComplete="email"
                 />
                 {fieldErrors.email && (
@@ -241,7 +241,7 @@ export default function ForgotPasswordPage() {
                 disabled={isSendingCode}
                 className="m3-btn m3-btn-primary w-full py-2.5 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isSendingCode ? "发送中..." : "发送验证码"}
+                {isSendingCode ? t("sendingCode") : t("sendCode")}
               </button>
             </fieldset>
           </form>
@@ -252,14 +252,14 @@ export default function ForgotPasswordPage() {
               className="space-y-4 disabled:opacity-90"
             >
               <label className="block text-sm text-warm-700">
-                验证码
+                {t("codeLabel")}
                 <input
                   type="text"
                   value={code}
                   onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
                   className={inputClass}
                   maxLength={6}
-                  placeholder="请输入 6 位数字验证码"
+                  placeholder={t("codePlaceholder")}
                   inputMode="numeric"
                   autoComplete="one-time-code"
                 />
@@ -269,14 +269,14 @@ export default function ForgotPasswordPage() {
               </label>
 
               <label className="block text-sm text-warm-700">
-                新密码
+                {t("newPasswordLabel")}
                 <div className="relative mt-2">
                   <input
                     type={showNewPassword ? "text" : "password"}
                     value={newPassword}
                     onChange={(event) => setNewPassword(event.target.value)}
                     className="m3-input w-full pr-16"
-                    placeholder="至少 8 位"
+                    placeholder={t("newPasswordPlaceholder")}
                     autoComplete="new-password"
                   />
                   <button
@@ -284,7 +284,7 @@ export default function ForgotPasswordPage() {
                     onClick={() => setShowNewPassword((prev) => !prev)}
                     className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs text-warm-500 hover:bg-warm-100 hover:text-warm-700"
                   >
-                    {showNewPassword ? "隐藏" : "显示"}
+                    {showNewPassword ? t("hidePassword") : t("showPassword")}
                   </button>
                 </div>
                 {fieldErrors.newPassword && (
@@ -293,14 +293,14 @@ export default function ForgotPasswordPage() {
               </label>
 
               <label className="block text-sm text-warm-700">
-                确认密码
+                {t("confirmPasswordLabel")}
                 <div className="relative mt-2">
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
                     className="m3-input w-full pr-16"
-                    placeholder="再次输入新密码"
+                    placeholder={t("confirmPasswordPlaceholder")}
                     autoComplete="new-password"
                   />
                   <button
@@ -308,7 +308,7 @@ export default function ForgotPasswordPage() {
                     onClick={() => setShowConfirmPassword((prev) => !prev)}
                     className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs text-warm-500 hover:bg-warm-100 hover:text-warm-700"
                   >
-                    {showConfirmPassword ? "隐藏" : "显示"}
+                    {showConfirmPassword ? t("hidePassword") : t("showPassword")}
                   </button>
                 </div>
                 {fieldErrors.confirmPassword && (
@@ -324,17 +324,17 @@ export default function ForgotPasswordPage() {
                   className="m3-btn m3-btn-tonal w-full py-2.5 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSendingCode
-                    ? "发送中..."
+                    ? t("sendingCode")
                     : cooldown > 0
-                      ? `重新发送 (${cooldown}s)`
-                      : "重新发送"}
+                      ? t("resendIn", { cooldown })
+                      : t("resend")}
                 </button>
                 <button
                   type="submit"
                   disabled={isResetting}
                   className="m3-btn m3-btn-primary w-full py-2.5 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isResetting ? "重置中..." : "重置密码"}
+                  {isResetting ? t("submitting") : t("submit")}
                 </button>
               </div>
             </fieldset>
@@ -342,9 +342,9 @@ export default function ForgotPasswordPage() {
         )}
 
         <p className="mt-6 text-center text-sm text-warm-600">
-          想起密码了？
+          {t("rememberPrompt")}
           <Link href="/login" className="m3-link ml-1">
-            去登录
+            {t("loginLink")}
           </Link>
         </p>
       </div>

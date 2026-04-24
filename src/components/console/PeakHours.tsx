@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { ConsoleHourlyAveragePoint } from "@/components/console/types";
 
@@ -14,21 +15,28 @@ interface PeakHoursProps {
   isLoading?: boolean;
 }
 
-function resolveRangeLabel(hourLabel: string): string {
+function resolveRangeLabel(
+  hourLabel: string,
+  t: ReturnType<typeof useTranslations>,
+): string {
   const hour = Number.parseInt(hourLabel.slice(0, 2), 10);
   if (!Number.isFinite(hour)) {
-    return `${hourLabel}-??:00`;
+    return t("peakRangeFallback", { label: hourLabel });
   }
 
   const nextHour = (hour + 1) % 24;
-  return `${String(hour).padStart(2, "0")}:00-${String(nextHour).padStart(2, "0")}:00`;
+  return t("peakRangeLabel", {
+    start: `${String(hour).padStart(2, "0")}:00`,
+    end: `${String(nextHour).padStart(2, "0")}:00`,
+  });
 }
 
 /**
- * 流量高峰时段分析。
- * 基于小时平均在线人数给出 Top 3，并提供 24 小时分布图。
+ * Peak-hour analysis section.
+ * Picks Top 3 hours by average online count and shows a 24h bar distribution.
  */
 export function PeakHours({ hourlyAverages, isLoading = false }: PeakHoursProps) {
+  const t = useTranslations("console.stats");
   const hasData = hourlyAverages.some((item) => item.sampleCount > 0);
 
   const peakHours = [...hourlyAverages]
@@ -43,12 +51,12 @@ export function PeakHours({ hourlyAverages, isLoading = false }: PeakHoursProps)
 
   return (
     <section className="m3-surface p-4 sm:p-5">
-      <h2 className="text-lg font-semibold text-warm-800">流量高峰时段</h2>
+      <h2 className="text-lg font-semibold text-warm-800">{t("peakTitle")}</h2>
 
       {isLoading ? (
-        <div className="mt-4 text-sm text-warm-500">分析中...</div>
+        <div className="mt-4 text-sm text-warm-500">{t("peakLoading")}</div>
       ) : !hasData ? (
-        <div className="mt-4 text-sm text-warm-500">近 7 天数据不足，暂时无法分析高峰时段。</div>
+        <div className="mt-4 text-sm text-warm-500">{t("peakEmpty")}</div>
       ) : (
         <>
           <div className="mt-4 space-y-2 rounded-xl border border-warm-200 bg-warm-50 p-3">
@@ -56,9 +64,9 @@ export function PeakHours({ hourlyAverages, isLoading = false }: PeakHoursProps)
               <div key={item.hour} className="flex items-center justify-between gap-3 text-sm">
                 <p className="text-warm-800">
                   <span className={index < 2 ? "text-accent-hover" : "text-warm-400"}>🔥</span>{" "}
-                  {resolveRangeLabel(item.hour)}
+                  {resolveRangeLabel(item.hour, t)}
                 </p>
-                <p className="text-warm-500">平均 {item.avgPlayers} 人</p>
+                <p className="text-warm-500">{t("peakAverage", { count: item.avgPlayers })}</p>
               </div>
             ))}
           </div>
@@ -90,7 +98,7 @@ export function PeakHours({ hourlyAverages, isLoading = false }: PeakHoursProps)
                   }}
                   cursor={{ fill: "rgba(184, 169, 154, 0.16)" }}
                 />
-                <Bar dataKey="avgPlayers" name="在线人数" fill={CHART_PRIMARY} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="avgPlayers" name={t("trendSeriesName")} fill={CHART_PRIMARY} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

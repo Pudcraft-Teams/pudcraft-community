@@ -1,23 +1,28 @@
-// Fix: env.ts - 补全关键环境变量的 Zod 校验：
-//   DATABASE_URL、NEXTAUTH_SECRET、NEXTAUTH_URL（env.ts:1 - 安全审查）
-//   Redis 连接信息（env.ts:1 - 稳定性审查）
+// Centralized Zod-validated env wrappers:
+//   DATABASE_URL, NEXTAUTH_SECRET, NEXTAUTH_URL (security review)
+//   Redis connection info (stability review)
 import { z } from "zod";
 import { parseRedisConfig } from "@/lib/redis-config";
 
-// ─── 核心必填变量 ─────────────────────────────────────
-// NEXTAUTH_URL 在 NextAuth v5 中可被自动推断（Vercel/localhost），
-// 生产自托管时必须显式设置；此处 optional() 以兼容本地构建。
+// Core required variables.
+// NEXTAUTH_URL can be auto-inferred in NextAuth v5 (Vercel/localhost);
+// a self-hosted production deployment must set it explicitly, so the
+// schema keeps it optional() to tolerate local builds.
 const coreEnvSchema = z.object({
-  DATABASE_URL: z.string().url("DATABASE_URL 必须是合法的数据库连接字符串"),
-  NEXTAUTH_SECRET: z.string().min(16, "NEXTAUTH_SECRET 长度不能少于 16 字符"),
-  NEXTAUTH_URL: z.string().url("NEXTAUTH_URL 必须是合法的 URL（生产环境必填）").optional(),
+  DATABASE_URL: z.string().url("DATABASE_URL must be a valid database connection string"),
+  NEXTAUTH_SECRET: z.string().min(16, "NEXTAUTH_SECRET must be at least 16 characters"),
+  NEXTAUTH_URL: z
+    .string()
+    .url("NEXTAUTH_URL must be a valid URL (required in production)")
+    .optional(),
 });
 
 let _coreEnv: z.infer<typeof coreEnvSchema> | null = null;
 
 /**
- * 核心认证 / 数据库环境变量。
- * 延迟到真正需要时再校验，避免构建期仅因 import 侧链触发而提前失败。
+ * Core auth / database environment variables.
+ * Validated lazily to avoid failing the build purely from import side
+ * effects.
  */
 export function getCoreEnv(): z.infer<typeof coreEnvSchema> {
   if (!_coreEnv) {
@@ -27,10 +32,10 @@ export function getCoreEnv(): z.infer<typeof coreEnvSchema> {
   return _coreEnv;
 }
 
-// ─── Redis 连接（REDIS_URL 或 REDIS_HOST + REDIS_PORT 二选一） ───
+// Redis connection (REDIS_URL or REDIS_HOST + REDIS_PORT — pick one).
 let _redisEnv: ReturnType<typeof parseRedisConfig> | null = null;
 
-/** Redis 配置，首次访问时才校验，避免构建期仅因 import 侧链而提前失败。 */
+/** Redis config; validated lazily on first access to avoid build-time failures. */
 export function getRedisEnv(): ReturnType<typeof parseRedisConfig> {
   if (!_redisEnv) {
     _redisEnv = parseRedisConfig();
@@ -39,7 +44,7 @@ export function getRedisEnv(): ReturnType<typeof parseRedisConfig> {
   return _redisEnv;
 }
 
-// ─── SMTP 邮件配置 ─────────────────────────────────────
+// SMTP mail config.
 const envSchema = z.object({
   SMTP_HOST: z.string().min(1),
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(465),
@@ -54,7 +59,7 @@ const envSchema = z.object({
 
 let _smtpEnv: z.infer<typeof envSchema> | null = null;
 
-/** SMTP 配置，首次访问时才校验（避免不需要 SMTP 的模块因缺少环境变量而崩溃） */
+/** SMTP config; validated lazily so modules that don't need SMTP still load. */
 export function getSmtpEnv(): z.infer<typeof envSchema> {
   if (!_smtpEnv) {
     _smtpEnv = envSchema.parse(process.env);
@@ -62,7 +67,7 @@ export function getSmtpEnv(): z.infer<typeof envSchema> {
   return _smtpEnv;
 }
 
-// ─── 内容审查配置（阿里云内容安全 Green 2.0） ─────────
+// Content moderation config (Alibaba Cloud Green 2.0).
 const contentModerationEnvSchema = z.object({
   CONTENT_MODERATION_ACCESS_KEY_ID: z.string().min(1).optional(),
   CONTENT_MODERATION_ACCESS_KEY_SECRET: z.string().min(1).optional(),
@@ -100,10 +105,10 @@ function parseBooleanEnv(value: string | undefined): boolean {
     return false;
   }
 
-  throw new Error("S3_FORCE_PATH_STYLE 必须是 true/false");
+  throw new Error("S3_FORCE_PATH_STYLE must be true/false");
 }
 
-// ─── 对象存储配置（仅 STORAGE_DRIVER=s3 时必填） ─────
+// Object storage config (required only when STORAGE_DRIVER=s3).
 
 const objectStorageEnvSchema = z.object({
   STORAGE_DRIVER: z.enum(["local", "s3", "oss"]).default("local"),
@@ -115,7 +120,7 @@ const objectStorageEnvSchema = z.object({
   S3_PUBLIC_BASE_URL: z.string().optional(),
   S3_FORCE_PATH_STYLE: z.string().optional(),
 
-  // 兼容旧变量名，避免已有环境一次性失效
+  // Legacy variable names; kept to avoid invalidating existing environments.
   OSS_REGION: z.string().optional(),
   OSS_BUCKET: z.string().optional(),
   OSS_ACCESS_KEY_ID: z.string().optional(),
@@ -145,14 +150,16 @@ const normalizedStorageEnv = {
 
 if (normalizedStorageEnv.STORAGE_DRIVER === "s3") {
   const required = z.object({
-    S3_BUCKET: z.string().min(1, "STORAGE_DRIVER=s3 时必须配置 S3_BUCKET"),
-    S3_ACCESS_KEY_ID: z.string().min(1, "STORAGE_DRIVER=s3 时必须配置 S3_ACCESS_KEY_ID"),
-    S3_ACCESS_KEY_SECRET: z.string().min(1, "STORAGE_DRIVER=s3 时必须配置 S3_ACCESS_KEY_SECRET"),
+    S3_BUCKET: z.string().min(1, "S3_BUCKET is required when STORAGE_DRIVER=s3"),
+    S3_ACCESS_KEY_ID: z.string().min(1, "S3_ACCESS_KEY_ID is required when STORAGE_DRIVER=s3"),
+    S3_ACCESS_KEY_SECRET: z
+      .string()
+      .min(1, "S3_ACCESS_KEY_SECRET is required when STORAGE_DRIVER=s3"),
   });
   required.parse(normalizedStorageEnv);
 
   if (!normalizedStorageEnv.S3_ENDPOINT && !normalizedStorageEnv.S3_REGION) {
-    throw new Error("STORAGE_DRIVER=s3 时必须配置 S3_ENDPOINT 或 S3_REGION");
+    throw new Error("STORAGE_DRIVER=s3 requires S3_ENDPOINT or S3_REGION");
   }
 }
 

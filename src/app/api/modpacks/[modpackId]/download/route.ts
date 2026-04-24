@@ -2,6 +2,8 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { Readable } from "stream";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -68,14 +70,17 @@ const isObjectStorageDriver = () => {
  * 未通过审核服务器的整合包仅 owner / admin 可下载。
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ modpackId: string }> },
 ) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tModpacks = await getTranslations({ locale, namespace: "errors.api.modpacks" });
   try {
     const { modpackId } = await params;
     const parsedId = modpackIdSchema.safeParse(modpackId);
     if (!parsedId.success) {
-      return NextResponse.json({ error: "无效的整合包 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tModpacks("invalidIdFormat") }, { status: 400 });
     }
 
     const modpack = await prisma.modpack.findUnique({
@@ -97,7 +102,7 @@ export async function GET(
     });
 
     if (!modpack) {
-      return NextResponse.json({ error: "整合包不存在或已删除" }, { status: 404 });
+      return NextResponse.json({ error: tModpacks("notFound") }, { status: 404 });
     }
 
     const session = await auth();
@@ -109,7 +114,7 @@ export async function GET(
     });
     if (!canAccessCurrentServer) {
       return NextResponse.json(
-        { error: "服务器未通过审核，整合包暂不可公开下载" },
+        { error: tModpacks("downloadForbidden") },
         { status: 403 },
       );
     }
@@ -122,7 +127,7 @@ export async function GET(
     );
     if (!canView) {
       return NextResponse.json(
-        { error: "你不是该服务器成员，无法下载整合包" },
+        { error: tModpacks("downloadMemberOnly") },
         { status: 403 },
       );
     }
@@ -152,7 +157,7 @@ export async function GET(
             reason: error instanceof Error ? error.message : "unknown",
           },
         );
-        return NextResponse.json({ error: "整合包下载链接生成失败" }, { status: 500 });
+        return NextResponse.json({ error: tModpacks("downloadSignFailed") }, { status: 500 });
       }
     }
 
@@ -162,7 +167,7 @@ export async function GET(
       const objectInfo = await getObjectFileInfo(modpack.fileKey);
       fileSize = objectInfo.size;
     } catch {
-      return NextResponse.json({ error: "整合包文件不存在或已损坏" }, { status: 404 });
+      return NextResponse.json({ error: tModpacks("downloadFileMissing") }, { status: 404 });
     }
 
     const stream = createObjectReadStream(modpack.fileKey);
@@ -172,6 +177,6 @@ export async function GET(
     return new NextResponse(webStream, { status: 200, headers });
   } catch (error) {
     logger.error("[api/modpacks/[modpackId]/download] Unexpected GET error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

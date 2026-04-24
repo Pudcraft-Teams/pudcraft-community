@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ImageCropDialog } from "@/components/ImageCropDialog";
@@ -28,6 +29,7 @@ export function ImageUpload({
   maxFileSize = DEFAULT_MAX_FILE_SIZE,
   capture,
 }: ImageUploadProps) {
+  const t = useTranslations("servers.common.imageUpload");
   const inputRef = useRef<HTMLInputElement>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [openCropDialog, setOpenCropDialog] = useState(false);
@@ -59,11 +61,11 @@ export function ImageUpload({
 
   const validateBeforeCrop = (file: File): string | null => {
     if (!ALLOWED_TYPES.has(file.type)) {
-      return "请选择 PNG、JPG、WebP 或 GIF 格式的图片";
+      return t("fileTypeError");
     }
 
     if (file.size > maxFileSize) {
-      return `原图大小不能超过 ${Math.round(maxFileSize / (1024 * 1024))}MB`;
+      return t("fileTooLarge", { max: Math.round(maxFileSize / (1024 * 1024)) });
     }
 
     return null;
@@ -116,12 +118,12 @@ export function ImageUpload({
         >
           +
         </div>
-        <span className="text-xs text-warm-500">点击上传头像</span>
+        <span className="text-xs text-warm-500">{t("uploadAvatar")}</span>
       </div>
     ) : (
       <div className="flex flex-col items-center gap-1 text-warm-400">
         <span className="text-lg">⬆</span>
-        <span className="text-xs">点击上传</span>
+        <span className="text-xs">{t("uploadIcon")}</span>
       </div>
     );
 
@@ -168,7 +170,7 @@ export function ImageUpload({
               <div className="group relative">
                 <Image
                   src={displaySrc}
-                  alt="图片预览"
+                  alt={t("previewAlt")}
                   width={size}
                   height={size}
                   unoptimized
@@ -178,13 +180,13 @@ export function ImageUpload({
                 <div
                   className={`absolute inset-0 flex items-center justify-center bg-black/45 text-lg text-white opacity-0 transition-opacity group-hover:opacity-100 ${shapeClass}`}
                 >
-                  编辑
+                  {t("edit")}
                 </div>
               </div>
             ) : (
               <Image
                 src={displaySrc}
-                alt="图片预览"
+                alt={t("previewAlt")}
                 width={size}
                 height={size}
                 unoptimized
@@ -205,7 +207,7 @@ export function ImageUpload({
             onClick={() => inputRef.current?.click()}
             className="m3-btn m3-btn-tonal rounded-lg px-2.5 py-1 text-xs"
           >
-            {displaySrc ? "更换图片" : "选择图片"}
+            {displaySrc ? t("replace") : t("select")}
           </button>
           {selectedFile && (
             <button
@@ -213,7 +215,7 @@ export function ImageUpload({
               onClick={handleRemoveSelected}
               className="m3-btn m3-btn-tonal rounded-lg px-2.5 py-1 text-xs"
             >
-              移除已选图片
+              {t("removeSelected")}
             </button>
           )}
         </div>

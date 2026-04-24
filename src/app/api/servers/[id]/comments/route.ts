@@ -1,12 +1,15 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { getRequestLocale } from "@/i18n/locale";
 import { auth } from "@/lib/auth";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
+import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { moderateContent } from "@/lib/moderation";
-import { createNotification } from "@/lib/notification";
+import { createTranslatedNotification } from "@/lib/notification";
 import { rateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 import { canViewServerDetails, isPrivilegedServerViewer } from "@/lib/server-access";
@@ -27,13 +30,13 @@ interface CommentNotificationParams {
   actorName: string;
 }
 
-function getActorDisplayName(name: string | null | undefined): string {
+function getActorDisplayName(name: string | null | undefined, fallback: string): string {
   if (typeof name !== "string") {
-    return "用户";
+    return fallback;
   }
 
   const trimmed = name.trim();
-  return trimmed.length > 0 ? trimmed : "用户";
+  return trimmed.length > 0 ? trimmed : fallback;
 }
 
 async function createCommentNotification({
@@ -66,11 +69,12 @@ async function createCommentNotification({
       });
 
       if (parentComment && parentComment.authorId !== actorId) {
-        await createNotification({
+        await createTranslatedNotification({
           userId: parentComment.authorId,
           type: "comment_reply",
-          title: "新的评论回复",
-          message: `${actorName} 回复了你的评论`,
+          titleKey: "commentReplyTitle",
+          bodyKey: "commentReplyBody",
+          params: { actor: actorName },
           link: `/servers/${server.psid}#comment-${commentId}`,
           serverId,
           commentId,
@@ -81,11 +85,12 @@ async function createCommentNotification({
     }
 
     if (server.ownerId && server.ownerId !== actorId) {
-      await createNotification({
+      await createTranslatedNotification({
         userId: server.ownerId,
         type: "comment_reply",
-        title: "新的服务器评论",
-        message: `${actorName} 评论了「${server.name}」`,
+        titleKey: "newCommentTitle",
+        bodyKey: "newCommentBody",
+        params: { actor: actorName, serverName: server.name },
         link: `/servers/${server.psid}#comment-${commentId}`,
         serverId,
         commentId,
@@ -146,29 +151,38 @@ function mapComments(
 
 /**
  * GET /api/servers/:id/comments
- * 获取服务器顶层评论（含一层回复），支持分页。
+ * Returns top-level comments (plus one layer of replies) with pagination.
  */
 export async function GET(request: Request, { params }: RouteContext) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
   try {
     const { id } = await params;
     const parsedServerId = serverLookupIdSchema.safeParse(id);
     if (!parsedServerId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const serverId = await resolveServerCuid(parsedServerId.data);
     if (!serverId) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const { searchParams } = new URL(request.url);
-    const parsedQuery = queryCommentsSchema.safeParse({
-      page: searchParams.get("page") ?? undefined,
-      limit: searchParams.get("limit") ?? undefined,
-    });
+    const parsedQuery = queryCommentsSchema.safeParse(
+      {
+        page: searchParams.get("page") ?? undefined,
+        limit: searchParams.get("limit") ?? undefined,
+      },
+      { errorMap: getZodErrorMap(locale) },
+    );
     if (!parsedQuery.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsedQuery.error.flatten() },
+        {
+          error: tCommon("validationFailed"),
+          details: flattenZodErrorWithLocale(parsedQuery.error, locale),
+        },
         { status: 400 },
       );
     }
@@ -183,7 +197,7 @@ export async function GET(request: Request, { params }: RouteContext) {
       },
     });
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const session = await auth();
@@ -216,7 +230,7 @@ export async function GET(request: Request, { params }: RouteContext) {
         isMember,
       })
     ) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const { page, limit } = parsedQuery.data;
@@ -266,15 +280,20 @@ export async function GET(request: Request, { params }: RouteContext) {
     });
   } catch (error) {
     logger.error("[api/servers/[id]/comments] Unexpected GET error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }
 
 /**
  * POST /api/servers/:id/comments
- * 发表评论或回复（仅支持两层：评论 -> 回复）。
+ * Posts a comment or reply (two-layer max: root comment → reply).
  */
 export async function POST(request: Request, { params }: RouteContext) {
+  const locale = await getRequestLocale(request);
+  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
+  const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
+  const tComments = await getTranslations({ locale, namespace: "errors.api.comments" });
+  const tUser = await getTranslations({ locale, namespace: "user.avatar" });
   try {
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
@@ -284,18 +303,18 @@ export async function POST(request: Request, { params }: RouteContext) {
 
     const limitResult = await rateLimit(`comment:${userId}`, 5, 60);
     if (!limitResult.allowed) {
-      return NextResponse.json({ error: "请求过于频繁，请稍后再试" }, { status: 429 });
+      return NextResponse.json({ error: tCommon("rateLimited") }, { status: 429 });
     }
 
     const { id } = await params;
     const parsedServerId = serverLookupIdSchema.safeParse(id);
     if (!parsedServerId.success) {
-      return NextResponse.json({ error: "无效的服务器 ID 格式" }, { status: 400 });
+      return NextResponse.json({ error: tServers("invalidIdFormat") }, { status: 400 });
     }
 
     const serverId = await resolveServerCuid(parsedServerId.data);
     if (!serverId) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const server = await prisma.server.findUnique({
@@ -308,7 +327,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       },
     });
     if (!server) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     let isMember = false;
@@ -338,28 +357,33 @@ export async function POST(request: Request, { params }: RouteContext) {
       isMember,
     });
     if (!canAccessCurrentServer) {
-      return NextResponse.json({ error: "服务器未找到" }, { status: 404 });
+      return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
     const body = await request.json().catch(() => null);
-    const parsedBody = createCommentSchema.safeParse(body);
+    const parsedBody = createCommentSchema.safeParse(body, {
+      errorMap: getZodErrorMap(locale),
+    });
     if (!parsedBody.success) {
       return NextResponse.json(
-        { error: "校验失败", details: parsedBody.error.flatten() },
+        {
+          error: tCommon("validationFailed"),
+          details: flattenZodErrorWithLocale(parsedBody.error, locale),
+        },
         { status: 400 },
       );
     }
 
     const { content, parentId } = parsedBody.data;
 
-    // ─── 内容审查 ───
+    // ─── Content moderation ───
     const modResult = await moderateContent(content, "comment", {
       userId,
       userIp: getClientIp(request),
     });
     if (!modResult.passed) {
       return NextResponse.json(
-        { error: "评论包含违规内容，请修改后重试", details: modResult.reason },
+        { error: tComments("contentModerated"), details: modResult.reason },
         { status: 422 },
       );
     }
@@ -375,11 +399,11 @@ export async function POST(request: Request, { params }: RouteContext) {
       });
 
       if (!parent || parent.serverId !== serverId) {
-        return NextResponse.json({ error: "回复目标不存在或不属于当前服务器" }, { status: 400 });
+        return NextResponse.json({ error: tComments("replyTargetInvalid") }, { status: 400 });
       }
 
       if (parent.parentId) {
-        return NextResponse.json({ error: "仅支持两层评论，不能回复子回复" }, { status: 400 });
+        return NextResponse.json({ error: tComments("replyDepthExceeded") }, { status: 400 });
       }
     }
 
@@ -402,7 +426,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       },
     });
 
-    const actorName = getActorDisplayName(authResult.user.name);
+    const actorName = getActorDisplayName(authResult.user.name, tUser("fallbackName"));
     void createCommentNotification({
       serverId,
       commentId: comment.id,
@@ -430,6 +454,6 @@ export async function POST(request: Request, { params }: RouteContext) {
     );
   } catch (error) {
     logger.error("[api/servers/[id]/comments] Unexpected POST error", error);
-    return NextResponse.json({ error: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

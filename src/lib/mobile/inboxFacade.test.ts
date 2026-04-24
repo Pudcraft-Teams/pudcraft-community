@@ -1,6 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import zhMessages from "../../../messages/zh.json";
 import { buildMobileInboxUnreadSummary, handleMobileInboxGet, mergeInboxItems } from "./inboxFacade";
+
+const zhApiErrors = zhMessages.errors.api;
+
+const testErrorText = {
+  notAuthenticated: zhApiErrors.auth.notAuthenticated,
+  validationFailed: zhApiErrors.validationFailed,
+  paginationTooDeep: zhApiErrors.notifications.paginationTooDeep,
+};
 
 test("mergeInboxItems sorts notifications newest first", () => {
   const items = mergeInboxItems(
@@ -33,6 +42,7 @@ test("handleMobileInboxGet caps totalPages to the supported merged fetch window"
         id: "user-1",
       },
     }),
+    errorText: testErrorText,
     loadServerInboxData: async () => ({
       serverTotal: 360,
       serverUnread: 7,
@@ -59,6 +69,7 @@ test("handleMobileInboxGet returns only server notifications with a stable unrea
         id: "user-1",
       },
     }),
+    errorText: testErrorText,
     loadServerInboxData: async () => ({
       serverTotal: 2,
       serverUnread: 1,
@@ -123,6 +134,7 @@ test("handleMobileInboxGet rejects pages beyond the supported merged fetch windo
         id: "user-1",
       },
     }),
+    errorText: testErrorText,
     loadServerInboxData: async () => {
       loadInboxDataCalled = true;
       return {
@@ -134,6 +146,6 @@ test("handleMobileInboxGet rejects pages beyond the supported merged fetch windo
   });
 
   assert.equal(response.status, 400);
-  assert.deepEqual(await response.json(), { error: "分页过深" });
+  assert.deepEqual(await response.json(), { error: zhApiErrors.notifications.paginationTooDeep });
   assert.equal(loadInboxDataCalled, false);
 });

@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 export type ServerSort = "newest" | "popular" | "players" | "name";
 
 interface SortButtonsProps {
@@ -7,32 +9,33 @@ interface SortButtonsProps {
   onChange: (sort: ServerSort) => void;
 }
 
-const SORT_OPTIONS: Array<{ value: ServerSort; label: string }> = [
-  { value: "newest", label: "最新发布" },
-  { value: "popular", label: "最多收藏" },
-  { value: "players", label: "在线人数" },
-  { value: "name", label: "名称" },
+const SORT_OPTION_KEYS: Array<{ value: ServerSort; labelKey: "sortNewest" | "sortPopular" | "sortPlayers" | "sortName" }> = [
+  { value: "newest", labelKey: "sortNewest" },
+  { value: "popular", labelKey: "sortPopular" },
+  { value: "players", labelKey: "sortPlayers" },
+  { value: "name", labelKey: "sortName" },
 ];
 
 export function SortButtons({ value, onChange }: SortButtonsProps) {
+  const t = useTranslations("servers.list");
   return (
     <>
       <div className="md:hidden">
         <label className="block text-sm text-warm-600">
-          排序
+          {t("sortLabel")}
           <select
             value={value}
             onChange={(event) => {
-              const selected = SORT_OPTIONS.find((option) => option.value === event.target.value);
+              const selected = SORT_OPTION_KEYS.find((option) => option.value === event.target.value);
               if (selected) {
                 onChange(selected.value);
               }
             }}
             className="m3-input mt-2 w-full"
           >
-            {SORT_OPTIONS.map((option) => (
+            {SORT_OPTION_KEYS.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {t(option.labelKey)}
               </option>
             ))}
           </select>
@@ -40,8 +43,8 @@ export function SortButtons({ value, onChange }: SortButtonsProps) {
       </div>
 
       <div className="hidden flex-wrap items-center gap-2 md:flex">
-        <span className="text-sm text-warm-600">排序：</span>
-        {SORT_OPTIONS.map((option) => (
+        <span className="text-sm text-warm-600">{t("sortLabelInline")}</span>
+        {SORT_OPTION_KEYS.map((option) => (
           <button
             key={option.value}
             type="button"
@@ -49,7 +52,7 @@ export function SortButtons({ value, onChange }: SortButtonsProps) {
             className={`m3-chip ${value === option.value ? "m3-chip-active" : ""}`}
             aria-pressed={value === option.value}
           >
-            {option.label}
+            {t(option.labelKey)}
           </button>
         ))}
       </div>

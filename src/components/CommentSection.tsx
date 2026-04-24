@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { CommentItem } from "@/components/CommentItem";
@@ -54,6 +55,7 @@ export function CommentSection({
 }: CommentSectionProps) {
   const { data: session, status } = useSession();
   const { toast } = useToast();
+  const t = useTranslations("comments");
   const currentUserId = session?.user?.id;
   const hasInitialPayload = Array.isArray(initialComments) && typeof initialTotal === "number";
 
@@ -85,7 +87,7 @@ export function CommentSection({
         );
         const payload = (await response.json().catch(() => ({}))) as ServerCommentsResponse;
         if (!response.ok) {
-          throw new Error(extractError(payload) ?? "评论加载失败");
+          throw new Error(extractError(payload) ?? t("loadError"));
         }
 
         const nextComments = Array.isArray(payload.comments) ? payload.comments : [];
@@ -99,7 +101,7 @@ export function CommentSection({
         setCurrentPage(nextPage);
         setTotalPages(nextTotalPages);
       } catch (error) {
-        const message = error instanceof Error ? error.message : "评论加载失败";
+        const message = error instanceof Error ? error.message : t("loadError");
         if (append) {
           toast.error(message);
         } else {
@@ -113,7 +115,7 @@ export function CommentSection({
         }
       }
     },
-    [serverId, toast],
+    [serverId, t, toast],
   );
 
   useEffect(() => {
@@ -147,11 +149,11 @@ export function CommentSection({
   const handleSubmitComment = async () => {
     const nextContent = content.trim();
     if (nextContent.length === 0) {
-      toast.error("评论内容不能为空");
+      toast.error(t("emptyContent"));
       return;
     }
     if (nextContent.length > 1000) {
-      toast.error("评论最多 1000 字");
+      toast.error(t("maxLength"));
       return;
     }
 
@@ -166,7 +168,7 @@ export function CommentSection({
       const payload = (await response.json().catch(() => ({}))) as CreateCommentResponse;
 
       if (!response.ok || !payload.data) {
-        toast.error(payload.error ?? "发表评论失败，请稍后重试");
+        toast.error(payload.error ?? t("submitFailed"));
         return;
       }
 
@@ -181,9 +183,9 @@ export function CommentSection({
       setComments((prev) => [newComment, ...prev]);
       setTotal((prev) => prev + 1);
       setContent("");
-      toast.success("评论发表成功");
+      toast.success(t("submitSuccess"));
     } catch {
-      toast.error("网络异常，发表评论失败");
+      toast.error(t("submitNetworkError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -231,8 +233,8 @@ export function CommentSection({
   return (
     <section className="mt-8 border-t border-warm-200 pt-6">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-warm-800">评论区</h2>
-        <span className="text-sm text-warm-500">{total} 条评论</span>
+        <h2 className="text-xl font-semibold text-warm-800">{t("heading")}</h2>
+        <span className="text-sm text-warm-500">{t("totalLabel", { count: total })}</span>
       </div>
 
       {status === "authenticated" ? (
@@ -242,18 +244,18 @@ export function CommentSection({
             onChange={(event) => setContent(event.target.value)}
             rows={4}
             maxLength={1000}
-            placeholder="写下你对这个服务器的评价..."
+            placeholder={t("composerPlaceholder")}
             className="m3-input w-full"
           />
           <div className="mt-2 flex items-center justify-between">
-            <span className="text-xs text-warm-500">{content.length}/1000</span>
+            <span className="text-xs text-warm-500">{t("counter", { count: content.length })}</span>
             <button
               type="button"
               onClick={handleSubmitComment}
               disabled={isSubmitting}
               className="m3-btn m3-btn-primary disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? "发表中..." : "发表"}
+              {isSubmitting ? t("submitting") : t("submit")}
             </button>
           </div>
         </div>
@@ -263,18 +265,18 @@ export function CommentSection({
             href={`/login?callbackUrl=${encodeURIComponent(`/servers/${serverId}`)}`}
             className="m3-link"
           >
-            登录后发表评论
+            {t("loginToComment")}
           </Link>
         </div>
       )}
 
       <div className="mt-6">
         {isLoading ? (
-          <LoadingSpinner text="评论加载中..." />
+          <LoadingSpinner text={t("loading")} />
         ) : loadError ? (
           <div className="m3-alert-error">{loadError}</div>
         ) : comments.length === 0 ? (
-          <EmptyState title="暂无评论" description="来发表第一条评论吧" />
+          <EmptyState title={t("emptyTitle")} description={t("emptyDescription")} />
         ) : (
           <>
             {comments.map((comment) => (
@@ -303,7 +305,7 @@ export function CommentSection({
                   disabled={isLoadingMore}
                   className="m3-btn m3-btn-tonal disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isLoadingMore ? "加载中..." : "加载更多评论"}
+                  {isLoadingMore ? t("loadingMore") : t("loadMore")}
                 </button>
               </div>
             )}
