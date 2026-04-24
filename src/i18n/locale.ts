@@ -61,12 +61,24 @@ export async function getRequestLocale(request?: Request): Promise<Locale> {
   });
 }
 
-function extractCookie(raw: string | null, name: string): string | null {
+export function extractCookie(raw: string | null, name: string): string | null {
   if (!raw) return null;
   const parts = raw.split(";").map((s) => s.trim());
   for (const part of parts) {
     const [k, v] = part.split("=");
-    if (k === name) return decodeURIComponent(v ?? "");
+    if (k === name) {
+      try {
+        return decodeURIComponent(v ?? "");
+      } catch (error) {
+        // Malformed percent-encoding (e.g. "NEXT_LOCALE=%E4") throws
+        // URIError. Treat the cookie as absent so callers fall through
+        // to the next locale source instead of producing a 500.
+        if (error instanceof URIError) {
+          return null;
+        }
+        throw error;
+      }
+    }
   }
   return null;
 }

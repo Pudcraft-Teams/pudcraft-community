@@ -17,13 +17,27 @@ export interface VerifyJobData {
   token: string;
 }
 
-export type VerifyJobReasonKey =
-  | "serverNotFound"
-  | "tokenUpdated"
-  | "tokenMissingClaimer"
-  | "tokenExpired"
-  | "serverOffline"
-  | "tokenNotInMotd";
+export const VERIFY_JOB_REASON_KEYS = [
+  "serverNotFound",
+  "tokenUpdated",
+  "tokenMissingClaimer",
+  "tokenExpired",
+  "serverOffline",
+  "tokenNotInMotd",
+] as const;
+
+export type VerifyJobReasonKey = (typeof VERIFY_JOB_REASON_KEYS)[number];
+
+const VERIFY_JOB_REASON_KEY_SET: ReadonlySet<VerifyJobReasonKey> = new Set(
+  VERIFY_JOB_REASON_KEYS,
+);
+
+export function isVerifyJobReasonKey(value: unknown): value is VerifyJobReasonKey {
+  return (
+    typeof value === "string" &&
+    VERIFY_JOB_REASON_KEY_SET.has(value as VerifyJobReasonKey)
+  );
+}
 
 export interface VerifyJobResult {
   success: boolean;

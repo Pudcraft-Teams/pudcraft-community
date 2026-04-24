@@ -12,9 +12,10 @@ import {
   getVerifyJobId,
   getVerifyQueue,
   getVerifyQueueEvents,
-  type VerifyJobResult,
+  type VerifyJobReasonKey,
 } from "@/lib/queue";
 import { serverLookupIdSchema } from "@/lib/validation";
+import { parseVerifyJobResult } from "@/lib/verify-job-result";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -53,17 +54,14 @@ function generateVerifyToken(): string {
   return `pudcraft-${suffix}`;
 }
 
-function parseVerifyJobResult(raw: unknown, invalidReason: string): VerifyJobResult {
-  if (typeof raw !== "object" || raw === null) {
-    return { success: false, reason: invalidReason };
-  }
-
-  const payload = raw as Record<string, unknown>;
-  return {
-    success: payload.success === true,
-    reason: typeof payload.reason === "string" ? payload.reason : undefined,
-  };
-}
+const VERIFY_REASON_KEY_MESSAGES = {
+  serverNotFound: "verifyReasonServerNotFound",
+  tokenUpdated: "verifyReasonTokenUpdated",
+  tokenMissingClaimer: "verifyReasonTokenMissingClaimer",
+  tokenExpired: "verifyReasonTokenExpired",
+  serverOffline: "verifyReasonServerOffline",
+  tokenNotInMotd: "verifyReasonNoToken",
+} as const satisfies Record<VerifyJobReasonKey, string>;
 
 async function findServerById(serverId: string): Promise<VerifyServer | null> {
   const server = await prisma.server.findUnique({
@@ -285,16 +283,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       });
     }
 
-    const verifyReasonKeyMap: Record<string, string> = {
-      serverNotFound: "verifyReasonServerNotFound",
-      tokenUpdated: "verifyReasonTokenUpdated",
-      tokenMissingClaimer: "verifyReasonTokenMissingClaimer",
-      tokenExpired: "verifyReasonTokenExpired",
-      serverOffline: "verifyReasonServerOffline",
-      tokenNotInMotd: "verifyReasonNoToken",
-    };
     const translatedReason = result.reasonKey
-      ? tServers(verifyReasonKeyMap[result.reasonKey] as never)
+      ? tServers(VERIFY_REASON_KEY_MESSAGES[result.reasonKey])
       : (result.reason ?? tServers("verifyReasonNoToken"));
 
     return NextResponse.json(
