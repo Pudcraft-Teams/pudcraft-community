@@ -63,11 +63,11 @@ export const serverLookupIdSchema = z
     "errors.validation.servers.invalidId",
   );
 
-/** User URL parameter validation (CUID or 9-digit UID). */
+/** User URL parameter validation (CUID or Misskey id). */
 export const userLookupIdSchema = z
   .string()
   .refine(
-    (v) => /^\d{9}$/.test(v) || z.string().cuid().safeParse(v).success,
+    (v) => /^[a-z0-9]{10,32}$/i.test(v) || z.string().cuid().safeParse(v).success,
     "errors.validation.servers.invalidUserId",
   );
 
@@ -233,57 +233,6 @@ export const queryServersSchema = z.object({
   ownerId: z.string().cuid().optional(),
 });
 
-/** Register request body. */
-export const registerSchema = z.object({
-  email: z
-    .string()
-    .email()
-    .transform((value) => value.toLowerCase().trim()),
-  password: z.string().min(8, "errors.validation.auth.passwordMin"),
-  code: z
-    .string()
-    .length(6, "errors.validation.auth.codeLength")
-    .regex(/^\d{6}$/),
-});
-
-/** Login request body. */
-export const loginSchema = z.object({
-  email: z
-    .string()
-    .email()
-    .transform((value) => value.toLowerCase().trim()),
-  password: z.string().min(1, "errors.validation.auth.passwordRequired"),
-});
-
-/** Send verification code request body. */
-export const sendCodeSchema = z.object({
-  email: z
-    .string()
-    .email()
-    .transform((value) => value.toLowerCase().trim()),
-});
-
-/** Send password reset code request body. */
-export const sendResetCodeSchema = z.object({
-  email: z
-    .string()
-    .email()
-    .transform((value) => value.toLowerCase().trim()),
-});
-
-/** Reset password request body. */
-export const resetPasswordSchema = z.object({
-  email: z
-    .string()
-    .email()
-    .transform((value) => value.toLowerCase().trim()),
-  code: z
-    .string()
-    .length(6, "errors.validation.auth.codeLength")
-    .regex(/^\d{6}$/),
-  newPassword: z.string().min(8, "errors.validation.auth.passwordMin"),
-});
-
 /** Post a comment / reply. */
 export const createCommentSchema = z.object({
   content: z
@@ -375,6 +324,14 @@ export const adminServerActionSchema = z.object({
   reason: z.string().max(500).optional(),
 });
 
+/** Admin console server field-level patch (isVerified toggle, ownerId assignment). */
+export const adminServerPatchSchema = z.object({
+  isVerified: z.boolean().optional(),
+  ownerId: z.string().nullable().optional(),
+}).refine((d) => d.isVerified !== undefined || d.ownerId !== undefined, {
+  message: "At least one field (isVerified or ownerId) must be provided",
+});
+
 /** Admin console user list query params. */
 export const adminQueryUsersSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -446,11 +403,6 @@ export type CreateServerInput = z.infer<typeof createServerSchema>;
 export type UpdateServerInput = z.infer<typeof updateServerSchema>;
 export type QueryServersInput = z.infer<typeof queryServersSchema>;
 export type PingResult = z.infer<typeof pingResultSchema>;
-export type RegisterInput = z.infer<typeof registerSchema>;
-export type LoginInput = z.infer<typeof loginSchema>;
-export type SendCodeInput = z.infer<typeof sendCodeSchema>;
-export type SendResetCodeInput = z.infer<typeof sendResetCodeSchema>;
-export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type CreateCommentInput = z.infer<typeof createCommentSchema>;
 export type QueryCommentsInput = z.infer<typeof queryCommentsSchema>;
 export type QueryNotificationsInput = z.infer<typeof queryNotificationsSchema>;

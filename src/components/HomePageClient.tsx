@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { EmptyState } from "@/components/EmptyState";
 import { PageLoading } from "@/components/PageLoading";
 import { Pagination } from "@/components/Pagination";
@@ -11,6 +12,7 @@ import { SearchBar } from "@/components/SearchBar";
 import { ServerCard } from "@/components/ServerCard";
 import { SortButtons } from "@/components/SortButtons";
 import { useToast } from "@/hooks/useToast";
+import { normalizeServerListResponse } from "@/lib/serverListResponse";
 import { buildServerListPath, type ServerSort } from "@/lib/serverListQuery";
 import type { ServerListItem } from "@/lib/types";
 
@@ -27,6 +29,17 @@ const TAG_FILTER_KEYS = [
 
 // Raw tag values used as API filter params. Keep aligned with TAG_FILTER_KEYS.
 const TAG_FILTER_VALUES = ["全部", "生存", "创造", "RPG", "PVP", "科技", "模组", "空岛"];
+const TAG_FILTER_SWATCHES: Record<string, string> = {
+  生存: "var(--mode-survival)",
+  创造: "var(--mode-creative)",
+  RPG: "var(--mode-rpg)",
+  PVP: "var(--mode-pvp)",
+  科技: "var(--mode-tech)",
+  模组: "var(--mode-mod)",
+  空岛: "var(--mode-sky)",
+  原版: "var(--mode-vanilla)",
+  小游戏: "var(--mode-mini)",
+};
 const DEFAULT_LIMIT = 12;
 
 interface HomePageClientProps {
@@ -37,6 +50,10 @@ interface HomePageClientProps {
   initialSearch: string;
   initialTotalPages: number;
   basePath: "/" | "/servers";
+  variant?: "home" | "list";
+  totalServers?: number;
+  onlineServers?: number;
+  activePlayers?: number;
 }
 
 interface QueryState {
@@ -46,19 +63,10 @@ interface QueryState {
   search: string;
 }
 
-interface ServersResponse {
-  data?: ServerListItem[];
-  servers?: ServerListItem[];
-  totalPages?: number;
-  pagination?: {
-    totalPages?: number;
-  };
+function formatNumber(n: number): string {
+  return n.toLocaleString("zh-CN");
 }
 
-/**
- * 首页交互层（Client Component）。
- * 首屏数据由服务端注入，筛选/排序/分页在客户端请求更新。
- */
 export function HomePageClient({
   initialServers,
   initialPage,
@@ -67,14 +75,21 @@ export function HomePageClient({
   initialSearch,
   initialTotalPages,
   basePath,
+  variant = "list",
+  totalServers = 0,
+  onlineServers = 0,
+  activePlayers = 0,
 }: HomePageClientProps) {
   const router = useRouter();
   const { status } = useSession();
   const { toast } = useToast();
   const t = useTranslations("servers.list");
+  const locale = useLocale();
+  const [now, setNow] = useState<Date | null>(null);
   const [servers, setServers] = useState<ServerListItem[]>(initialServers);
   const [loading, setLoading] = useState(false);
   const [totalPages, setTotalPages] = useState(Math.max(1, initialTotalPages));
+  const [resultTotal, setResultTotal] = useState(totalServers);
   const [favoriteServerIds, setFavoriteServerIds] = useState<string[]>([]);
   const [query, setQuery] = useState<QueryState>({
     page: initialPage,
@@ -86,9 +101,12 @@ export function HomePageClient({
   const skipFirstFetchRef = useRef(true);
 
   const activeTag = query.tag || TAG_FILTER_VALUES[0];
-  const buildUrl = useCallback((nextQuery: QueryState) => {
-    return `${basePath}${buildServerListPath(nextQuery)}`;
-  }, [basePath]);
+  const buildUrl = useCallback(
+    (nextQuery: QueryState) => {
+      return `${basePath}${buildServerListPath(nextQuery)}`;
+    },
+    [basePath],
+  );
 
   const updateQuery = useCallback(
     (
@@ -159,28 +177,19 @@ export function HomePageClient({
           throw new Error(t("loadFailed"));
         }
 
-        const payload = (await response.json()) as ServersResponse;
+        const payload = normalizeServerListResponse(await response.json());
         if (cancelled) {
           return;
         }
 
-        const list = Array.isArray(payload.data)
-          ? payload.data
-          : Array.isArray(payload.servers)
-            ? payload.servers
-            : [];
-
-        const nextTotalPages =
-          typeof payload.totalPages === "number"
-            ? payload.totalPages
-            : (payload.pagination?.totalPages ?? 1);
-
-        setServers(list);
-        setTotalPages(Math.max(1, nextTotalPages));
+        setServers(payload.servers);
+        setTotalPages(payload.totalPages);
+        setResultTotal(payload.total);
       } catch {
         if (!cancelled) {
           setServers([]);
           setTotalPages(1);
+          setResultTotal(0);
           toast.error(t("loadFailedToast"));
         }
       } finally {
@@ -243,15 +252,8 @@ export function HomePageClient({
     (nextSearch: string) => {
       const trimmed = nextSearch.trim();
 
-      // 6 位纯数字 → PSID 跳转
       if (/^\d{6}$/.test(trimmed)) {
         router.push(`/servers/${trimmed}`);
-        return;
-      }
-
-      // 9 位纯数字 → UID 跳转
-      if (/^\d{9}$/.test(trimmed)) {
-        router.push(`/u/${trimmed}`);
         return;
       }
 
@@ -262,83 +264,332 @@ export function HomePageClient({
 
   const sort = useMemo(() => query.sort, [query.sort]);
 
+  const featuredServer = useMemo(() => {
+    if (variant !== "home") return null;
+    return (
+      initialServers.find((s) => s.status.online && s.isVerified) ||
+      initialServers.find((s) => s.status.online) ||
+      null
+    );
+  }, [initialServers, variant]);
+
+  const isHome = variant === "home";
+
+  useEffect(() => {
+    if (!isHome) return;
+    setNow(new Date());
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, [isHome]);
+
+  const dateInfo = useMemo(() => {
+    if (!isHome || !now) {
+      return null;
+    }
+    const yearMonth = new Intl.DateTimeFormat(locale, {
+      year: "numeric",
+      month: "long",
+    }).format(now);
+    const weekday = new Intl.DateTimeFormat(locale, { weekday: "long" }).format(now);
+    const dayOfMonth = now.getDate();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const startOfYear = new Date(now.getFullYear(), 0, 1).getTime();
+    const endOfYear = new Date(now.getFullYear() + 1, 0, 1).getTime();
+    const minutesIntoDay = now.getHours() * 60 + now.getMinutes();
+    const minutesIntoMonth = (dayOfMonth - 1) * 24 * 60 + minutesIntoDay;
+    const todayProgress = (minutesIntoDay / (24 * 60)) * 100;
+    const monthProgress = (minutesIntoMonth / (daysInMonth * 24 * 60)) * 100;
+    const yearProgress = ((now.getTime() - startOfYear) / (endOfYear - startOfYear)) * 100;
+    return {
+      yearMonth,
+      day: dayOfMonth,
+      weekday,
+      todayProgress,
+      monthProgress,
+      yearProgress,
+    };
+  }, [isHome, locale, now]);
+
+  const onlineRatio = totalServers > 0 ? (onlineServers / totalServers) * 100 : 0;
+  const daySuffix = t("heroWidgetDaySuffix");
+
   return (
     <div>
-      {/* Hero — 精简：只保留文案和搜索 */}
-      <section className="mb-8 pt-2">
-        <h1 className="text-2xl font-bold tracking-tight text-warm-800">
-          {t("heroTitle")}
-        </h1>
-        <p className="mt-1.5 text-sm text-warm-500">{t("heroSubtitle")}</p>
+      {isHome ? (
+        <section className="player-hero player-hero-breakout">
+          <div className="player-hero-bg" />
+          <div className="player-hero-grain" />
+          <div className="player-hero-inner">
+            <div>
+              <span className="player-hero-eyebrow">
+                <span className="pulse" aria-hidden />
+                {t("heroEyebrow", {
+                  servers: formatNumber(onlineServers || totalServers),
+                  players: formatNumber(activePlayers),
+                })}
+              </span>
+              <h1>
+                {t("heroTitleLeft")}
+                <br />
+                <span className="highlight">{t("heroTitleHighlight")}</span>
+                <br />
+                {t("heroTitleTrail")}
+              </h1>
+              <p className="player-hero-lede">{t("heroSubtext")}</p>
+              <div className="player-hero-ctas">
+                <Link
+                  href="/servers"
+                  className="m3-btn m3-btn-primary inline-flex h-10 items-center gap-2 px-4"
+                >
+                  {t("heroBrowseCta")}
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
+                    <path d="M3 8h10M9 4l4 4-4 4" />
+                  </svg>
+                </Link>
+                <Link
+                  href="/submit"
+                  className="m3-btn m3-btn-tonal inline-flex h-10 items-center px-4"
+                >
+                  {t("heroSubmitCta")}
+                </Link>
+              </div>
+              <div className="player-hero-stats">
+                <div className="player-hero-stat">
+                  <div className="num">{formatNumber(totalServers)}</div>
+                  <div className="lbl">{t("heroStatServers")}</div>
+                </div>
+                <div className="player-hero-stat">
+                  <div className="num">{formatNumber(activePlayers)}</div>
+                  <div className="lbl">{t("heroStatPlayers")}</div>
+                </div>
+                <div className="player-hero-stat">
+                  <div className="num">{formatNumber(onlineServers)}</div>
+                  <div className="lbl">{t("heroStatOnline")}</div>
+                </div>
+              </div>
+            </div>
+            <aside className="hero-widget-stack" aria-label={t("heroWidgetPulseLabel")}>
+              <div className="hero-widget hero-widget-date">
+                <div className="hero-widget-date-left">
+                  <div className="hero-widget-date-yearmonth">
+                    {dateInfo?.yearMonth ?? " "}
+                  </div>
+                  <div className="hero-widget-date-day">
+                    <span className="num">{dateInfo?.day ?? "—"}</span>
+                    {daySuffix ? <span className="suffix">{daySuffix}</span> : null}
+                  </div>
+                  <div className="hero-widget-date-weekday">
+                    {dateInfo?.weekday ?? " "}
+                  </div>
+                </div>
+                <div className="hero-widget-progress">
+                  <div className="hero-widget-progress-row" data-tone="today">
+                    <span className="hero-widget-progress-label">
+                      {t("heroWidgetTodayLabel")}
+                    </span>
+                    <span className="hero-widget-progress-bar">
+                      <span style={{ width: `${dateInfo?.todayProgress ?? 0}%` }} />
+                    </span>
+                    <span className="hero-widget-progress-pct">
+                      {dateInfo ? `${dateInfo.todayProgress.toFixed(1)}%` : "—"}
+                    </span>
+                  </div>
+                  <div className="hero-widget-progress-row" data-tone="month">
+                    <span className="hero-widget-progress-label">
+                      {t("heroWidgetMonthLabel")}
+                    </span>
+                    <span className="hero-widget-progress-bar">
+                      <span style={{ width: `${dateInfo?.monthProgress ?? 0}%` }} />
+                    </span>
+                    <span className="hero-widget-progress-pct">
+                      {dateInfo ? `${dateInfo.monthProgress.toFixed(1)}%` : "—"}
+                    </span>
+                  </div>
+                  <div className="hero-widget-progress-row" data-tone="year">
+                    <span className="hero-widget-progress-label">
+                      {t("heroWidgetYearLabel")}
+                    </span>
+                    <span className="hero-widget-progress-bar">
+                      <span style={{ width: `${dateInfo?.yearProgress ?? 0}%` }} />
+                    </span>
+                    <span className="hero-widget-progress-pct">
+                      {dateInfo ? `${dateInfo.yearProgress.toFixed(1)}%` : "—"}
+                    </span>
+                  </div>
+                </div>
+              </div>
 
-        <div className="mt-5 max-w-lg">
-          <SearchBar onSearch={handleSearch} initialValue={query.search} />
-        </div>
+              <div className="hero-widget hero-widget-pulse">
+                <div className="hero-widget-pulse-head">
+                  <span className="hero-widget-pulse-dot" aria-hidden />
+                  <span className="label">{t("heroWidgetPulseLabel")}</span>
+                  <span className="hint">{t("heroWidgetPulseHint")}</span>
+                </div>
+                <div className="hero-widget-pulse-grid">
+                  <div className="hero-widget-pulse-cell">
+                    <div className="num">{formatNumber(onlineServers)}</div>
+                    <div className="lbl">{t("heroWidgetStatOnlineServers")}</div>
+                  </div>
+                  <div className="hero-widget-pulse-cell">
+                    <div className="num">{formatNumber(activePlayers)}</div>
+                    <div className="lbl">{t("heroWidgetStatActivePlayers")}</div>
+                  </div>
+                  <div className="hero-widget-pulse-cell">
+                    <div className="num">{formatNumber(totalServers)}</div>
+                    <div className="lbl">{t("heroWidgetStatTotalServers")}</div>
+                  </div>
+                  <div className="hero-widget-pulse-cell">
+                    <div className="num">{`${onlineRatio.toFixed(0)}%`}</div>
+                    <div className="lbl">{t("heroWidgetStatOnlineRatio")}</div>
+                  </div>
+                </div>
+              </div>
 
-        <div className="scrollbar-hide mt-3 flex gap-1.5 overflow-x-auto pb-1">
-          {TAG_FILTER_KEYS.map((key, index) => {
-            const value = TAG_FILTER_VALUES[index];
-            return (
-              <button
-                key={value}
-                type="button"
-                onClick={() => {
-                  updateQuery(
-                    { tag: value === TAG_FILTER_VALUES[0] ? "" : value },
-                    { resetPage: true },
-                  );
-                }}
-                className={`m3-chip ${value === activeTag ? "m3-chip-active" : ""}`}
-              >
-                {t(key)}
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* 排序 + 结果 */}
-      <div className="mb-4 flex items-center justify-between">
-        <SortButtons
-          value={sort}
-          onChange={(nextSort) => {
-            updateQuery({ sort: nextSort }, { resetPage: true });
-          }}
-        />
-      </div>
-
-      {loading ? (
-        <PageLoading />
-      ) : servers.length === 0 ? (
-        <EmptyState title={t("emptyTitle")} description={t("emptyDescription")} />
+              {featuredServer ? (
+                <Link
+                  href={`/servers/${featuredServer.psid}`}
+                  aria-label={featuredServer.name}
+                  className="hero-widget hero-widget-featured no-underline"
+                >
+                  <div className="hero-widget-featured-head">
+                    <span className="hero-widget-featured-spark" aria-hidden />
+                    <span className="label">{t("heroWidgetFeaturedHeading")}</span>
+                    <span className="hero-widget-featured-online">
+                      <span className="dot" aria-hidden />
+                      {featuredServer.status.playerCount}/{featuredServer.status.maxPlayers}
+                    </span>
+                  </div>
+                  <div className="hero-widget-featured-body">
+                    <div className="hero-widget-featured-cover" />
+                    <div className="hero-widget-featured-meta">
+                      <h3 className="hero-widget-featured-name">{featuredServer.name}</h3>
+                      <div className="hero-widget-featured-host">
+                        {featuredServer.host === "hidden" || !featuredServer.host
+                          ? t("heroAddressHidden")
+                          : featuredServer.port === 25565
+                            ? featuredServer.host
+                            : `${featuredServer.host}:${featuredServer.port}`}
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ) : null}
+            </aside>
+          </div>
+        </section>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {servers.map((server, index) => (
-            <ServerCard
-              key={server.id}
-              server={server}
-              style={{ animationDelay: `${index * 50}ms` }}
-              initialFavorited={favoriteServerIds.includes(server.id)}
-              onFavoriteChange={(serverId, favorited) => {
-                setFavoriteServerIds((previous) => {
-                  if (favorited) {
-                    return previous.includes(serverId) ? previous : [...previous, serverId];
-                  }
-                  return previous.filter((id) => id !== serverId);
-                });
-              }}
-            />
-          ))}
-        </div>
+        <section className="player-list-head">
+          <div>
+            <h1>{t("heroTitle")}</h1>
+            <p>{t("heroSubtitle")}</p>
+          </div>
+          <div className="player-list-head-count">{t("resultsCount", { count: resultTotal })}</div>
+        </section>
       )}
 
-      <Pagination
-        currentPage={query.page}
-        totalPages={totalPages}
-        onPageChange={(nextPage) => {
-          updateQuery({ page: nextPage });
-        }}
-      />
+      <section className={isHome ? "player-section" : ""}>
+        {isHome ? (
+          <div className="player-section-head">
+            <div>
+              <h2>{t("browseTitle")}</h2>
+              <p className="sub">{t("browseSubtitle")}</p>
+            </div>
+            <Link href="/servers" className="player-section-head-link">
+              {t("browseViewAll")}
+            </Link>
+          </div>
+        ) : null}
+
+        <div className={isHome ? "" : "mb-4"}>
+          {!isHome ? (
+            <div className="mb-4 max-w-lg">
+              <SearchBar onSearch={handleSearch} initialValue={query.search} />
+            </div>
+          ) : null}
+          <div className="player-filter-rail scrollbar-hide overflow-x-auto">
+            {TAG_FILTER_KEYS.map((key, index) => {
+              const value = TAG_FILTER_VALUES[index];
+              const isAll = value === TAG_FILTER_VALUES[0];
+              const swatch = TAG_FILTER_SWATCHES[value];
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => {
+                    updateQuery({ tag: isAll ? "" : value }, { resetPage: true });
+                  }}
+                  className={`mode-chip ${value === activeTag ? "mode-chip-active" : ""}`}
+                >
+                  {!isAll && swatch ? (
+                    <span
+                      className="swatch"
+                      style={{ ["--swatch" as string]: swatch }}
+                      aria-hidden
+                    />
+                  ) : null}
+                  {t(key)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="player-toolbar">
+          <p className="player-toolbar-count" aria-live="polite">
+            {isHome ? t("resultsCount", { count: resultTotal }) : query.search ? query.search : ""}
+          </p>
+          <SortButtons
+            value={sort}
+            onChange={(nextSort) => {
+              updateQuery({ sort: nextSort }, { resetPage: true });
+            }}
+          />
+        </div>
+
+        {loading ? (
+          <PageLoading />
+        ) : servers.length === 0 ? (
+          <EmptyState title={t("emptyTitle")} description={t("emptyDescription")} />
+        ) : (
+          <div className="player-grid">
+            {servers.map((server, index) => (
+              <ServerCard
+                key={server.id}
+                server={server}
+                featured={isHome && index === 0}
+                style={{ animationDelay: `${index * 50}ms` }}
+                initialFavorited={favoriteServerIds.includes(server.id)}
+                onFavoriteChange={(serverId, favorited) => {
+                  setFavoriteServerIds((previous) => {
+                    if (favorited) {
+                      return previous.includes(serverId) ? previous : [...previous, serverId];
+                    }
+                    return previous.filter((id) => id !== serverId);
+                  });
+                }}
+              />
+            ))}
+          </div>
+        )}
+
+        <Pagination
+          currentPage={query.page}
+          totalPages={totalPages}
+          onPageChange={(nextPage) => {
+            updateQuery({ page: nextPage });
+          }}
+        />
+      </section>
     </div>
   );
 }

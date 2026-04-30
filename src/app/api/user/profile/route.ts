@@ -1,47 +1,29 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 import { getTranslations } from "next-intl/server";
+
 import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
-import { translateImageValidationError } from "@/lib/i18nImage";
-import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
-import { moderateFields } from "@/lib/moderation";
-import { getClientIp } from "@/lib/request-ip";
-import {
-  deleteFile,
-  getPublicUrl,
-  ImageModerationError,
-  ImageValidationError,
-  uploadAvatar,
-  validateImageFile,
-} from "@/lib/storage";
-import { updateProfileSchema } from "@/lib/validation";
+import { getUserImageUrl } from "@/lib/user-image";
 
 interface ProfileResponseData {
   id: string;
-  uid: number;
+  misskeyId: string;
+  misskeyUsername: string;
   name: string | null;
-  email: string;
   image: string | null;
   bio: string | null;
 }
 
-function extractTextField(formData: FormData, key: string): string | undefined {
-  const value = formData.get(key);
-  return typeof value === "string" ? value : undefined;
-}
-
-function hasOwnProperty<T extends object>(value: T, key: string): boolean {
-  return Object.prototype.hasOwnProperty.call(value, key);
-}
-
 /**
  * GET /api/user/profile
- * Returns the current authenticated user's profile.
+ * Returns the current authenticated user's profile. Profile fields
+ * (name / image / bio / misskeyUsername) are sourced from the upstream
+ * Misskey instance and re-synced on every login — they cannot be
+ * mutated through this API.
  */
 export async function GET() {
   const locale = await getRequestLocale();
@@ -58,9 +40,9 @@ export async function GET() {
       where: { id: userId },
       select: {
         id: true,
-        uid: true,
+        misskeyId: true,
+        misskeyUsername: true,
         name: true,
-        email: true,
         image: true,
         bio: true,
       },
@@ -72,215 +54,16 @@ export async function GET() {
 
     const data: ProfileResponseData = {
       id: user.id,
-      uid: user.uid,
+      misskeyId: user.misskeyId,
+      misskeyUsername: user.misskeyUsername,
       name: user.name,
-      email: user.email,
-      image: getPublicUrl(user.image),
+      image: getUserImageUrl(user.image),
       bio: user.bio,
     };
 
     return NextResponse.json({ data });
   } catch (error) {
     logger.error("[api/user/profile] Unexpected GET error", error);
-    return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
-  }
-}
-
-/**
- * PATCH /api/user/profile
- * Updates the current authenticated user's profile (name, bio, avatar).
- */
-export async function PATCH(request: Request) {
-  const locale = await getRequestLocale(request);
-  const tCommon = await getTranslations({ locale, namespace: "errors.api" });
-  const tUsers = await getTranslations({ locale, namespace: "errors.api.users" });
-  const tUploads = await getTranslations({ locale, namespace: "errors.api.uploads" });
-  try {
-    const authResult = await requireActiveUser();
-    if (isActiveUserError(authResult)) {
-      return authResult.response;
-    }
-    const userId = authResult.user.id;
-
-    const existingUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        uid: true,
-        name: true,
-        email: true,
-        image: true,
-        bio: true,
-      },
-    });
-
-    if (!existingUser) {
-      return NextResponse.json({ error: tUsers("notFound") }, { status: 404 });
-    }
-
-    const formData = await request.formData();
-    const payload: Record<string, string> = {};
-    const name = extractTextField(formData, "name");
-    const bio = extractTextField(formData, "bio");
-
-    if (name !== undefined) {
-      payload.name = name;
-    }
-    if (bio !== undefined) {
-      payload.bio = bio;
-    }
-
-    const parsed = updateProfileSchema.safeParse(payload, {
-      errorMap: getZodErrorMap(locale),
-    });
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
-        { status: 400 },
-      );
-    }
-
-    // ─── Content moderation ───
-    const fieldsToCheck: Record<string, string> = {};
-    if (parsed.data.name) fieldsToCheck[tUsers("usernameFieldLabel")] = parsed.data.name;
-    if (parsed.data.bio) fieldsToCheck[tUsers("bioFieldLabel")] = parsed.data.bio;
-
-    if (Object.keys(fieldsToCheck).length > 0) {
-      const modResult = await moderateFields(fieldsToCheck, "username", {
-        userId,
-        userIp: getClientIp(request),
-      });
-      if (!modResult.passed) {
-        return NextResponse.json(
-          { error: tUsers("profileModerated"), details: modResult.reason },
-          { status: 422 },
-        );
-      }
-    }
-
-    const avatarField = formData.get("avatar");
-    let avatarBuffer: Buffer | null = null;
-    let avatarMimeType: string | null = null;
-
-    if (avatarField instanceof File && avatarField.size > 0) {
-      avatarBuffer = Buffer.from(await avatarField.arrayBuffer());
-      avatarMimeType = avatarField.type;
-      logger.info("[api/user/profile] Avatar upload attempt", {
-        claimedType: avatarMimeType,
-        size: avatarBuffer.byteLength,
-        headerHex: avatarBuffer.subarray(0, 12).toString("hex"),
-      });
-      try {
-        validateImageFile(avatarBuffer, avatarMimeType);
-      } catch (error) {
-        if (error instanceof ImageValidationError) {
-          logger.warn("[api/user/profile] Avatar validation failed", {
-            code: error.code,
-            claimedType: avatarMimeType,
-          });
-          return NextResponse.json(
-            { error: translateImageValidationError(error, tUploads) },
-            { status: error.status },
-          );
-        }
-
-        return NextResponse.json({ error: tUsers("avatarInvalid") }, { status: 400 });
-      }
-    }
-
-    const data: Prisma.UserUpdateInput = {};
-
-    if (hasOwnProperty(parsed.data, "name")) {
-      data.name = parsed.data.name ?? null;
-    }
-
-    if (hasOwnProperty(parsed.data, "bio")) {
-      data.bio = parsed.data.bio && parsed.data.bio.length > 0 ? parsed.data.bio : null;
-    }
-
-    let nextImageKey: string | null | undefined;
-    if (avatarBuffer && avatarMimeType) {
-      try {
-        nextImageKey = await uploadAvatar(avatarBuffer, existingUser.id, avatarMimeType, {
-          userId: existingUser.id,
-          userIp: getClientIp(request),
-        });
-        data.image = nextImageKey;
-      } catch (error) {
-        if (error instanceof ImageValidationError) {
-          return NextResponse.json(
-            { error: translateImageValidationError(error, tUploads) },
-            { status: error.status },
-          );
-        }
-        if (error instanceof ImageModerationError) {
-          return NextResponse.json(
-            { error: tUsers("avatarModerated"), details: error.category ?? null },
-            { status: error.status },
-          );
-        }
-        logger.error("[api/user/profile] Upload avatar failed", {
-          userId: existingUser.id,
-          reason: error instanceof Error ? error.message : "unknown",
-        });
-        return NextResponse.json({ error: tUsers("avatarUploadFailed") }, { status: 500 });
-      }
-    }
-
-    if (Object.keys(data).length === 0) {
-      return NextResponse.json({
-        data: {
-          id: existingUser.id,
-          uid: existingUser.uid,
-          name: existingUser.name,
-          email: existingUser.email,
-          image: getPublicUrl(existingUser.image),
-          bio: existingUser.bio,
-        } satisfies ProfileResponseData,
-      });
-    }
-
-    const updated = await prisma.user.update({
-      where: { id: existingUser.id },
-      data,
-      select: {
-        id: true,
-        uid: true,
-        name: true,
-        email: true,
-        image: true,
-        bio: true,
-      },
-    });
-
-    if (
-      typeof nextImageKey === "string" &&
-      existingUser.image &&
-      existingUser.image !== nextImageKey
-    ) {
-      try {
-        await deleteFile(existingUser.image);
-      } catch (error) {
-        logger.warn("[api/user/profile] delete old avatar failed", {
-          userId: existingUser.id,
-          key: existingUser.image,
-          reason: error instanceof Error ? error.message : "unknown",
-        });
-      }
-    }
-
-    return NextResponse.json({
-      data: {
-        id: updated.id,
-        uid: updated.uid,
-        name: updated.name,
-        email: updated.email,
-        image: getPublicUrl(updated.image),
-        bio: updated.bio,
-      } satisfies ProfileResponseData,
-    });
-  } catch (error) {
-    logger.error("[api/user/profile] Unexpected PATCH error", error);
     return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
   }
 }

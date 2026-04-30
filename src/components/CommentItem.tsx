@@ -148,7 +148,7 @@ export function CommentItem({
             className="h-8 w-8"
             fallbackClassName="bg-gradient-to-br from-coral to-coral-amber text-white"
           />
-          <Link href={`/u/${comment.author.uid}`} className="m3-link text-sm font-medium">
+          <Link href={`/u/${comment.author.misskeyId}`} className="m3-link text-sm font-medium">
             {displayAuthorName(comment.author)}
           </Link>
         </div>
@@ -252,7 +252,7 @@ export function CommentItem({
                     className="h-8 w-8"
                     fallbackClassName="bg-gradient-to-br from-coral to-coral-amber text-white"
                   />
-                  <Link href={`/u/${reply.author.uid}`} className="m3-link text-sm font-medium">
+                  <Link href={`/u/${reply.author.misskeyId}`} className="m3-link text-sm font-medium">
                     {displayAuthorName(reply.author)}
                   </Link>
                 </div>

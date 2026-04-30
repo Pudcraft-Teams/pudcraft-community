@@ -182,13 +182,9 @@ export default function AdminUsersPage() {
               <thead>
                 <tr className="border-b border-warm-200 text-xs text-warm-500">
                   <th className="px-4 py-3 font-medium">{t("colUser")}</th>
-                  <th className="hidden px-4 py-3 font-medium sm:table-cell">{t("colEmail")}</th>
-                  <th className="hidden px-4 py-3 font-medium md:table-cell">
-                    {t("colServers")}
-                  </th>
-                  <th className="hidden px-4 py-3 font-medium md:table-cell">
-                    {t("colComments")}
-                  </th>
+                  <th className="hidden px-4 py-3 font-medium sm:table-cell">{t("colMisskey")}</th>
+                  <th className="hidden px-4 py-3 font-medium md:table-cell">{t("colServers")}</th>
+                  <th className="hidden px-4 py-3 font-medium md:table-cell">{t("colComments")}</th>
                   <th className="hidden px-4 py-3 font-medium lg:table-cell">
                     {t("colCreatedAt")}
                   </th>
@@ -207,7 +203,7 @@ export default function AdminUsersPage() {
                         <UserAvatar
                           src={user.image}
                           name={user.name}
-                          email={user.email}
+                          handle={user.misskeyUsername}
                           className="h-7 w-7"
                           fallbackClassName="bg-gradient-to-br from-coral to-coral-amber text-white"
                         />
@@ -217,7 +213,7 @@ export default function AdminUsersPage() {
                       </div>
                     </td>
                     <td className="hidden px-4 py-3 text-xs text-warm-500 sm:table-cell">
-                      {user.email}
+                      @{user.misskeyUsername}
                     </td>
                     <td className="hidden px-4 py-3 text-xs text-warm-600 md:table-cell">
                       {user.serverCount}
@@ -231,7 +227,7 @@ export default function AdminUsersPage() {
                     <td className="px-4 py-3">
                       {user.isBanned ? (
                         <span
-                          className="inline-block rounded-full bg-coral-light px-2 py-0.5 text-xs font-medium text-coral-hover ring-1 ring-coral-hover/20"
+                          className="bg-coral-light text-coral-hover ring-coral-hover/20 inline-block rounded-full px-2 py-0.5 text-xs font-medium ring-1"
                           title={user.banReason ?? undefined}
                         >
                           {t("statusBanned")}
@@ -261,13 +257,13 @@ export default function AdminUsersPage() {
                               setBanningId(user.id);
                               setBanReason("");
                             }}
-                            className="rounded bg-coral-light px-2 py-1 text-xs font-medium text-coral-hover transition-colors hover:bg-coral-light/80 disabled:opacity-50"
+                            className="bg-coral-light text-coral-hover hover:bg-coral-light/80 rounded px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50"
                           >
                             {t("actionBan")}
                           </button>
                         ) : null}
                         <Link
-                          href={`/u/${user.uid}`}
+                          href={`/u/${user.misskeyId}`}
                           className="rounded bg-warm-50 px-2 py-1 text-xs font-medium text-warm-600 transition-colors hover:bg-warm-100"
                         >
                           {t("actionView")}
@@ -290,7 +286,7 @@ export default function AdminUsersPage() {
                               type="button"
                               disabled={actionLoading === user.id}
                               onClick={() => handleBan(user.id)}
-                              className="rounded bg-coral-hover px-2 py-1 text-xs text-white hover:bg-coral-hover/80 disabled:opacity-50"
+                              className="bg-coral-hover hover:bg-coral-hover/80 rounded px-2 py-1 text-xs text-white disabled:opacity-50"
                             >
                               {t("confirmBan")}
                             </button>

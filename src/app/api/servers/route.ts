@@ -14,7 +14,7 @@ import { logger } from "@/lib/logger";
 import { generateAndReservePsid } from "@/lib/numeric-id";
 import { getClientIp } from "@/lib/request-ip";
 import { rateLimit } from "@/lib/rate-limit";
-import { getInitialServerSubmissionState } from "@/lib/server-access";
+import { getAutoApprovedSubmissionState, getRejectedSubmissionState } from "@/lib/server-access";
 import { buildServerStatusResponse } from "@/lib/serverStatus";
 import {
   getPublicUrl,
@@ -24,6 +24,7 @@ import {
   validateImageFile,
 } from "@/lib/storage";
 import { moderateFields } from "@/lib/moderation";
+import { moderateImage } from "@/lib/image-moderation";
 import { buildServerContent } from "@/lib/serverContent";
 import { createServerSchema, queryServersSchema } from "@/lib/validation";
 import type { ServerListItem, ServerVisibility, ServerJoinMode } from "@/lib/types";
@@ -356,9 +357,9 @@ export async function POST(request: Request) {
       }
     }
 
+    let iconKey: string | null = null;
     let server;
     try {
-      const initialReviewState = getInitialServerSubmissionState();
       server = await prisma.$transaction(async (tx) => {
         const psid = await generateAndReservePsid(tx);
         return tx.server.create({
@@ -378,7 +379,8 @@ export async function POST(request: Request) {
             ownerId: userId,
             maxPlayers: typeof maxPlayers === "number" ? maxPlayers : 0,
             visibility: visibility ?? "public",
-            ...initialReviewState,
+            status: "pending",
+            reviewStatus: "unreviewed",
           },
         });
       });
@@ -411,8 +413,7 @@ export async function POST(request: Request) {
       throw error;
     }
 
-    let iconKey: string | null = null;
-    let iconWarning: string | undefined;
+    // ─── 图标上传 + 图片内容审查 ───
     if (iconBuffer && iconMimeType) {
       try {
         iconKey = await uploadServerIcon(iconBuffer, server.id, iconMimeType, {
@@ -425,15 +426,12 @@ export async function POST(request: Request) {
         });
       } catch (error) {
         if (error instanceof ImageValidationError) {
-          iconWarning = translateImageValidationError(error, tUploads);
           logger.info("[api/servers] Server icon failed validation", {
             serverId: server.id,
             reason: error.message,
           });
-        } else
-        if (error instanceof ImageModerationError) {
-          iconWarning = tServers("iconModeratedSkipped");
-          logger.info("[api/servers] Server icon rejected by moderation", {
+        } else if (error instanceof ImageModerationError) {
+          logger.info("[api/servers] Server icon rejected by moderation during upload", {
             serverId: server.id,
             reason: error.message,
           });
@@ -443,24 +441,53 @@ export async function POST(request: Request) {
             reason: resolveErrorMessage(error, "unknown"),
           });
         }
+        iconKey = null;
       }
     }
+
+    // ─── 图片内容审查（对已上传的图标 URL 执行） ───
+    if (iconKey) {
+      const iconUrl = getPublicUrl(iconKey);
+      if (iconUrl) {
+        const imgModResult = await moderateImage(iconUrl, "server-icon", {
+          contentId: server.id,
+          userId,
+          userIp: clientIpForMod,
+        });
+        if (!imgModResult.passed) {
+          const rejectReason = imgModResult.reason ?? tServers("contentModerated");
+          await prisma.server.update({
+            where: { id: server.id },
+            data: getRejectedSubmissionState(rejectReason),
+          });
+          return NextResponse.json(
+            { error: tServers("contentModerated"), details: rejectReason },
+            { status: 422 },
+          );
+        }
+      }
+    }
+
+    // ─── 自动通过审核（text + image moderation both passed） ───
+    const finalServer = await prisma.server.update({
+      where: { id: server.id },
+      data: getAutoApprovedSubmissionState(),
+    });
 
     return NextResponse.json(
       {
         success: true,
         message: tServers("submitted"),
-        warning: iconWarning,
         data: {
-          id: server.id,
-          psid: server.psid,
-          name: server.name,
-          host: server.host,
-          port: server.port,
-          description: server.description,
-          tags: server.tags,
-          ownerId: server.ownerId,
-          reviewStatus: server.reviewStatus,
+          id: finalServer.id,
+          psid: finalServer.psid,
+          name: finalServer.name,
+          host: finalServer.host,
+          port: finalServer.port,
+          description: finalServer.description,
+          tags: finalServer.tags,
+          ownerId: finalServer.ownerId,
+          reviewStatus: finalServer.reviewStatus,
           iconUrl: getPublicUrl(iconKey),
         },
       },

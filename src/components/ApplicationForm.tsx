@@ -276,8 +276,8 @@ export function ApplicationForm({ serverId, fields, onSuccess }: ApplicationForm
               >
                 <option value="">{field.placeholder ?? t("selectPlaceholder")}</option>
                 {field.options?.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
+                  <option key={option.value} value={option.value}>
+                    {option.label}
                   </option>
                 ))}
               </select>
@@ -288,10 +288,10 @@ export function ApplicationForm({ serverId, fields, onSuccess }: ApplicationForm
                 {field.options?.map((option) => {
                   const selected =
                     Array.isArray(formData[field.key]) &&
-                    (formData[field.key] as string[]).includes(option);
+                    (formData[field.key] as string[]).includes(option.value);
                   return (
                     <label
-                      key={option}
+                      key={option.value}
                       className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm transition-colors ${
                         selected
                           ? "border-accent bg-accent-muted text-accent"
@@ -301,10 +301,10 @@ export function ApplicationForm({ serverId, fields, onSuccess }: ApplicationForm
                       <input
                         type="checkbox"
                         checked={selected}
-                        onChange={() => toggleMultiselect(field.key, option)}
+                        onChange={() => toggleMultiselect(field.key, option.value)}
                         className="sr-only"
                       />
-                      {option}
+                      {option.label}
                     </label>
                   );
                 })}

@@ -9,9 +9,8 @@ This document describes only the live server-only endpoints. Forum / MoltBook en
 
 ### Authentication
 
-- Web: session cookie (Auth.js / NextAuth)
+- Web: session cookie (NextAuth v5 / JWT). Sign-in is exclusively through Misskey MiAuth (single self-hosted instance configured by `MISSKEY_HOST`); the legacy local credentials, registration, password reset, and `/api/mobile/*` flows have been removed.
 - Plugin / sync / plugin claim: bearer API key or claim key
-- Mobile: trusted session cookie returned by `/api/mobile/session*`
 
 ### Response format
 
@@ -73,7 +72,6 @@ In this document both are written as `{id}`.
 
 - API error responses (`{ error, details }`) honor the caller's locale. Resolution order: `x-locale` header → `NEXT_LOCALE` cookie → highest-q supported `Accept-Language` match → `zh` default.
 - Zod validation failures returned as `details.fieldErrors` are already localized per field — the server translates the `errors.validation.<area>.<key>` paths before serialization.
-- Email subjects / bodies (`sendVerificationCode`, `sendResetPasswordCode`) resolve the recipient's locale from `User.locale`, with an explicit `localeOverride` honored first (unauthenticated flows pass the request locale so the response and the email match).
 - Successful response bodies may still contain locale-specific strings (server-name, comment body, user-provided content). Clients should not depend on any non-machine-readable value being English.
 - New client code should use `apiFetch` from `@/lib/apiFetch` to inject `x-locale` explicitly.
 
@@ -81,10 +79,9 @@ In this document both are written as `{id}`.
 
 | Method | Path | Auth | Notes |
 |---|---|---|---|
-| GET / POST | `/auth/[...nextauth]` | - | Standard Auth.js routes |
-| POST | `/auth/register` | - | Email registration |
-| POST | `/auth/send-code` | - | Send email verification code |
-| POST / PATCH | `/auth/reset-password` | - | Send reset code / reset password with code |
+| GET / POST | `/auth/[...nextauth]` | - | Standard NextAuth routes (session, csrf, signout, internal credentials callback) |
+| GET | `/auth/misskey/start?callbackUrl=...` | - | Generates a MiAuth session, stores `callbackUrl` in Redis, redirects the browser to `https://{MISSKEY_HOST}/miauth/{session}?callback=...` |
+| GET | `/auth/misskey/callback?session=...` | - | Misskey redirects here after the user authorizes; verifies the session via `POST /api/miauth/{session}/check`, upserts the local `User` keyed by `misskeyId`, derives `role` from `isAdmin`/`isModerator`, then signs in via NextAuth using a one-shot HMAC ticket |
 
 ## Public and user endpoints
 
@@ -129,18 +126,7 @@ In this document both are written as `{id}`.
 | GET | `/health` | - | Health check |
 | POST | `/uploads/editor-image` | Signed in | Editor image upload |
 
-## Server claiming and owner-management endpoints
-
-### Claim flow
-
-| Method | Path | Auth | Notes |
-|---|---|---|---|
-| GET | `/servers/{id}/verify` | Signed in | Claim state from the current user's perspective; only the current claim initiator can see `verifyToken` |
-| POST | `/servers/{id}/verify` | Signed in | Start a MOTD-token claim; any signed-in user may initiate, ownership may transfer on success |
-| PATCH | `/servers/{id}/verify` | Signed in (current claim initiator) | Trigger the BullMQ verify job and await the result |
-| POST | `/servers/{id}/verify/claim` | Bearer claim key / API key | Plugin-side claim completion or API-key validation for an already-claimed server |
-| GET | `/servers/{id}/verify/claim-key` | Signed in | Claim-key state for the current user |
-| POST | `/servers/{id}/verify/claim-key` | Signed in | Generate a claim key for an unclaimed server; current owner or a valid claim initiator may do this |
+## Server owner-management endpoints
 
 ### Private-server settings, applications, invites, members
 
@@ -170,9 +156,7 @@ In this document both are written as `{id}`.
 | DELETE | `/modpacks/{modpackId}` | Owner | Delete a modpack |
 | GET | `/modpacks/{modpackId}/download` | Optional | Download a modpack; unapproved servers are downloadable only by owner / admin, private servers still require membership |
 
-## Whitelist-sync and mobile endpoints
-
-### Whitelist sync
+## Whitelist-sync endpoints
 
 | Method | Path | Auth | Notes |
 |---|---|---|---|
@@ -181,17 +165,6 @@ In this document both are written as `{id}`.
 | GET | `/servers/{id}/sync/status` | Owner | Sync overview for the console |
 | POST | `/sync/{syncId}/ack` | Plugin API key | Acknowledge a processed sync event |
 
-### Native mobile endpoints
-
-| Method | Path | Auth | Notes |
-|---|---|---|---|
-| GET | `/mobile/session` | Mobile session | Current mobile session |
-| DELETE | `/mobile/session` | Mobile session | Log out the mobile session |
-| POST | `/mobile/session/login` | - | Mobile login |
-| GET | `/mobile/inbox` | Mobile session | Aggregated mobile inbox |
-| POST | `/mobile/inbox/read` | Mobile session | Mark mobile inbox items as read |
-| GET | `/mobile/inbox/unread-summary` | Mobile session | Mobile unread summary |
-
 ## Admin endpoints
 
 ### Servers / users / moderation / reports / changelog
@@ -199,7 +172,7 @@ In this document both are written as `{id}`.
 | Method | Path | Auth | Notes |
 |---|---|---|---|
 | GET | `/admin/servers` | Admin | Admin server list |
-| PATCH | `/admin/servers/{id}` | Admin | Review / update server status |
+| PATCH | `/admin/servers/{id}` | Admin | Update server status, assign `ownerId` for legacy `ownerId=null` servers, toggle `isVerified` (official certification badge; writes `ModerationLog`) |
 | DELETE | `/admin/servers/{id}` | Admin | Delete a server |
 | GET | `/admin/users` | Admin | User list |
 | PATCH | `/admin/users/{id}` | Admin | Ban, unban, role changes, etc. |

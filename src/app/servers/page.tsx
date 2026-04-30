@@ -29,6 +29,9 @@ export default async function ServersPage({ searchParams }: ServersPageProps) {
 
   let servers: ServerListItem[] = [];
   let totalPages = 1;
+  let totalServers = 0;
+  let onlineServers = 0;
+  let activePlayers = 0;
 
   try {
     const result = await loadServerListPageData(query, {
@@ -37,6 +40,9 @@ export default async function ServersPage({ searchParams }: ServersPageProps) {
     });
     servers = result.servers;
     totalPages = result.totalPages;
+    totalServers = result.total;
+    onlineServers = result.totalOnlineServers;
+    activePlayers = result.totalActivePlayers;
   } catch {
     // DB unavailable — render empty state
   }
@@ -50,6 +56,10 @@ export default async function ServersPage({ searchParams }: ServersPageProps) {
       initialSearch={query.search}
       initialTotalPages={totalPages}
       basePath="/servers"
+      variant="list"
+      totalServers={totalServers}
+      onlineServers={onlineServers}
+      activePlayers={activePlayers}
     />
   );
 }

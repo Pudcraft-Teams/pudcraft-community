@@ -2,9 +2,11 @@
 
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { MAX_FORM_FIELDS } from "@/lib/applicationFormDocument";
 import { isPrivateServersEnabled } from "@/lib/features";
 import type {
   ApplicationFormField,
+  OwnerFormConfig,
   ServerJoinMode,
   ServerVisibility,
 } from "@/lib/types";
@@ -20,8 +22,6 @@ const FIELD_TYPE_OPTION_KEYS: ApplicationFormField["type"][] = [
   "multiselect",
 ];
 
-const MAX_FORM_FIELDS = 10;
-
 // ─── Props ───────────────────────────────────────
 
 interface ServerSettingsProps {
@@ -29,7 +29,11 @@ interface ServerSettingsProps {
   initialVisibility: string;
   initialDiscoverable: boolean;
   initialJoinMode: string;
-  initialApplicationForm: ApplicationFormField[] | null;
+  /**
+   * Full owner-side document. The editor reads `.fields` for the field-list state today; Phase 5
+   * brings the rest of the document (settings, branching, scoring options) into the UI.
+   */
+  initialApplicationForm: OwnerFormConfig | null;
   onSaved?: () => void;
 }
 
@@ -130,7 +134,7 @@ export function ServerSettings({
     isValidJoinMode(initialJoinMode) ? initialJoinMode : "open",
   );
   const [formFields, setFormFields] = useState<ApplicationFormField[]>(
-    initialApplicationForm ?? [],
+    initialApplicationForm?.fields ?? [],
   );
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -170,7 +174,8 @@ export function ServerSettings({
     const visChanged = visibility !== (isValidVisibility(initialVisibility) ? initialVisibility : "public");
     const discChanged = discoverable !== initialDiscoverable;
     const joinChanged = joinMode !== (isValidJoinMode(initialJoinMode) ? initialJoinMode : "open");
-    const formChanged = JSON.stringify(formFields) !== JSON.stringify(initialApplicationForm ?? []);
+    const formChanged =
+      JSON.stringify(formFields) !== JSON.stringify(initialApplicationForm?.fields ?? []);
     return visChanged || discChanged || joinChanged || formChanged;
   }, [visibility, discoverable, joinMode, formFields, initialVisibility, initialDiscoverable, initialJoinMode, initialApplicationForm]);
 
@@ -217,7 +222,8 @@ export function ServerSettings({
     const options = optionsText
       .split(",")
       .map((s) => s.trim())
-      .filter(Boolean);
+      .filter(Boolean)
+      .map((label) => ({ value: label, label }));
 
     setFormFields((prev) =>
       prev.map((field) => {

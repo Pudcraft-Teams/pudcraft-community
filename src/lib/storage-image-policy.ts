@@ -18,6 +18,7 @@ export interface StorageImagePolicyEnv {
   ossRegion?: string;
   s3ForcePathStyle?: string;
   ossForcePathStyle?: string;
+  misskeyHost?: string;
 }
 
 type TrustedStorageUrlRule = {
@@ -238,14 +239,20 @@ function buildRegionalS3TrustedUrlRule(
   ];
 }
 
+function buildMisskeyRemotePatterns(hostValue: string | undefined): StorageImageRemotePattern[] {
+  const parsedUrl = parseConfiguredHttpUrl(hostValue);
+  if (!parsedUrl) {
+    return [];
+  }
+
+  return [createRemotePattern(parsedUrl)];
+}
+
 export function buildStorageImageRemotePatterns(
   env: StorageImagePolicyEnv,
 ): StorageImageRemotePattern[] {
   const effectiveConfig = resolveEffectiveStorageImageConfig(env);
-  const directUrlPatterns = [
-    env.nextPublicStoragePublicBaseUrl,
-    effectiveConfig.publicBaseUrl,
-  ]
+  const directUrlPatterns = [env.nextPublicStoragePublicBaseUrl, effectiveConfig.publicBaseUrl]
     .map((value) => parseConfiguredHttpUrl(value))
     .filter((value): value is URL => value !== null)
     .map((parsedUrl) => createRemotePattern(parsedUrl));
@@ -259,6 +266,7 @@ export function buildStorageImageRemotePatterns(
       effectiveConfig.endpoint,
       effectiveConfig.publicBaseUrl,
     ),
+    ...buildMisskeyRemotePatterns(env.misskeyHost),
   ]);
 }
 

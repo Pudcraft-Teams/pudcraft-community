@@ -7,7 +7,7 @@ import { logger } from "@/lib/logger";
 import { resolveServerCuid } from "@/lib/lookup";
 import { createTranslatedNotification } from "@/lib/notification";
 import { requireAdmin, isAdminError, translateAdminError } from "@/lib/admin";
-import { serverLookupIdSchema, adminServerActionSchema } from "@/lib/validation";
+import { serverLookupIdSchema, adminServerActionSchema, adminServerPatchSchema } from "@/lib/validation";
 import { deleteFile, deleteObject } from "@/lib/storage";
 
 interface ReviewNotificationParams {
@@ -114,6 +114,53 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
         { status: 400 },
       );
+    }
+
+    const bodyObj = body as Record<string, unknown>;
+
+    // Field-level patch: isVerified toggle or ownerId assignment (no "action" key).
+    if (!("action" in bodyObj)) {
+      const fieldParsed = adminServerPatchSchema.safeParse(body, {
+        errorMap: getZodErrorMap(locale),
+      });
+      if (!fieldParsed.success) {
+        return NextResponse.json(
+          { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(fieldParsed.error, locale) },
+          { status: 400 },
+        );
+      }
+
+      const { isVerified, ownerId } = fieldParsed.data;
+      const updateData: Record<string, unknown> = {};
+
+      if (isVerified !== undefined) {
+        updateData.isVerified = isVerified;
+        updateData.verifiedAt = isVerified ? new Date() : null;
+      }
+
+      if (ownerId !== undefined) {
+        if (ownerId !== null) {
+          const ownerExists = await prisma.user.findUnique({
+            where: { id: ownerId },
+            select: { id: true },
+          });
+          if (!ownerExists) {
+            return NextResponse.json({ error: tAdmin("ownerNotFound") }, { status: 404 });
+          }
+        }
+        updateData.ownerId = ownerId;
+      }
+
+      await prisma.server.update({
+        where: { id: resolvedId },
+        data: updateData,
+      });
+
+      const messages: string[] = [];
+      if (isVerified !== undefined) messages.push(tAdmin("serverVerifiedSet"));
+      if (ownerId !== undefined) messages.push(tAdmin("serverOwnerSet"));
+
+      return NextResponse.json({ success: true, message: messages.join(" ") });
     }
 
     const { action, reason } = parsed.data;

@@ -128,12 +128,6 @@ export default function SubmitServerPage() {
                 hint: duplicateServer.hint,
               })}
             </p>
-            <Link
-              href={`/servers/${duplicateServer.psid ?? duplicateServer.id}/verify`}
-              className="m3-link mt-2 inline-flex text-sm"
-            >
-              {t("duplicateGoVerify")}
-            </Link>
           </div>
         )}
         <ServerForm mode="create" cancelHref="/console" onSubmit={handleCreateServer} />

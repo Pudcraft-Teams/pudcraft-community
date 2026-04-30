@@ -49,7 +49,7 @@ const ACTION_OPTIONS: { key: ActionKey; labelKey: string }[] = [
 interface ReportReporter {
   id: string;
   name: string | null;
-  email: string;
+  misskeyUsername: string;
 }
 
 interface ReportItem {
@@ -299,7 +299,7 @@ export default function AdminReportsPage() {
                       {report.description ?? "—"}
                     </td>
                     <td className="hidden px-4 py-3 text-xs text-warm-600 md:table-cell">
-                      {report.reporter.name ?? report.reporter.email}
+                      {report.reporter.name ?? `@${report.reporter.misskeyUsername}`}
                     </td>
                     <td className="px-4 py-3">
                       {report.status === "pending" ? (

@@ -55,7 +55,7 @@ export function HeaderSearch({
   if (variant === "mobile") {
     if (open) {
       return (
-        <div className="fixed inset-x-0 top-14 z-[120] border-b border-warm-200 bg-surface px-4 py-3 shadow-sm md:hidden">
+        <div className="player-mobile-search md:hidden">
           <form
             onSubmit={(event) => {
               event.preventDefault();
@@ -91,7 +91,7 @@ export function HeaderSearch({
     return (
       <button
         type="button"
-        className="m3-btn m3-btn-tonal inline-flex h-11 min-w-0 items-center gap-2 px-3"
+        className="m3-btn m3-btn-tonal player-mobile-search-trigger"
         onClick={() => {
           window.dispatchEvent(
             new CustomEvent(MOBILE_HEADER_OVERLAY_EVENT, {
@@ -107,7 +107,7 @@ export function HeaderSearch({
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
           fill="currentColor"
-          className="h-4 w-4 text-warm-500"
+          className="h-4 w-4"
         >
           <path
             fillRule="evenodd"
@@ -115,7 +115,7 @@ export function HeaderSearch({
             clipRule="evenodd"
           />
         </svg>
-        <span className="text-sm text-warm-500">{t("headerSearchTriggerLabel")}</span>
+        <span>{t("headerSearchTriggerLabel")}</span>
       </button>
     );
   }
@@ -126,28 +126,37 @@ export function HeaderSearch({
         event.preventDefault();
         submit(query);
       }}
-      className="relative"
+      className="player-header-search"
       role="search"
     >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="player-header-search-icon"
+        aria-hidden
+      >
+        <circle cx="7" cy="7" r="4.5" />
+        <path d="m10.5 10.5 3 3" />
+      </svg>
       <input
         type="search"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder={t("headerSearchPlaceholderShort")}
-        className="m3-input w-28 py-1.5 pl-7 pr-2 text-xs sm:w-36"
+        placeholder={t("headerSearchPlaceholder")}
+        aria-label={t("headerSearchInputAriaLabel")}
+        className="player-header-search-input"
       />
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 20 20"
-        fill="currentColor"
-        className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-warm-400"
+      <span
+        className="player-header-search-kbd"
+        aria-hidden
       >
-        <path
-          fillRule="evenodd"
-          d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z"
-          clipRule="evenodd"
-        />
-      </svg>
+        {t("headerSearchKbd")}
+      </span>
     </form>
   );
 }

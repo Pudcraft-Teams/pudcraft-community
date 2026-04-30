@@ -61,7 +61,7 @@ export default async function ConsoleLayout({ children }: ConsoleLayoutProps) {
   const t = await getTranslations("console.nav");
 
   const displayName =
-    session?.user?.name?.trim() || session?.user?.email?.split("@")[0] || t("displayNameFallback");
+    session?.user?.name?.trim() || session?.user?.misskeyUsername || t("displayNameFallback");
 
   return (
     <div className="min-h-[calc(100vh-10rem)]">
@@ -79,13 +79,13 @@ export default async function ConsoleLayout({ children }: ConsoleLayoutProps) {
             {t("backHome")}
           </Link>
           <Link
-            href={`/u/${session?.user?.uid}`}
+            href={`/u/${session?.user?.misskeyId}`}
             className="m3-btn m3-btn-tonal inline-flex w-full items-center justify-center gap-2 px-3 py-2 sm:w-auto"
           >
             <UserAvatar
               src={session?.user?.image}
               name={session?.user?.name}
-              email={session?.user?.email}
+              handle={session?.user?.misskeyUsername}
               className="h-6 w-6"
               fallbackClassName="bg-gradient-to-br from-coral to-coral-amber text-white"
             />

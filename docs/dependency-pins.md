@@ -41,10 +41,6 @@ This branch keeps the live Next/React stack current and only documents pins that
 - `minecraft-server-util`
   - Still used by `src/lib/mc-ping.ts` for ping/verification. Replace it only as a dedicated transport/runtime task.
 
-- `@types/bcryptjs`
-  - Deprecated because `bcryptjs` now ships its own types.
-  - Still present in `package.json`; remove during a small dependency-cleanup pass.
-
 - `@types/cropperjs`
   - Deprecated because `cropperjs` now ships its own types.
   - Keep it only until the cropper integration is updated and revalidated.

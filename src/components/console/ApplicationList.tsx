@@ -83,6 +83,65 @@ function resolveUserName(
   return app.userName?.trim() || t("anonymousUser");
 }
 
+function EvaluationBadge({
+  app,
+  t,
+  formData,
+}: {
+  app: ServerApplicationItem;
+  t: ReturnType<typeof useTranslations>;
+  formData: ServerApplicationItem["formData"];
+}) {
+  const result = app.evaluationResult;
+  if (!result) {
+    if (formData && Object.keys(formData).length > 0) {
+      return (
+        <span className="inline-flex items-center rounded-full bg-warm-100 px-2.5 py-0.5 text-xs font-medium text-warm-500">
+          {t("badge.noEvaluation")}
+        </span>
+      );
+    }
+    return null;
+  }
+
+  if (result.result === "hard_disqualify") {
+    const fieldLabel = result.offendingFieldKey ?? "";
+    return (
+      <span className="inline-flex items-center rounded-full bg-coral-light px-2.5 py-0.5 text-xs font-medium text-coral ring-1 ring-coral/20">
+        {t("badge.hardDisqualify", { fieldLabel })}
+      </span>
+    );
+  }
+
+  if (result.result === "score_below_threshold") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-coral-light px-2.5 py-0.5 text-xs font-medium text-coral ring-1 ring-coral/20">
+        {t("badge.scoreBelowThreshold", {
+          score: result.score ?? 0,
+          passingScore: result.passingScore ?? 0,
+        })}
+      </span>
+    );
+  }
+
+  // pending_review
+  if (typeof result.score === "number" && typeof result.passingScore === "number") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-forest-light px-2.5 py-0.5 text-xs font-medium text-forest-dark ring-1 ring-forest/20">
+        {t("badge.passedAutoScreen", {
+          score: result.score,
+          passingScore: result.passingScore,
+        })}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center rounded-full bg-warm-100 px-2.5 py-0.5 text-xs font-medium text-warm-600">
+      {t("badge.awaitingReview")}
+    </span>
+  );
+}
+
 /**
  * Application review list.
  * Owners can view and moderate (approve / reject) player join applications.
@@ -284,7 +343,8 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
                   </div>
                 </div>
 
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                  <EvaluationBadge app={app} t={t} formData={app.formData} />
                   <StatusBadge status={app.status} t={t} />
                   <span className="text-xs text-warm-400">{timeAgo(app.createdAt, appLocale)}</span>
                 </div>

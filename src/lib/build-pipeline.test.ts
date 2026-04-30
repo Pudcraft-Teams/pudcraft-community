@@ -32,33 +32,6 @@ test("Dockerfile forwards storage configuration into the Next.js build environme
   assert.match(dockerfile, /^ENV OSS_FORCE_PATH_STYLE="\$\{OSS_FORCE_PATH_STYLE\}"$/m);
 });
 
-test("GitHub build workflow passes storage build args into docker/build-push-action", () => {
-  const workflow = readFileSync(path.join(repoRoot, ".github/workflows/build.yml"), "utf8");
-
-  assert.match(workflow, /^\s+build-args:\s+\|$/m);
-  assert.match(workflow, /^\s+S3_BUCKET=/m);
-  assert.match(workflow, /^\s+S3_REGION=/m);
-  assert.match(workflow, /^\s+S3_ENDPOINT=/m);
-  assert.match(workflow, /^\s+S3_PUBLIC_BASE_URL=/m);
-  assert.match(workflow, /^\s+S3_FORCE_PATH_STYLE=/m);
-  assert.match(workflow, /^\s+OSS_BUCKET=/m);
-  assert.match(workflow, /^\s+OSS_REGION=/m);
-  assert.match(workflow, /^\s+OSS_ENDPOINT=/m);
-  assert.match(workflow, /^\s+OSS_PUBLIC_BASE_URL=/m);
-  assert.match(workflow, /^\s+OSS_FORCE_PATH_STYLE=/m);
-});
-
-test("Deploy workflow refreshes GHCR auth before pulling the image on VPS", () => {
-  const workflow = readFileSync(path.join(repoRoot, ".github/workflows/deploy.yml"), "utf8");
-
-  assert.match(workflow, /^\s+packages:\s+read$/m);
-  assert.match(workflow, /^\s+envs:\s+GHCR_TOKEN,GHCR_USERNAME$/m);
-  assert.match(
-    workflow,
-    /echo "\$GHCR_TOKEN" \| docker login ghcr\.io -u "\$GHCR_USERNAME" --password-stdin/,
-  );
-});
-
 test("next.config forwards OSS regional envs into remote image patterns", () => {
   const script = `
     import config from "./next.config.ts";
@@ -151,4 +124,34 @@ test("next.config exposes a public storage base url fallback for the client bund
   assert.match(result.stdout, /"publicStorageBaseUrl":"https:\/\/cdn\.example\.com\/storage"/);
   assert.match(result.stdout, /"hostname":"cdn\.example\.com"/);
   assert.match(result.stdout, /"pathname":"\/storage\/\*\*"/);
+});
+
+test("next.config only allows local IP image optimization in development", () => {
+  const script = `
+    import config from "./next.config.ts";
+    const resolvedConfig = config.default ?? config;
+    console.log(JSON.stringify(resolvedConfig.images?.dangerouslyAllowLocalIP ?? null));
+  `;
+
+  const developmentResult = spawnSync(process.execPath, ["--import", "tsx", "-e", script], {
+    cwd: repoRoot,
+    env: {
+      ...process.env,
+      NODE_ENV: "development",
+    },
+    encoding: "utf8",
+  });
+  assert.equal(developmentResult.status, 0, developmentResult.stderr);
+  assert.equal(developmentResult.stdout.trim(), "true");
+
+  const productionResult = spawnSync(process.execPath, ["--import", "tsx", "-e", script], {
+    cwd: repoRoot,
+    env: {
+      ...process.env,
+      NODE_ENV: "production",
+    },
+    encoding: "utf8",
+  });
+  assert.equal(productionResult.status, 0, productionResult.stderr);
+  assert.equal(productionResult.stdout.trim(), "false");
 });

@@ -59,6 +59,19 @@ export function Sidebar({ servers }: SidebarProps) {
   return (
     <>
       <div className="m3-surface mb-4 space-y-3 p-3 md:hidden">
+        <Link
+          href="/console"
+          className="mb-2 flex items-center gap-2 rounded-xl border border-warm-200 bg-warm-50 px-3 py-2 text-sm font-medium text-warm-700 transition-colors hover:bg-warm-100"
+        >
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+            <rect x="2" y="2" width="5" height="5" rx="1" />
+            <rect x="9" y="2" width="5" height="5" rx="1" />
+            <rect x="2" y="9" width="5" height="5" rx="1" />
+            <rect x="9" y="9" width="5" height="5" rx="1" />
+          </svg>
+          {t("dashboard")}
+        </Link>
+
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wide text-warm-500">
@@ -131,6 +144,23 @@ export function Sidebar({ servers }: SidebarProps) {
 
       <aside className="hidden w-64 shrink-0 md:block">
         <div className="m3-surface sticky top-20 flex max-h-[calc(100vh-8rem)] flex-col p-3">
+          <Link
+            href="/console"
+            className={`mb-2 flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+              !activeServerId
+                ? "border border-coral/30 bg-coral-light text-warm-800"
+                : "text-warm-600 hover:bg-warm-50"
+            }`}
+          >
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+              <rect x="2" y="2" width="5" height="5" rx="1" />
+              <rect x="9" y="2" width="5" height="5" rx="1" />
+              <rect x="2" y="9" width="5" height="5" rx="1" />
+              <rect x="9" y="9" width="5" height="5" rx="1" />
+            </svg>
+            {t("dashboard")}
+          </Link>
+
           <h2 className="mb-3 px-2 text-xs font-semibold uppercase tracking-wider text-warm-500">
             {t("myServers")}
           </h2>

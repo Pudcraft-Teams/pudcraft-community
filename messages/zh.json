@@ -3,23 +3,34 @@
     "siteName": "PudCraft Community",
     "title": "PudCraft Community - Minecraft 服务器与社区广场",
     "description": "发现优质 Minecraft 服务器，提交、认领、评论与收藏，与服主和玩家一起交流。",
-    "keywords": ["Minecraft", "MC服务器", "我的世界", "服务器列表", "社区", "MC联机"]
+    "keywords": [
+      "Minecraft",
+      "MC服务器",
+      "我的世界",
+      "服务器列表",
+      "社区",
+      "MC联机"
+    ]
   },
   "nav": {
     "skipToContent": "跳到主要内容",
     "servers": "服务器",
     "changelog": "更新日志",
+    "submitServer": "提交服务器",
+    "primaryNavLabel": "主导航",
     "brandTagline": "Community",
+    "brandSubtext": "community.pudcraft.cn",
     "auth": {
       "loading": "加载中...",
-      "login": "登录",
-      "register": "注册",
+      "login": "用咖啡厅登录",
       "submitServer": "提交服务器",
       "myHome": "我的主页",
-      "profileSettings": "资料设置",
-      "console": "控制台",
+      "myServers": "我的服务器",
       "myFavorites": "我的收藏",
-      "adminPanel": "管理后台",
+      "myNotifications": "我的通知",
+      "profileSettings": "账号设置",
+      "console": "控制台",
+      "adminPanel": "站点管理",
       "logout": "退出",
       "loggingOut": "退出中...",
       "displayNameFallback": "已登录用户",
@@ -36,7 +47,12 @@
     }
   },
   "footer": {
-    "copyright": "© {year}"
+    "copyright": "© {year}",
+    "tagline": "Pudcraft 社区目录 · 由玩家维护，免费、无广告、开源",
+    "linkChangelog": "更新日志",
+    "linkSubmit": "提交服务器",
+    "linkSponsor": "赞助我们",
+    "sponsorHint": "服务器和域名都需要成本，一杯咖啡就能帮我们走得更远 ☕"
   },
   "errors": {
     "page": {
@@ -91,11 +107,6 @@
         "mcUsernameMax": "MC 用户名最多 16 个字符",
         "mcUsernameFormat": "MC 用户名只能包含字母、数字和下划线"
       },
-      "auth": {
-        "passwordMin": "密码至少 8 位",
-        "passwordRequired": "请输入密码",
-        "codeLength": "验证码为 6 位数字"
-      },
       "comments": {
         "contentRequired": "评论内容不能为空",
         "contentMax": "评论最多 1000 字"
@@ -117,6 +128,14 @@
         "titleMax": "标题最多 100 字",
         "contentRequired": "内容不能为空",
         "contentMax": "内容最多 20000 字"
+      },
+      "applicationForm": {
+        "documentTooLarge": "申请表过大（{actualBytes} 字节 / {maxBytes} 字节上限）",
+        "forwardBranch": "第 {ruleIndex} 条分支规则的「{fieldKey}」依赖更后面的「{whenFieldKey}」，请调整顺序或删除规则",
+        "duplicateKey": "题目标识「{key}」重复",
+        "thresholdWithoutCorrect": "设置了通过分但没有任何题目标记正确选项",
+        "invalidVersion": "申请表版本不支持（version={version}）",
+        "labelModerationFailed": "题目或选项标签未通过内容审核（{failedField}）"
       }
     },
     "api": {
@@ -128,20 +147,9 @@
         "notAuthenticated": "请先登录",
         "userNotFound": "用户不存在",
         "banned": "账号已被封禁",
-        "credentials": "邮箱或密码错误",
+        "misskeyFailed": "咖啡厅授权失败",
         "loginFailed": "登录失败",
         "logoutFailed": "登出失败",
-        "registerRateLimited": "今日注册请求次数已达上限，请明天再试",
-        "registerConflict": "注册失败，请重试",
-        "codeTooManyAttempts": "验证码错误次数过多，请稍后再试",
-        "codeInvalidOrExpired": "验证码错误或已过期",
-        "registerSuccess": "注册成功",
-        "sendCooldown": "发送过于频繁，请 60 秒后再试",
-        "ipDailyLimit": "当前 IP 今日发送次数已达上限",
-        "resetMailSent": "如果该邮箱已注册，你将收到重置邮件",
-        "resetFailed": "重置失败，请重试",
-        "resetSuccess": "密码已重置",
-        "codeSent": "验证码已发送",
         "forbidden": "无权限"
       },
       "servers": {
@@ -177,27 +185,7 @@
         "inviteAlreadyMember": "你已经是该服务器成员",
         "invalidMemberIdFormat": "无效的成员 ID 格式",
         "memberNotFound": "成员不存在",
-        "verifyTokenRequired": "请先获取验证码后再验证",
-        "verifyTokenNotYours": "验证码不是你生成的，请重新获取后再验证",
-        "verifyTokenExpired": "验证码已过期，请重新获取后再验证",
-        "verifyInstruction": "请将此 Token 添加到服务器 MOTD 中",
-        "verifyCurrentOwnerHint": "该服务器已有管理员，认领成功后所有权将转移给你",
-        "verifyFailedGeneric": "验证未通过",
-        "verifyReasonNoToken": "MOTD 中未找到验证码",
-        "verifyReasonServerNotFound": "服务器不存在",
-        "verifyReasonTokenUpdated": "验证码已更新，请重新获取后再验证",
-        "verifyReasonTokenMissingClaimer": "当前验证码缺少认领者，请重新获取",
-        "verifyReasonTokenExpired": "验证码已过期，请重新生成",
-        "verifyReasonServerOffline": "服务器离线，无法验证",
-        "verifySuccessNewOwner": "验证通过！你已成为该服务器的新管理员。",
-        "verifySuccessClaimed": "验证通过！你已成功认领该服务器。",
-        "verifyTimeout": "验证超时，请确认 Worker 已运行后重试",
-        "verifyInvalidResult": "验证任务返回了无效结果",
         "unauthorized": "未授权",
-        "claimKeyExpired": "认领密钥已过期，请重新生成",
-        "claimIpMismatch": "请求来源 IP 与服务器地址不匹配",
-        "claimKeyConflict": "已有其他用户正在进行认领",
-        "claimKeyGenerated": "认领密钥已生成，请妥善保存。认领成功后此密钥将成为服务器 API Key。",
         "apiKeyGenerated": "API Key 已生成，请妥善保存。此密钥仅显示一次。",
         "modpackRequireVerified": "请先完成服务器认领认证，再上传整合包",
         "modpackFileRequired": "请选择要上传的 .mrpack 文件",
@@ -302,119 +290,42 @@
         "serverRejected": "服务器已拒绝",
         "serverReviewed": "已标记为已巡检",
         "serverDeleted": "服务器已删除",
+        "serverVerifiedSet": "认领状态已更新",
+        "serverOwnerSet": "服务器管理员已更新",
+        "ownerNotFound": "指定用户不存在",
+        "nothingToUpdate": "未提供任何可更新的字段",
         "userBanned": "用户已封禁",
         "userUnbanned": "用户已解封",
         "reportDismissed": "已驳回",
         "reportResolved": "已处理"
+      },
+      "applications": {
+        "formChangedSinceRejection": "服主已更新申请表，请重新查看后再提交",
+        "duplicateActiveApplication": "已有进行中的申请，请勿重复提交"
       }
+    },
+    "moderation": {
+      "ad": "包含广告内容",
+      "porn": "包含色情内容",
+      "politics": "包含敏感内容",
+      "abuse": "包含辱骂内容",
+      "contraband": "包含违禁内容",
+      "flood": "包含灌水内容",
+      "unknown": "包含违规内容"
     }
   },
   "auth": {
     "login": {
       "metaTitle": "登录",
       "title": "登录 PudCraft",
-      "subtitle": "使用邮箱和密码登录你的账号",
-      "emailLabel": "邮箱",
-      "emailPlaceholder": "you@example.com",
-      "passwordLabel": "密码",
-      "showPassword": "显示",
-      "hidePassword": "隐藏",
-      "forgotLink": "忘记密码？",
-      "submit": "登录",
-      "submitting": "登录中...",
-      "noAccount": "没有账号？",
-      "registerLink": "去注册",
+      "subtitle": "使用咖啡厅账号登录",
+      "loginWithMisskey": "用咖啡厅登录",
+      "misskeyNotice": "登录将跳转到我们的咖啡厅实例完成授权",
       "errors": {
-        "invalidEmail": "请输入有效邮箱",
-        "passwordRequired": "请输入密码",
-        "formInvalid": "请检查邮箱和密码格式",
         "banned": "账号已被封禁",
-        "credentials": "邮箱或密码错误",
-        "generic": "登录失败，请稍后重试"
-      },
-      "toasts": {
-        "registered": "注册成功，请登录",
-        "reset": "密码已重置，请用新密码登录"
-      }
-    },
-    "register": {
-      "metaTitle": "注册",
-      "title": "注册 PudCraft 账号",
-      "subtitleStepOne": "填写邮箱和密码后获取验证码",
-      "subtitleStepTwo": "输入邮箱验证码完成注册",
-      "emailLabel": "邮箱",
-      "emailPlaceholder": "you@example.com",
-      "passwordLabel": "密码",
-      "passwordPlaceholder": "至少 8 位",
-      "confirmPasswordLabel": "确认密码",
-      "confirmPasswordPlaceholder": "再次输入密码",
-      "showPassword": "显示",
-      "hidePassword": "隐藏",
-      "sendCode": "发送验证码",
-      "sendingCode": "发送中...",
-      "codeSentTo": "验证码已发送到",
-      "codeLabel": "验证码",
-      "codePlaceholder": "请输入 6 位数字验证码",
-      "submit": "注册",
-      "submitting": "注册中...",
-      "resend": "重新发送",
-      "resendIn": "重新发送 ({cooldown}s)",
-      "haveAccount": "已有账号？",
-      "loginLink": "去登录",
-      "errors": {
-        "invalidEmail": "请输入有效邮箱",
-        "passwordMin": "密码至少 8 位",
-        "confirmPasswordRequired": "请再次输入密码",
-        "passwordMismatch": "两次输入的密码不一致",
-        "codeFormat": "验证码必须是 6 位数字",
-        "stepOneInvalid": "请检查邮箱和密码输入",
-        "codeInvalid": "验证码格式不正确",
-        "sendFailed": "验证码发送失败，请稍后再试",
-        "submitFailed": "注册失败，请稍后再试",
-        "network": "网络异常，请稍后重试"
-      },
-      "toasts": {
-        "codeSent": "验证码已发送，请查收邮箱",
-        "codeResent": "验证码已重新发送，请查收邮箱"
-      }
-    },
-    "forgot": {
-      "metaTitle": "找回密码",
-      "titleStepOne": "找回密码",
-      "titleStepTwo": "重置密码",
-      "subtitleStepOne": "请输入你的注册邮箱，我们会发送验证码帮你重置密码。",
-      "subtitleStepTwo": "验证码已发送到 {email}",
-      "emailLabel": "邮箱",
-      "emailPlaceholder": "you@example.com",
-      "codeLabel": "验证码",
-      "codePlaceholder": "请输入 6 位数字验证码",
-      "newPasswordLabel": "新密码",
-      "newPasswordPlaceholder": "至少 8 位",
-      "confirmPasswordLabel": "确认密码",
-      "confirmPasswordPlaceholder": "再次输入新密码",
-      "showPassword": "显示",
-      "hidePassword": "隐藏",
-      "sendCode": "发送验证码",
-      "sendingCode": "发送中...",
-      "resend": "重新发送",
-      "resendIn": "重新发送 ({cooldown}s)",
-      "submit": "重置密码",
-      "submitting": "重置中...",
-      "rememberPrompt": "想起密码了？",
-      "loginLink": "去登录",
-      "errors": {
-        "invalidEmail": "请输入有效邮箱",
-        "codeFormat": "验证码必须是 6 位数字",
-        "passwordMin": "密码至少 8 位",
-        "confirmPasswordRequired": "请再次输入密码",
-        "passwordMismatch": "两次输入的密码不一致",
-        "resetFormInvalid": "请检查验证码和密码输入",
-        "sendFailed": "验证码发送失败，请稍后再试",
-        "submitFailed": "密码重置失败，请稍后重试",
-        "network": "网络异常，请稍后重试"
-      },
-      "toasts": {
-        "codeSentIfRegistered": "如果该邮箱已注册，验证码已发送"
+        "misskeyFailed": "咖啡厅授权失败，请重试",
+        "misskeyUnconfigured": "咖啡厅实例尚未配置",
+        "signinFailed": "登录失败，请稍后重试"
       }
     }
   },
@@ -426,6 +337,29 @@
       "metaListDescription": "浏览国内优质 Minecraft 私人服务器，找到适合你的社区。",
       "heroTitle": "发现 Minecraft 服务器",
       "heroSubtitle": "浏览国内优质私人服务器，找到志同道合的玩家",
+      "heroEyebrow": "{servers} 个服务器在线 · {players} 名玩家活跃",
+      "heroTitleLeft": "找到你的",
+      "heroTitleHighlight": "下一个家",
+      "heroTitleTrail": "从这里开始。",
+      "heroSubtext": "Pudcraft 是面向中文 Minecraft 玩家的开放服务器目录。原版生存、模组冒险、PVP 竞技、像素 RPG —— 由社区维护，免费认领。",
+      "heroBrowseCta": "浏览服务器",
+      "heroSubmitCta": "提交我的服务器",
+      "heroStatServers": "服务器总数",
+      "heroStatPlayers": "活跃玩家",
+      "heroStatOnline": "当前在线",
+      "heroAddressHidden": "地址隐藏",
+      "heroWidgetDaySuffix": "日",
+      "heroWidgetTodayLabel": "今天",
+      "heroWidgetMonthLabel": "本月",
+      "heroWidgetYearLabel": "今年",
+      "heroWidgetPulseLabel": "社区脉动",
+      "heroWidgetPulseHint": "实时",
+      "heroWidgetStatOnlineServers": "在线服务器",
+      "heroWidgetStatActivePlayers": "活跃玩家",
+      "heroWidgetStatTotalServers": "服务器总数",
+      "heroWidgetStatOnlineRatio": "在线占比",
+      "heroWidgetFeaturedHeading": "今日精选",
+      "resultsCount": "显示 {count} 个服务器",
       "websiteSchemaDescription": "PudCraft Minecraft 服务器社区，浏览服务器、筛选标签、搜索关键词",
       "tagAll": "全部",
       "tagSurvival": "生存",
@@ -448,9 +382,13 @@
       "paginationNavLabel": "分页导航",
       "paginationPrev": "上一页",
       "paginationNext": "下一页",
+      "headerSearchKbd": "⌘K",
+      "browseTitle": "浏览服务器",
+      "browseSubtitle": "按模式筛选 · 实时人数 · 玩家社区认领",
+      "browseViewAll": "查看全部 →",
       "searchBarPlaceholder": "搜索服务器名称、描述，或输入 PSID / UID 直达...",
       "searchBarClearLabel": "清空搜索",
-      "headerSearchPlaceholder": "搜索服务器...",
+      "headerSearchPlaceholder": "搜索服务器、玩家、整合包",
       "headerSearchPlaceholderShort": "搜索服务器",
       "headerSearchInputAriaLabel": "搜索服务器",
       "headerSearchSubmit": "搜索",
@@ -470,10 +408,7 @@
       "iconAlt": "{name} 图标",
       "actionEdit": "编辑",
       "actionManageModpacks": "整合包管理",
-      "actionClaim": "认领此服务器",
       "actionOpenConsole": "打开控制台",
-      "actionClaimAfterLogin": "登录后认领",
-      "actionReclaim": "我是服主，重新认领",
       "actionMoreAriaLabel": "更多操作",
       "badgeApplyRequired": "需申请加入",
       "badgePrivate": "私密服务器",
@@ -537,6 +472,7 @@
       "cardStatusOnline": "在线",
       "cardStatusOffline": "离线",
       "cardBadgeVerified": "已认领",
+      "cardBadgeFeatured": "★ 推荐",
       "cardBadgeApply": "需申请",
       "cardBadgeInvite": "邀请制",
       "reportTitle": "举报",
@@ -684,86 +620,6 @@
       "tagVanilla": "原版",
       "tagBedrock": "基岩版"
     },
-    "verify": {
-      "loadFailed": "加载认领状态失败",
-      "loadFailedRetry": "加载认领状态失败，请稍后重试",
-      "serverFallback": "该服务器",
-      "notFoundOrDeleted": "服务器不存在或已被删除",
-      "backToDetail": "返回服务器详情",
-      "heading": "认领服务器「{name}」",
-      "description": "认领通过后你将成为该服务器管理员，并获得「已认领」标识。",
-      "anotherOwnerNotice": "该服务器已被其他用户认领。你可以通过验证服务器所有权来重新认领。",
-      "ownedByYou": "该服务器已由你认领。",
-      "verifiedAtLabel": "验证时间：",
-      "goConsole": "前往控制台",
-      "tabMotd": "MOTD 认领",
-      "tabPlugin": "插件认领",
-      "motd": {
-        "conflictHint": "当前已有其他用户在认领该服务器。你重新获取验证码会覆盖之前的认领流程。",
-        "stepsHeading": "认领步骤：",
-        "step1": "点击下方按钮获取验证码",
-        "step2": "将验证码添加到 server.properties 的 motd= 行",
-        "step3": "重启服务器使 MOTD 生效，然后回到本页点击「开始验证」",
-        "step4": "验证通过后可移除 MOTD 中的验证码",
-        "generateBtn": "获取验证码",
-        "generatingBtn": "生成中...",
-        "generateFailed": "获取验证码失败",
-        "regenerate": "重新获取验证码",
-        "tokenHeading": "你的验证码：",
-        "configTitle": "请将验证码添加到 server.properties 文件中的 motd= 行：",
-        "configExample": "motd=你的原始MOTD {token}",
-        "configNote": "注意：修改 MOTD 后必须重启服务器，变更才会生效。",
-        "expired": "验证码已过期，请重新获取。",
-        "remainingTime": "验证码有效期：还剩 {time}",
-        "remainingUnit": "{minutes} 分 {seconds} 秒",
-        "startVerify": "开始验证",
-        "verifying": "验证中...",
-        "verifyingNote": "正在连接服务器，请稍候...",
-        "networkError": "网络异常，获取验证码失败",
-        "verifyNetworkError": "网络异常，验证失败",
-        "verifyFailedTitle": "验证未通过",
-        "verifyFailedReason": "原因：{reason}",
-        "verifyFailedChecklist": "请确认：验证码已写入 MOTD、服务器已重启、服务器当前在线。",
-        "retryVerify": "重试验证",
-        "forbidden": "无权限操作",
-        "tokenNotYours": "该验证码不属于当前账号",
-        "genericError": "验证未通过",
-        "alreadyClaimed": "服务器已认领，无需重复验证",
-        "defaultInstruction": "验证码已生成，请将其写入 MOTD 后开始验证",
-        "defaultSuccess": "验证通过！你的服务器已获得认领标识。",
-        "copy": "复制",
-        "copied": "已复制",
-        "copyFailed": "复制失败，请手动复制"
-      },
-      "plugin": {
-        "conflictHint": "当前已有其他用户在认领该服务器。生成新密钥会覆盖之前的认领流程。",
-        "stepsHeading": "认领步骤：",
-        "step1": "点击下方按钮生成认领密钥",
-        "step2": "在你的 Minecraft 服务器中安装 Pudcraft 插件",
-        "step3": "将认领密钥和服务器 ID 填入插件配置文件",
-        "step4": "启动 / 重启 Minecraft 服务器，插件会自动完成认领",
-        "ipNote": "认领需要从服务器本机发起请求，系统会校验请求来源 IP 是否与服务器地址一致。",
-        "serverIdHeading": "服务器 ID：",
-        "keyHeading": "认领密钥（仅显示一次）：",
-        "keyHint": "请立即复制并保存。认领成功后此密钥将成为服务器的 API Key，后续无需再次获取。",
-        "keyGenerated": "认领密钥已生成",
-        "keyWaiting": "等待插件从服务器发起认领请求...",
-        "expired": "认领密钥已过期，请重新生成。",
-        "remainingTime": "密钥有效期：还剩 {time}",
-        "generate": "生成认领密钥",
-        "generating": "生成中...",
-        "regenerate": "重新生成密钥",
-        "configExampleTitle": "插件配置示例：",
-        "configKeyFallback": "pdc_你的认领密钥",
-        "configUrlFallback": "https://your-domain.com",
-        "conflict": "服务器已被认领",
-        "generateFailed": "生成失败，请稍后重试",
-        "networkError": "网络异常，生成失败",
-        "copy": "复制",
-        "copied": "已复制",
-        "copyFailed": "复制失败，请手动复制"
-      }
-    },
     "apply": {
       "notAcceptingApplication": "该服务器不接受入服申请",
       "serverNotFound": "服务器未找到",
@@ -795,7 +651,16 @@
       "submitFailed": "提交失败，请稍后重试",
       "networkSubmitError": "网络异常，请稍后重试",
       "successTitle": "申请已提交",
-      "successHint": "请等待服主审核，审核结果将通过站内通知告知。"
+      "successHint": "请等待服主审核，审核结果将通过站内通知告知。",
+      "evaluation": {
+        "rejectedHardDisqualifyWithReason": "申请未通过：第「{fieldLabel}」题的答案不满足前置条件",
+        "rejectedHardDisqualifyGeneric": "申请未通过",
+        "rejectedScoreWithDetails": "得分 {score} / {passingScore}，未达通过分",
+        "rejectedScoreGeneric": "申请未通过",
+        "pendingReview": "申请已提交，等待服主审核",
+        "formChangedSinceRejection": "服主已更新申请表，请重新查看后再提交",
+        "duplicateActiveApplication": "已有进行中的申请，请勿重复提交"
+      }
     },
     "join": {
       "featureDisabledHeading": "当前未开放邀请码加入",
@@ -952,36 +817,29 @@
       "metaDisplayNameFallback": "用户",
       "metaDescription": "{name} 的 PudCraft 主页",
       "displayNameFallback": "用户",
-      "uidLabel": "UID",
+      "misskeyIdLabel": "咖啡厅 ID",
       "bioEmpty": "这个用户还没有填写个人简介。",
       "registeredAt": "注册于 {time}",
-      "editProfile": "编辑资料",
+      "editProfile": "查看资料",
       "serversHeading": "提交的服务器",
       "serversEmptyTitle": "暂无服务器",
       "serversEmptyDescription": "该用户还没有提交服务器"
     },
     "settings": {
-      "metaTitle": "个人资料设置",
-      "heading": "个人资料设置",
-      "subtitle": "设置头像、昵称和一句话简介。",
+      "metaTitle": "个人资料",
+      "heading": "个人资料",
+      "misskeySyncNotice": "资料从咖啡厅同步，每次登录自动更新。",
       "loadingText": "资料加载中...",
       "redirectingToLogin": "正在跳转到登录页...",
       "avatarLabel": "头像",
       "nameLabel": "昵称",
-      "namePlaceholder": "输入昵称（2-20 字）",
-      "emailLabel": "邮箱（不可修改）",
+      "namePlaceholder": "未设置",
+      "misskeyHandleLabel": "咖啡厅用户名",
+      "misskeyIdLabel": "咖啡厅 ID",
       "bioLabel": "个人简介",
-      "bioPlaceholder": "一句话介绍自己...",
-      "bioCounter": "{count}/200",
-      "save": "保存修改",
-      "saving": "保存中...",
-      "nameRange": "昵称长度需在 2-20 个字符之间",
-      "bioMax": "简介最多 200 字",
+      "bioPlaceholder": "（无简介）",
       "loadFailed": "资料加载失败",
-      "networkLoadFailed": "网络异常，资料加载失败",
-      "saveFailed": "保存失败，请稍后重试",
-      "saveSuccess": "资料已更新",
-      "networkSaveFailed": "网络异常，保存失败"
+      "networkLoadFailed": "网络异常，资料加载失败"
     }
   },
   "notifications": {
@@ -1057,6 +915,7 @@
       "displayNameFallback": "已登录用户"
     },
     "sidebar": {
+      "dashboard": "仪表盘",
       "myServers": "我的服务器",
       "subtitleHasServers": "切换服务器后查看对应控制台数据",
       "subtitleNoServers": "你还没有可管理的服务器",
@@ -1073,6 +932,42 @@
       "description": "你目前还没有可管理的服务器。先提交一个服务器，审核通过后即可在控制台查看趋势数据和管理操作。",
       "submitServer": "提交新服务器",
       "backHome": "返回首页"
+    },
+    "dashboard": {
+      "heading": "仪表盘",
+      "greeting": "早安，{name} · 你管理着 {count} 个服务器",
+      "submitServer": "+ 添加服务器",
+      "kpiOnlineNow": "当前在线",
+      "kpiOnlineNowSub": "在线 {online}/{total} 个服务器",
+      "kpiServers": "我的服务器",
+      "kpiServersSub": "{online} 个在线",
+      "kpiVerified": "已认领",
+      "kpiVerifiedSub": "{unclaimed} 个待认领",
+      "kpiPending": "待处理",
+      "kpiPendingSub": "申请与告警合计",
+      "serversTitle": "我的服务器",
+      "serversCount": "共 {count} 个 · 实时心跳",
+      "serversEmptyTitle": "暂无服务器",
+      "serversEmptyHint": "提交一个服务器后会出现在这里。",
+      "colServer": "服务器",
+      "colStatus": "状态",
+      "colOnline": "在线",
+      "colVersion": "版本",
+      "manage": "管理",
+      "verifiedBadge": "已认领",
+      "statusOnline": "在线",
+      "statusOffline": "离线",
+      "addressHidden": "地址隐藏",
+      "tasksTitle": "待处理 ({count})",
+      "tasksEmptyTitle": "无待处理事项",
+      "tasksEmptyHint": "新申请或告警会出现在这里。",
+      "taskAction": "查看",
+      "taskServerOffline": "{name} · 服务器离线，请检查节点连接",
+      "taskApplication": "{name} · {applicant} 申请加入",
+      "activityTitle": "最近事件",
+      "activitySeeAll": "事件中心 →",
+      "activityEmptyTitle": "暂无事件",
+      "activityEmptyHint": "服务器状态变化与玩家活动会出现在这里。"
     },
     "stats": {
       "peakTime": "{time}",
@@ -1123,7 +1018,14 @@
       "reviewRejectedTitle": "审核未通过",
       "reviewRejectReason": "原因：{reason}",
       "reviewRejectReasonMissing": "管理员未填写具体原因，请修改后重新提交。",
-      "reviewRejectEditLink": "去编辑并重新提交"
+      "reviewRejectEditLink": "去编辑并重新提交",
+      "tabOverview": "概览",
+      "tabSettings": "设置",
+      "tabMembers": "成员",
+      "tabIntegration": "集成",
+      "settingsMetaTitle": "设置",
+      "membersMetaTitle": "成员管理",
+      "integrationMetaTitle": "集成"
     },
     "members": {
       "title": "成员管理",
@@ -1234,7 +1136,6 @@
       "title": "服务器管理",
       "editInfo": "编辑信息",
       "verifiedBadge": "✓ 已认领",
-      "goVerify": "去认领",
       "viewPublic": "查看公开详情页 ↗",
       "delete": "删除服务器"
     },
@@ -1266,7 +1167,14 @@
       "cancelReject": "取消",
       "approveAction": "通过",
       "rejectAction": "拒绝",
-      "processing": "处理中..."
+      "processing": "处理中...",
+      "badge": {
+        "hardDisqualify": "硬否决（{fieldLabel}）",
+        "scoreBelowThreshold": "分数未达 ({score} / {passingScore})",
+        "passedAutoScreen": "通过自动筛选 ({score} / {passingScore})",
+        "awaitingReview": "待审核",
+        "noEvaluation": "无评估"
+      }
     },
     "settings": {
       "title": "隐私与加入设置",
@@ -1311,6 +1219,58 @@
       "saving": "保存中...",
       "saved": "设置已保存",
       "saveFailed": "保存失败"
+    },
+    "applicationForm": {
+      "editor": {
+        "field": {
+          "dragHandleAria": "拖动以重新排序",
+          "duplicate": "复制此题",
+          "delete": "删除此题",
+          "addField": "添加题目",
+          "maxFieldsReached": "已达到最大题数 {max}"
+        },
+        "option": {
+          "label": "选项文本",
+          "value": "选项标识",
+          "correctLabel": "正确选项",
+          "pointsLabel": "分值",
+          "autoRejectLabel": "选这个直接拒绝",
+          "add": "添加选项",
+          "remove": "移除选项"
+        },
+        "formSettings": {
+          "heading": "表单设置",
+          "passingScoreLabel": "通过分阈值",
+          "passingScoreHint": "总分低于此值的申请会被自动拒绝；留空则不启用自动拒",
+          "passingScoreUnset": "未设置（不自动拒绝）",
+          "showScoreLabel": "被拒时向玩家显示分数",
+          "showReasonLabel": "被拒时向玩家显示具体原因"
+        },
+        "branching": {
+          "heading": "条件分支",
+          "addRule": "添加条件",
+          "whenLabel": "当哪个题目",
+          "allowedValuesLabel": "选了哪些选项",
+          "removeRule": "删除条件",
+          "autoDropOnReorder": "「{fieldLabel}」依赖的「{whenFieldLabel}」已被移到它后面，规则已自动移除",
+          "autoDropUndo": "撤销",
+          "invalidRuleBanner": "存在无效的分支规则，请处理",
+          "invalidRuleAutoDrop": "自动移除",
+          "invalidRuleKeepDisabled": "保留但禁用"
+        },
+        "preview": {
+          "heading": "实时预览",
+          "outcomeHardDisqualify": "预测结果：将因「{fieldLabel}」直接被拒",
+          "outcomeScoreBelow": "预测结果：得分 {score} / {passingScore} 未达通过分",
+          "outcomePending": "预测结果：通过自动筛选，进入人工审核",
+          "previewAnswersHeading": "预览作答",
+          "fillToSeeOutcome": "填写预览答案后查看判定"
+        },
+        "size": {
+          "readout": "表单大小 {actualKb} KB / {maxKb} KB",
+          "warning": "表单太大（{actualKb} KB > {maxKb} KB），请精简标签或减少选项"
+        }
+      }
     }
   },
   "admin": {
@@ -1392,18 +1352,26 @@
       "rejectSuccess": "服务器已拒绝",
       "reviewedSuccess": "已标记为已巡检",
       "deleteSuccess": "服务器已删除",
-      "deleteFailed": "删除失败"
+      "deleteFailed": "删除失败",
+      "actionVerify": "设为已认领",
+      "actionUnverify": "取消认领",
+      "verifySuccess": "认领状态已更新",
+      "ownerLabel": "管理员 ID",
+      "ownerPlaceholder": "输入用户 ID",
+      "actionSetOwner": "设定管理员",
+      "ownerSuccess": "管理员已更新",
+      "ownerInputLabel": "指定服务器管理员"
     },
     "users": {
       "heading": "用户管理",
       "tabAll": "全部",
       "tabNormal": "正常",
       "tabBanned": "已封禁",
-      "searchPlaceholder": "搜索用户名或邮箱...",
+      "searchPlaceholder": "搜索显示名、咖啡厅 ID 或用户名...",
       "searchSubmit": "搜索",
       "empty": "暂无数据",
       "colUser": "用户",
-      "colEmail": "邮箱",
+      "colMisskey": "咖啡厅用户名",
       "colServers": "服务器",
       "colComments": "评论",
       "colCreatedAt": "注册时间",
@@ -1623,24 +1591,6 @@
       "submitSuccess": "举报已提交，感谢反馈",
       "submitFailed": "举报提交失败，请稍后重试",
       "networkError": "网络异常，举报提交失败"
-    }
-  },
-  "email": {
-    "verifyCode": {
-      "subject": "PudCraft 邮箱验证码",
-      "heading": "PudCraft 邮箱验证",
-      "greeting": "你好，你正在进行邮箱验证。",
-      "instruction": "请在页面中输入以下 6 位验证码：",
-      "validity": "验证码 10 分钟内有效，请勿泄露给他人。",
-      "textBody": "你的验证码是 {code}，10 分钟内有效。"
-    },
-    "resetPassword": {
-      "subject": "PudCraft 密码重置验证码",
-      "heading": "PudCraft 密码重置",
-      "greeting": "你正在重置 PudCraft 账号密码。",
-      "instruction": "请在页面中输入以下 6 位验证码：",
-      "validity": "验证码 10 分钟内有效。如果这不是你的操作，请忽略此邮件。",
-      "textBody": "你正在重置 PudCraft 账号密码，验证码为 {code}，10 分钟内有效。如果这不是你的操作，请忽略此邮件。"
     }
   }
 }

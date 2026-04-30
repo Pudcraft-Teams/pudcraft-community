@@ -40,6 +40,8 @@ export default function AdminServersPage() {
   const [rejectReason, setRejectReason] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [ownerInputId, setOwnerInputId] = useState<string | null>(null);
+  const [ownerInput, setOwnerInput] = useState("");
 
   const formatTimeAgo = useCallback(
     (dateStr: string): string => {
@@ -210,6 +212,51 @@ export default function AdminServersPage() {
     }
   };
 
+  const handleToggleVerified = async (id: string, currentValue: boolean) => {
+    setActionLoading(id);
+    try {
+      const res = await fetch(`/api/admin/servers/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isVerified: !currentValue }),
+      });
+      if (!res.ok) {
+        const json = (await res.json()) as { error?: string };
+        throw new Error(json.error ?? t("actionFailed"));
+      }
+      toast.success(t("verifySuccess"));
+      await fetchServers();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("actionFailed"));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleSetOwner = async (id: string) => {
+    const trimmed = ownerInput.trim();
+    setActionLoading(id);
+    try {
+      const res = await fetch(`/api/admin/servers/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ownerId: trimmed || null }),
+      });
+      if (!res.ok) {
+        const json = (await res.json()) as { error?: string };
+        throw new Error(json.error ?? t("actionFailed"));
+      }
+      toast.success(t("ownerSuccess"));
+      setOwnerInputId(null);
+      setOwnerInput("");
+      await fetchServers();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("actionFailed"));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1);
@@ -310,7 +357,7 @@ export default function AdminServersPage() {
                     </td>
                     <td className="hidden px-4 py-3 md:table-cell">
                       <span className="text-xs text-warm-500">
-                        {server.ownerName || server.ownerEmail || "—"}
+                        {server.ownerName || (server.ownerHandle ? `@${server.ownerHandle}` : "—")}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -423,7 +470,7 @@ export default function AdminServersPage() {
                   {expandedId === server.id && (
                     <tr className="bg-warm-50">
                       <td colSpan={7} className="px-4 py-3">
-                        <div className="space-y-2 text-sm">
+                        <div className="space-y-3 text-sm">
                           <div>
                             <span className="font-medium text-warm-800">
                               {t("detailDescriptionLabel")}
@@ -443,6 +490,61 @@ export default function AdminServersPage() {
                             ) : (
                               <span className="text-warm-500">{t("detailEmpty")}</span>
                             )}
+                          </div>
+                          {/* Admin controls: isVerified toggle + ownerId assignment */}
+                          <div className="flex flex-wrap items-start gap-4 border-t border-warm-200 pt-3">
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                disabled={actionLoading === server.id}
+                                onClick={() => handleToggleVerified(server.id, server.isVerified)}
+                                className={`rounded px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
+                                  server.isVerified
+                                    ? "bg-accent-muted text-accent-hover hover:bg-accent-muted/80"
+                                    : "bg-forest-light text-forest-dark hover:bg-forest-light/80"
+                                }`}
+                              >
+                                {server.isVerified ? t("actionUnverify") : t("actionVerify")}
+                              </button>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <span className="text-xs font-medium text-warm-600">{t("ownerInputLabel")}</span>
+                              {ownerInputId === server.id ? (
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="text"
+                                    value={ownerInput}
+                                    onChange={(e) => setOwnerInput(e.target.value)}
+                                    placeholder={t("ownerPlaceholder")}
+                                    className="m3-input w-48 text-xs"
+                                    autoFocus
+                                  />
+                                  <button
+                                    type="button"
+                                    disabled={actionLoading === server.id}
+                                    onClick={() => handleSetOwner(server.id)}
+                                    className="rounded bg-accent px-2 py-1 text-xs text-white hover:bg-accent-hover disabled:opacity-50"
+                                  >
+                                    {t("actionSetOwner")}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => { setOwnerInputId(null); setOwnerInput(""); }}
+                                    className="rounded bg-warm-100 px-2 py-1 text-xs text-warm-500 hover:bg-warm-200"
+                                  >
+                                    {t("cancel")}
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => { setOwnerInputId(server.id); setOwnerInput(server.ownerId ?? ""); }}
+                                  className="self-start rounded bg-warm-100 px-2 py-1 text-xs text-warm-600 hover:bg-warm-200"
+                                >
+                                  {server.ownerId ? `${t("ownerLabel")}: ${server.ownerId}` : t("actionSetOwner")}
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </td>

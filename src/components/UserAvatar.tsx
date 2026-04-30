@@ -7,7 +7,7 @@ import { normalizeImageSrc } from "@/lib/image-url";
 interface UserAvatarProps {
   src?: string | null;
   name?: string | null;
-  email?: string | null;
+  handle?: string | null;
   alt?: string;
   className?: string;
   fallbackClassName?: string;
@@ -18,8 +18,8 @@ function joinClassNames(...parts: Array<string | undefined>): string {
   return parts.filter(Boolean).join(" ");
 }
 
-function resolveInitial(name?: string | null, email?: string | null): string {
-  const source = name?.trim() || email?.trim() || "U";
+function resolveInitial(name?: string | null, handle?: string | null): string {
+  const source = name?.trim() || handle?.trim() || "U";
   return source.charAt(0).toUpperCase();
 }
 
@@ -30,14 +30,14 @@ function resolveInitial(name?: string | null, email?: string | null): string {
 export function UserAvatar({
   src,
   name,
-  email,
+  handle,
   alt,
   className = "h-10 w-10",
   fallbackClassName = "bg-gradient-to-br from-coral to-coral-amber text-white",
   showInitialFallback = false,
 }: UserAvatarProps) {
   const t = useTranslations("user.avatar");
-  const initial = resolveInitial(name, email);
+  const initial = resolveInitial(name, handle);
   const sharedClassName = joinClassNames(
     "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full",
     className,

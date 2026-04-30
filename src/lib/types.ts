@@ -50,8 +50,14 @@ export interface ServerDetail extends ServerListItem {
   favoriteCount: number;
   /** 非公开服务器是否出现在首页发现列表（仅 owner 可见） */
   discoverable?: boolean;
-  /** 申请表单配置（仅 owner 可见） */
-  applicationForm?: ApplicationFormField[] | null;
+  /**
+   * 申请表单配置（split-brain projection at API boundary）。
+   * - Owner / admin viewers receive the full `OwnerFormConfig` (gating data needed by the editor).
+   * - Apply-eligible non-owner viewers receive only the `PlayerFormView` projection (no gating data).
+   * - Other viewers (e.g. open / unlisted servers) receive `undefined`.
+   * See `pickPlayerFormView` and `src/app/api/servers/[id]/route.ts`.
+   */
+  applicationForm?: OwnerFormConfig | PlayerFormView | null;
   /** 是否已生成 API Key（仅 owner 可见） */
   hasApiKey?: boolean;
   createdAt: string;
@@ -107,7 +113,8 @@ export interface ServerDetailResponse {
 /** 评论作者信息 */
 export interface CommentAuthor {
   id: string;
-  uid: number;
+  misskeyId: string;
+  misskeyUsername: string;
   name: string | null;
   image: string | null;
 }
@@ -187,9 +194,9 @@ export interface MarkNotificationsReadResponse {
 /** 当前登录用户资料 */
 export interface CurrentUserProfile {
   id: string;
-  uid: number;
+  misskeyId: string;
+  misskeyUsername: string;
   name: string | null;
-  email: string;
   image: string | null;
   bio: string | null;
 }
@@ -202,7 +209,8 @@ export interface CurrentUserProfileResponse {
 /** 用户公开主页数据 */
 export interface PublicUserProfile {
   id: string;
-  uid: number;
+  misskeyId: string;
+  misskeyUsername: string;
   name: string | null;
   image: string | null;
   bio: string | null;
@@ -233,7 +241,7 @@ export interface AdminServerItem {
   isVerified: boolean;
   ownerId: string | null;
   ownerName: string | null;
-  ownerEmail: string | null;
+  ownerHandle: string | null;
   createdAt: string;
   reportCount?: number;
 }
@@ -241,9 +249,9 @@ export interface AdminServerItem {
 /** 管理后台 - 用户列表项 */
 export interface AdminUserItem {
   id: string;
-  uid: number;
+  misskeyId: string;
+  misskeyUsername: string;
   name: string | null;
-  email: string;
   image: string | null;
   role: string;
   isBanned: boolean;
@@ -323,14 +331,96 @@ export type ServerJoinMode = "open" | "apply" | "invite" | "apply_and_invite";
 export type ApplicationStatus = "pending" | "approved" | "rejected" | "cancelled";
 export type SyncStatus = "pending" | "pushed" | "acked" | "failed";
 
-/** Application form field configuration */
+/** Application form option (v1 canonical shape). Owner-authored. */
+export interface ApplicationFormOption {
+  /** Stable identifier used in answers / branching rules. */
+  value: string;
+  /** Display label (owner copy — moderated via `moderateFields` on save). */
+  label: string;
+  /** Per-option score awarded if selected. Server-side only; never reaches PlayerFormView. */
+  points?: number;
+  /** Mark as the "correct" choice for scoring purposes. Server-side only. */
+  correct?: boolean;
+  /** When `true`, selecting this option immediately auto-rejects the application. Server-side only. */
+  autoReject?: boolean;
+}
+
+/** Application form field configuration (v1 canonical). */
 export interface ApplicationFormField {
   key: string;
   label: string;
   type: "text" | "textarea" | "select" | "multiselect";
   required: boolean;
-  options?: string[];
+  /**
+   * Options are canonical `ApplicationFormOption[]` in v1. The runtime `normalizeApplicationFormOption`
+   * helper coerces legacy `string[]` shapes on read so v0 documents still work.
+   */
+  options?: ApplicationFormOption[];
   placeholder?: string;
+}
+
+/** Owner-configurable form-level settings. Server-side / owner-side only. */
+export interface ApplicationFormSettings {
+  /** Total below this auto-rejects. `null` disables threshold gate. */
+  passingScore: number | null;
+  /** When auto-rejected for score, show the score to the player. */
+  showScoreToPlayerOnReject: boolean;
+  /** When auto-rejected, show the structured reason (which field / threshold) to the player. */
+  showRejectReasonToPlayerOnReject: boolean;
+}
+
+/** Branching rule: a target field is shown only if the referenced earlier field's answer matches. */
+export interface ApplicationFormBranchRule {
+  /** Field that becomes conditionally visible. */
+  targetFieldKey: string;
+  /** Earlier field this rule reads. MUST be earlier in `fields[]` order. */
+  whenFieldKey: string;
+  /** Allowed answer values; OR-matched. For multiselect, ANY overlap counts as a match. */
+  allowedValues: string[];
+}
+
+/** Outcome of server-side evaluation. Persisted inside `ServerApplication.formData._evaluation`. */
+export interface ApplicationFormEvaluationResult {
+  result: "hard_disqualify" | "score_below_threshold" | "pending_review";
+  /** Total awarded points (only when fields with `correct` options exist). */
+  score?: number;
+  /** The threshold that was applied (mirrored from settings.passingScore at submit time). */
+  passingScore?: number | null;
+  /** For `hard_disqualify`, the field key whose answer triggered the disqualification. */
+  offendingFieldKey?: string;
+  /** ISO timestamp the evaluator ran. */
+  evaluatedAt: string;
+}
+
+/** Owner-side full document. Contains gating data — MUST NOT be served to non-owner viewers. */
+export interface OwnerFormConfig {
+  version: 1;
+  fields: ApplicationFormField[];
+  settings: ApplicationFormSettings;
+  branching: ApplicationFormBranchRule[];
+}
+
+/** Player-renderable option projection. No points, no correct flag, no autoReject. */
+export type PlayerFormOption = Pick<ApplicationFormOption, "value" | "label">;
+
+/** Player-renderable field projection. */
+export interface PlayerFormField {
+  key: string;
+  label: string;
+  type: "text" | "textarea" | "select" | "multiselect";
+  required: boolean;
+  options?: PlayerFormOption[];
+  placeholder?: string;
+}
+
+/**
+ * Player-side projection. Server projects to this at any non-owner API boundary that ships
+ * `applicationForm`. Excludes ALL gating data (points/correct/autoReject/passingScore/branching/transparency-toggles).
+ * See plan §"Two views, one document".
+ */
+export interface PlayerFormView {
+  version: 1;
+  fields: PlayerFormField[];
 }
 
 /** Server application list item */
@@ -342,6 +432,10 @@ export interface ServerApplicationItem {
   mcUsername: string;
   status: ApplicationStatus;
   formData: Record<string, string | string[]> | null;
+  /** Server-side evaluation outcome surfaced to owner UI. `null` for legacy v0 forms. */
+  evaluationResult: ApplicationFormEvaluationResult | null;
+  /** Hash of the form document at submit time. `null` for legacy applications submitted before this feature. */
+  formContentHash: string | null;
   reviewNote: string | null;
   reviewerName: string | null;
   createdAt: string;

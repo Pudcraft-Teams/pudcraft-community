@@ -1,17 +1,11 @@
 import { createHash } from "node:crypto";
-import NextAuth from "next-auth";
-import { CredentialsSignin } from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import bcrypt from "bcryptjs";
-import { db } from "@/lib/db";
-import { getClientIp } from "@/lib/request-ip";
-import { rateLimit } from "@/lib/rate-limit";
-import { getPublicUrl } from "@/lib/storage";
-import { loginSchema } from "@/lib/validation";
-import type { NextAuthConfig } from "next-auth";
 
-const BCRYPT_ROUNDS = 12;
+import { db } from "@/lib/db";
+import { verifyAndConsumeTicket } from "@/lib/auth-ticket";
+import { getUserImageUrl } from "@/lib/user-image";
+import type { NextAuthConfig } from "next-auth";
 
 class BannedUserError extends CredentialsSignin {
   code = "banned";
@@ -19,28 +13,33 @@ class BannedUserError extends CredentialsSignin {
 
 interface SessionTokenStateValidationInput {
   tokenSessionVersion: string | undefined;
-  latestPasswordHash: string;
+  lastLoginAt: Date | null;
   isBanned: boolean;
 }
 
-export function createPasswordSessionVersion(passwordHash: string): string {
-  return createHash("sha256").update(passwordHash).digest("hex");
+/**
+ * The session version is derived from the user's lastLoginAt. Each
+ * MiAuth login refreshes lastLoginAt, which invalidates any session
+ * that was issued from an earlier login. Admins can also force a
+ * logout by simply re-banning the user (isBanned causes invalidation).
+ */
+export function createLoginSessionVersion(lastLoginAt: Date | null): string {
+  const seed = lastLoginAt ? lastLoginAt.toISOString() : "no-login";
+  return createHash("sha256").update(seed).digest("hex");
 }
 
 export function isSessionTokenStateValid({
   tokenSessionVersion,
-  latestPasswordHash,
+  lastLoginAt,
   isBanned,
 }: SessionTokenStateValidationInput): boolean {
   if (isBanned) {
     return false;
   }
-
   if (!tokenSessionVersion) {
     return false;
   }
-
-  return tokenSessionVersion === createPasswordSessionVersion(latestPasswordHash);
+  return tokenSessionVersion === createLoginSessionVersion(lastLoginAt);
 }
 
 function invalidateToken() {
@@ -48,87 +47,67 @@ function invalidateToken() {
 }
 
 export const authConfig: NextAuthConfig = {
-  adapter: PrismaAdapter(db),
   session: { strategy: "jwt" },
   providers: [
     Credentials({
-      // Labels here only surface in NextAuth's auto-generated sign-in
-      // fallback page. The real login UI is /login, which uses translated
-      // copy via `useTranslations`. Keep these English.
+      id: "misskey",
+      // The login flow only ever sends a single short-lived ticket
+      // produced by /api/auth/misskey/callback. The Misskey MiAuth
+      // session check, profile sync, and User upsert all happen there;
+      // authorize() merely validates and burns the ticket.
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
+        ticket: { label: "Ticket", type: "text" },
       },
-      authorize: async (credentials, request) => {
-        const clientIp = getClientIp(request);
-        const loginRate = await rateLimit(`login:${clientIp}`, 10, 15 * 60);
-        if (!loginRate.allowed) {
-          const rawPassword = typeof credentials?.password === "string" ? credentials.password : "";
-          await bcrypt.hash(rawPassword, BCRYPT_ROUNDS);
+      authorize: async (credentials) => {
+        const ticket = typeof credentials?.ticket === "string" ? credentials.ticket : "";
+        if (!ticket) {
           return null;
         }
-
-        const parsed = loginSchema.safeParse(credentials);
-        if (!parsed.success) {
+        const userId = await verifyAndConsumeTicket(ticket);
+        if (!userId) {
           return null;
         }
-
-        const { email, password } = parsed.data;
         const user = await db.user.findUnique({
-          where: { email },
+          where: { id: userId },
           select: {
             id: true,
             name: true,
-            email: true,
             image: true,
-            emailVerified: true,
-            passwordHash: true,
             isBanned: true,
           },
         });
-
         if (!user) {
-          await bcrypt.hash(password, BCRYPT_ROUNDS);
           return null;
         }
-
-        const passwordValid = await bcrypt.compare(password, user.passwordHash);
-        if (!passwordValid) {
-          return null;
-        }
-
-        if (!user.emailVerified) {
-          return null;
-        }
-
         if (user.isBanned) {
           throw new BannedUserError();
         }
-
         return {
           id: user.id,
           name: user.name,
-          email: user.email,
-          image: getPublicUrl(user.image),
+          image: getUserImageUrl(user.image),
         };
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
       }
 
       if (typeof token.id === "string") {
         const shouldRefreshProfile =
-          !!user || trigger === "update" || token.profileHydrated !== true || typeof token.uid !== "number";
+          !!user ||
+          trigger === "update" ||
+          token.profileHydrated !== true ||
+          typeof token.misskeyId !== "string";
 
         if (!user && !shouldRefreshProfile) {
           const latestSessionState = await db.user.findUnique({
             where: { id: token.id },
             select: {
-              passwordHash: true,
+              lastLoginAt: true,
               isBanned: true,
             },
           });
@@ -140,7 +119,7 @@ export const authConfig: NextAuthConfig = {
           const tokenStateValid = isSessionTokenStateValid({
             tokenSessionVersion:
               typeof token.sessionVersion === "string" ? token.sessionVersion : undefined,
-            latestPasswordHash: latestSessionState.passwordHash,
+            lastLoginAt: latestSessionState.lastLoginAt,
             isBanned: latestSessionState.isBanned,
           });
 
@@ -154,11 +133,11 @@ export const authConfig: NextAuthConfig = {
             where: { id: token.id },
             select: {
               name: true,
-              email: true,
               image: true,
               role: true,
-              uid: true,
-              passwordHash: true,
+              misskeyId: true,
+              misskeyUsername: true,
+              lastLoginAt: true,
               isBanned: true,
             },
           });
@@ -167,13 +146,13 @@ export const authConfig: NextAuthConfig = {
             return invalidateToken();
           }
 
-          const nextSessionVersion = createPasswordSessionVersion(latestUser.passwordHash);
+          const nextSessionVersion = createLoginSessionVersion(latestUser.lastLoginAt);
           const tokenStateValid =
             !!user ||
             isSessionTokenStateValid({
               tokenSessionVersion:
                 typeof token.sessionVersion === "string" ? token.sessionVersion : undefined,
-              latestPasswordHash: latestUser.passwordHash,
+              lastLoginAt: latestUser.lastLoginAt,
               isBanned: latestUser.isBanned,
             });
 
@@ -182,21 +161,12 @@ export const authConfig: NextAuthConfig = {
           }
 
           token.name = latestUser.name;
-          token.email = latestUser.email;
-          token.picture = getPublicUrl(latestUser.image);
+          token.picture = getUserImageUrl(latestUser.image);
           token.role = latestUser.role;
-          token.uid = latestUser.uid;
+          token.misskeyId = latestUser.misskeyId;
+          token.misskeyUsername = latestUser.misskeyUsername;
           token.sessionVersion = nextSessionVersion;
           token.profileHydrated = true;
-        }
-      }
-
-      if (trigger === "update" && session) {
-        if ("name" in session && (typeof session.name === "string" || session.name === null)) {
-          token.name = session.name;
-        }
-        if ("image" in session && (typeof session.image === "string" || session.image === null)) {
-          token.picture = session.image;
         }
       }
 
@@ -209,17 +179,17 @@ export const authConfig: NextAuthConfig = {
       if (session.user) {
         session.user.name = typeof token.name === "string" ? token.name : null;
       }
-      if (session.user && typeof token.email === "string") {
-        session.user.email = token.email;
-      }
       if (session.user && (typeof token.picture === "string" || token.picture === null)) {
         session.user.image = token.picture;
       }
       if (session.user) {
         session.user.role = typeof token.role === "string" ? token.role : "user";
       }
-      if (session.user && typeof token.uid === "number") {
-        session.user.uid = token.uid;
+      if (session.user && typeof token.misskeyId === "string") {
+        session.user.misskeyId = token.misskeyId;
+      }
+      if (session.user && typeof token.misskeyUsername === "string") {
+        session.user.misskeyUsername = token.misskeyUsername;
       }
       return session;
     },

@@ -1,9 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  buildStorageImageRemotePatterns,
-  isAllowedStorageImageUrl,
-} from "./storage-image-policy";
+import { buildStorageImageRemotePatterns, isAllowedStorageImageUrl } from "./storage-image-policy";
 
 test("buildStorageImageRemotePatterns follows endpoint-derived storage hosts when endpoint is configured", () => {
   const patterns = buildStorageImageRemotePatterns({
@@ -12,21 +9,18 @@ test("buildStorageImageRemotePatterns follows endpoint-derived storage hosts whe
     s3Endpoint: "https://objects.example.com/media",
   });
 
-  assert.deepEqual(
-    patterns,
-    [
-      {
-        protocol: "https",
-        hostname: "objects.example.com",
-        pathname: "/media/**",
-      },
-      {
-        protocol: "https",
-        hostname: "pudcraft.objects.example.com",
-        pathname: "/media/**",
-      },
-    ],
-  );
+  assert.deepEqual(patterns, [
+    {
+      protocol: "https",
+      hostname: "objects.example.com",
+      pathname: "/media/**",
+    },
+    {
+      protocol: "https",
+      hostname: "pudcraft.objects.example.com",
+      pathname: "/media/**",
+    },
+  ]);
 });
 
 test("buildStorageImageRemotePatterns includes regional AWS host only for region-only config", () => {
@@ -54,14 +48,8 @@ test("isAllowedStorageImageUrl rejects protocol-relative urls and enforces trust
 
   assert.equal(isAllowedStorageImageUrl("/uploads/circle.webp", env), true);
   assert.equal(isAllowedStorageImageUrl("//evil.example/circle.webp", env), false);
-  assert.equal(
-    isAllowedStorageImageUrl("https://cdn.example.com/storage/circle.webp", env),
-    true,
-  );
-  assert.equal(
-    isAllowedStorageImageUrl("https://cdn.example.com/other/circle.webp", env),
-    false,
-  );
+  assert.equal(isAllowedStorageImageUrl("https://cdn.example.com/storage/circle.webp", env), true);
+  assert.equal(isAllowedStorageImageUrl("https://cdn.example.com/other/circle.webp", env), false);
   assert.equal(
     isAllowedStorageImageUrl("https://objects.example.com/media/pudcraft/circle.webp", env),
     true,
@@ -150,4 +138,18 @@ test("storage image policy mirrors mixed S3 and OSS env fallback semantics", () 
     ),
     true,
   );
+});
+
+test("buildStorageImageRemotePatterns includes configured Misskey host for synced avatars", () => {
+  const patterns = buildStorageImageRemotePatterns({
+    misskeyHost: "misskey.example.com",
+  });
+
+  assert.deepEqual(patterns, [
+    {
+      protocol: "https",
+      hostname: "misskey.example.com",
+      pathname: "/**",
+    },
+  ]);
 });
