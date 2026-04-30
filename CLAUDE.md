@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Pudcraft Community is currently a server-only Minecraft server community platform. The live product surface only covers server discovery, submission, claiming, comments, favorites, private-server membership flow, notifications, changelog, and the admin console. Historical forum / MoltBook features have been removed from this branch and must not be treated as live capabilities, developed against, or documented as current behavior.
+Pudcraft Community is currently a server-only Minecraft server community platform. The live product surface only covers server discovery, submission (submit-and-own with auto content moderation), owner management via the console, comments, favorites, private-server membership flow, notifications, changelog, and the admin console. Historical forum / MoltBook features have been removed from this branch and must not be treated as live capabilities, developed against, or documented as current behavior.
 
 ## Read this first
 
@@ -46,16 +46,19 @@ Exceptions — keep as-is, do not rewrite:
 Current live scope:
 
 1. Server discovery and search: `/` and `/servers` share the server-list experience.
-2. Server submission and review: signed-in users can submit, admins approve before publishing.
-3. Server claiming and owner management: MOTD verification, settings, applications, invite codes, API keys, whitelist sync.
-4. Server interaction: comments, favorites, notifications, public changelog, reports.
-5. Native mobile support: `/api/mobile/session*` and `/api/mobile/inbox*`.
+2. Server submission: signed-in users submit a server; auto content moderation (Alibaba Cloud Green text + image) runs immediately. Pass → `reviewStatus = "approved"`, `ownerId = submitter`. Fail → `reviewStatus = "rejected"` with reason. No admin review step for new submissions; no server-connectivity check on submit.
+3. Owner management: submitter is automatically the owner. Owners manage their servers via `/console` and `/console/{serverId}` (tabs: Overview, Settings, Members, Integration). No MOTD claim/verify flow.
+4. Admin controls: `/admin/servers` lets admins set `ownerId` for legacy `ownerId=null` servers and toggle `isVerified` (official certification badge, writes `ModerationLog`). `isVerified` is admin-assigned only — no user-initiated verify flow.
+5. Server interaction: comments, favorites, notifications, public changelog, reports.
+
+Authentication: identities are sourced exclusively from a self-hosted Misskey instance via MiAuth (shown as "咖啡厅" in user-visible UI; code, routes, DB fields, and env vars keep "misskey"). There is no local password / email / verification-code flow; profile fields (name / avatar / bio / handle) and admin role are re-synced from Misskey on every login.
 
 Explicitly out of scope:
 
 - Circles
 - Post feed
 - Forum bookmarks / forum notifications
+- Native mobile API surface (`/api/mobile/*` was removed; mobile clients are deferred until a dedicated MiAuth mobile flow ships)
 - Anything that would restore removed surfaces such as `src/components/forum/*`, `/c/*`, `/post/*`, `/explore`, `/new`
 
 ## Stack
@@ -63,10 +66,9 @@ Explicitly out of scope:
 - Framework: Next.js 16.2.4 (App Router) + React 19.2.5 + TypeScript 5.9.3 (strict)
 - Styling: Tailwind CSS 3 + Warm Clay Community UI
 - Database: Prisma ORM 6.19.2 + PostgreSQL
-- Auth: Auth.js / NextAuth v5 beta (Credentials + JWT session)
+- Auth: NextAuth v5 beta (JWT session) backed by Misskey MiAuth (single self-hosted instance via `MISSKEY_HOST`); a short-lived HMAC ticket bridges the MiAuth callback into NextAuth's Credentials provider
 - Queue: BullMQ 5.74.1 + Redis (ioredis 5.10.1)
 - Realtime: a standalone WebSocket process used for whitelist-sync push
-- Email: Nodemailer 8.0.5
 - Package manager: pnpm 10.28.x
 - Runtime: production minimum Node.js 20.9+; this working tree is validated on Node.js 25.2.1
 
@@ -121,23 +123,23 @@ Commit messages use `<type>: <description>`, e.g. `feat:` / `fix:` / `refactor:`
 
 ## Directory layout
 
-| Directory | Responsibility | Do not put here |
-|---|---|---|
-| `src/app/` | Page containers and App Router routes | Business logic, database access |
-| `src/app/api/` | REST API Route Handlers | Page components |
-| `src/app/admin/` | Admin console pages | Regular user features |
-| `src/app/console/` | Owner console pages | Admin-only logic |
-| `src/app/servers/` | Server detail, apply, claim, edit, modpack pages | Generic business logic |
-| `src/components/` | Reusable UI components | Direct database access |
-| `src/components/console/` | Console-only interactive components | Shared logic beyond console layout |
-| `src/hooks/` | React hooks | Page routing, database access |
-| `src/lib/` | Business logic, data-access wrappers, validation, utilities | React components |
-| `src/i18n/` | `next-intl` config (`config.ts`, `request.ts`) | Message JSON, UI components |
-| `src/worker/` | ping / verify / sync background jobs | API Routes |
-| `src/ws/` | Whitelist-sync WebSocket service | Page components |
-| `messages/` | `next-intl` message bundles, one JSON per locale | Anything other than translation strings |
-| `prisma/` | Schema and migrations | Application UI code |
-| `docs/` | Live documents and archival material | Source implementation |
+| Directory                 | Responsibility                                              | Do not put here                         |
+| ------------------------- | ----------------------------------------------------------- | --------------------------------------- |
+| `src/app/`                | Page containers and App Router routes                       | Business logic, database access         |
+| `src/app/api/`            | REST API Route Handlers                                     | Page components                         |
+| `src/app/admin/`          | Admin console pages                                         | Regular user features                   |
+| `src/app/console/`        | Owner console pages                                         | Admin-only logic                        |
+| `src/app/servers/`        | Server detail, apply, edit, modpack pages                   | Generic business logic                  |
+| `src/components/`         | Reusable UI components                                      | Direct database access                  |
+| `src/components/console/` | Console-only interactive components                         | Shared logic beyond console layout      |
+| `src/hooks/`              | React hooks                                                 | Page routing, database access           |
+| `src/lib/`                | Business logic, data-access wrappers, validation, utilities | React components                        |
+| `src/i18n/`               | `next-intl` config (`config.ts`, `request.ts`)              | Message JSON, UI components             |
+| `src/worker/`             | ping / verify / sync background jobs                        | API Routes                              |
+| `src/ws/`                 | Whitelist-sync WebSocket service                            | Page components                         |
+| `messages/`               | `next-intl` message bundles, one JSON per locale            | Anything other than translation strings |
+| `prisma/`                 | Schema and migrations                                       | Application UI code                     |
+| `docs/`                   | Live documents and archival material                        | Source implementation                   |
 
 ## Live page routes
 
@@ -149,21 +151,23 @@ User / public pages:
 - `/servers/{id}`: server detail
 - `/servers/{id}/apply`: apply to a private server
 - `/servers/{id}/join/{code}`: join via invite code
-- `/servers/{id}/verify`: claim a server
 - `/servers/{id}/edit`: owner edits server
 - `/servers/{id}/modpacks`: modpacks page
 - `/submit`: submit a server
 - `/favorites`: my favorites
 - `/notifications`: notification center
-- `/u/{uid}`: public user profile (server-centric)
-- `/settings/profile`: profile settings
-- `/login` / `/register` / `/forgot-password`
+- `/u/{misskeyId}`: public user profile (server-centric)
+- `/settings/profile`: read-only profile view (synced from Misskey on every login)
+- `/login`: Misskey MiAuth gateway (the only sign-in entry point)
 - `/changelog`
 
 Console / admin pages:
 
 - `/console`: my servers and console entry
-- `/console/{serverId}`: owner console
+- `/console/{serverId}`: owner console (Overview tab, default)
+- `/console/{serverId}/settings`: Settings tab
+- `/console/{serverId}/members`: Members tab
+- `/console/{serverId}/integration`: Integration tab
 - `/my-servers`: legacy entry, redirects to `/console`
 - `/admin`
 - `/admin/servers`
@@ -176,14 +180,13 @@ Console / admin pages:
 
 Full interface reference lives in `docs/API.md`. The live API surface should be maintained only around these modules:
 
-- Auth: `/api/auth/*`
+- Auth: `/api/auth/[...nextauth]`, `/api/auth/misskey/start`, `/api/auth/misskey/callback`
 - Servers: `/api/servers`, `/api/servers/{id}`
 - Favorites: `/api/servers/{id}/favorite`, `/api/user/favorites*`
 - Comments: `/api/servers/{id}/comments*`
-- Claiming: `/api/servers/{id}/verify*`
 - Private servers: `settings` / `applications` / `invites` / `membership` / `members` / `api-key`
 - Sync: `/api/servers/{id}/sync/*`, `/api/sync/{syncId}/ack`
-- Notifications: `/api/notifications*`, `/api/mobile/inbox*`
+- Notifications: `/api/notifications*`
 - Reports: `/api/reports`, `/api/admin/reports*`
 - Admin: `/api/admin/servers*`, `/api/admin/users*`, `/api/admin/moderation*`, `/api/admin/changelog*`
 - System: `/api/health`, `/api/changelog`, `/api/uploads/editor-image`
@@ -215,12 +218,12 @@ Import order:
 
 ## Security rules
 
-- Secrets, SMTP, object storage, Redis, etc. must come from `.env*`
+- Secrets, object storage, Redis, etc. must come from `.env*`
 - Every write endpoint must enforce permission on the server; do not rely on a hidden front-end button
 - Server address validation must continue to reject localhost / private IPs; port range is 1–65535
 - Private server addresses and ports are visible only to owner / admin / members
 - API keys are shown once at generation; only a hash is persisted
-- Email verification codes keep their cooldown and lockout
+- The Misskey login ticket is short-lived, HMAC-signed, and one-shot consumed
 - Report targets are limited to the live set: `server`, `comment`, `user`
 - User-provided external links must use `rel="noopener noreferrer" target="_blank"`
 - Never apply `dangerouslySetInnerHTML` to unsanitized content
@@ -237,7 +240,7 @@ Import order:
 
 Primary models today:
 
-- `User`
+- `User` (keyed by upstream `misskeyId`; `name` / `image` / `bio` / `misskeyUsername` are overwritten on every login)
 - `Server`
 - `ServerStatus`
 - `ServerComment` (table `comments`)
@@ -265,33 +268,26 @@ Database conventions:
 ## Worker / WebSocket rules
 
 - `server-ping`: periodically refreshes cached online status, player count, latency
-- `server-verify`: runs MOTD-token claim verification
 - Whitelist sync uses Redis Pub/Sub bridged to the WebSocket service
 - Sync records must cover `pending / pushed / acked / failed`
 - Plugin integration follows `handshake -> realtime push -> ack`
 
 ## UI rules
 
-- Theme: Warm Clay Community UI
-- Primary: `#C2703C`
-- Page background: `#F9F8F6`
-- Surface: `#FFFFFF`
-- Primary text: `#1A1816`
-- Secondary text: `#6F6862`
-- Border: `#E7E4E0`
-- Success / online: `#5C946E`
-- Fonts: Plus Jakarta Sans + PingFang SC fallback
+- Theme: **Claude Clay** — warm cream paper + clay-orange brand. Mode-keyed earthen accents on player surfaces; the same tokens carry through to the owner console (`/console`) so the dashboard reads as cohesive with the player surfaces, not a separate visual world.
+- Primary (buttons, links, focus): `#CC7D5E` (clay). Hover: `#BC6E4F`. Active: `#A45F40`.
+- Page background: `#F4EFE6` (cream paper). Surface (cards): `#FFFEFA`. Surface variant / soft panels: `#EDE6D9`.
+- Primary text: `#1A1A18` · body: `#494842` · secondary: `#847F71` · meta: `#B5AE9A`.
+- Border: `#E2DCCC`. Strong border: `#D5CDB7`.
+- Success / online: `#5C8C4E` · Warning: `#C97C3F` · Error / danger: `#C0392B`.
+- Mode palette (server-card cover gradients + chip swatches): `--mode-survival #6B8E5B` (sage), `--mode-creative #4A7C9D` (dusty blue), `--mode-rpg #8B6FA8` (mauve), `--mode-pvp #C0392B` (terracotta), `--mode-tech #C97C3F` (burnt sienna), `--mode-sky #70A5B5` (hazy teal), `--mode-vanilla #9C8F75` (khaki), `--mode-mod #C9A93F` (mustard), `--mode-mini #B86E8E` (dusty rose).
+- Fonts: HarmonyOS Sans SC self-hosted at `/public/fonts/HarmonyOS_SansSC_Regular.woff2`, declared via `@font-face` in `globals.css`. Fallback chain: `-apple-system, BlinkMacSystemFont, system-ui, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif`. Body letter-spacing `-0.005em`.
+- Hero typography goes large (`clamp(36px, 5vw, 56px)`, weight 700, letter-spacing `-0.035em`) — only on the marketing surfaces (home `/`). Inner pages stay compact.
+- Use `.cover-{mode}` classes for server-card covers (16:9 gradient + grid pattern) and `.mode-tag` overlays for badges. Mode chips on filters carry a colored swatch.
+- Borders + warm shadows do the depth work. Avoid neumorphism, inner shadows, or gradient fills outside cover artwork and the hero card preview.
 - Mobile-first; breakpoints `sm:640 md:768 lg:1024`
 - Prefer Next.js `<Image>`; `<img>` is only acceptable for sanitized, whitelisted sources
 - Reuse the shared Toast / EmptyState / PageLoading primitives
-
-## Deployment
-
-- GitHub Actions builds the image and deploys to a VPS
-- Containers: `web` + `worker` + `ws`
-- PostgreSQL / Redis are reused from the 1Panel environment
-- Deployment path: `/opt/pudcraft/`
-- Reverse proxy is managed through 1Panel OpenResty
 
 ## Documentation rules
 
@@ -313,3 +309,5 @@ Record concrete mistakes here so the same one does not happen twice. When a new 
 - **Inline error copy in lib functions that cross request boundaries (e.g. `requireAdmin` returning `{ error: "请先登录" }`).** Blocks translation because the caller doesn't know the recipient's locale. Pattern: lib returns an `errorKey`, the caller translates via `getTranslations({ locale })`. This is how `requireActiveUser` / `requireAdmin` / `resolveActiveUserResult` were refactored.
 - **Throwing user-facing Chinese from `Error.message` in domain libraries (e.g. `throw new Error("整合包缺少 modrinth.index.json")` in `src/lib/modpack.ts`).** The route handler surfaced `error.message` verbatim, which couples the library to a single locale and makes English translation impossible. Next time: custom error classes expose a machine-readable `.key` (and params), and the route handler translates via a keyed namespace. See `ModpackError` + `errors.api.modpacks.*` for the pattern; the same shape applies to `ImageValidationError.code` / `VerifyJobResult.reasonKey`.
 - **Zod inline `.min(3, "MC 用户名至少 3 个字符")` messages bypass `errorMap`.** The initial Batch 3 plan assumed `getZodErrorMap` could intercept every Zod message, but Zod's `errorMap` only fires for issues that do NOT carry an inline message. Field-specific copy must instead use the `errors.validation.<area>.<key>` key-path form and be translated at serialization time via `flattenZodErrorWithLocale`. Validate any change to `src/lib/validation.ts` with a round-trip test that asserts the serialized `details.fieldErrors` picks up the locale.
+- **Treating `isVerified` as a claim/verify flow artifact.** After the user architecture overhaul (2026-04-30), `Server.isVerified` no longer means "owner completed MOTD verification" — it is an admin-assigned official certification badge toggled via `/admin/servers`. The claim/verify flow (`/servers/{id}/verify`, `/api/servers/{id}/verify*`, `server-verify` worker job) was removed entirely. Existing `isVerified=true` records are treated as admin-granted. Next time: do not attempt to re-introduce MOTD verification or a user-initiated claim flow; that path was deliberately removed. The only way to set `isVerified` is through the admin panel.
+- **Half-migrated identity systems (Misskey MiAuth takeover).** When the project moved from local credentials to Misskey, every codepath that referenced `User.uid` / `User.email` / `User.passwordHash` / `Account` / `Session` / `VerificationToken` had to go in the same change — leaving even one stale `select: { uid: true }` or one `signIn("credentials", { email })` call would have broken the whole pipeline. Next time we replace an identity system: grep the entire `src/` tree for the old field names _before_ the rename, write down the full call graph, and treat the migration as one PR (schema + types + every call site + i18n + docs + tests) rather than a "we'll mop up later" two-step. Mobile-only API surfaces depending on the old auth (`/api/mobile/*`) were retired in the same change because they had no MiAuth path; do not resurrect them without a dedicated mobile MiAuth design.
