@@ -11,7 +11,14 @@
 
 import { z } from "zod";
 
-import { MAX_APPLICATION_FORM_BYTES } from "@/lib/applicationFormDocument";
+import {
+  MAX_APPLICATION_FORM_BYTES,
+  validateBranchingGraph,
+} from "@/lib/applicationFormDocument";
+import type {
+  ApplicationFormBranchRule,
+  ApplicationFormField,
+} from "@/lib/types";
 
 // ─── Base field schemas ─────────────────────────
 
@@ -220,6 +227,27 @@ const applicationFormDocumentSchema = z
         message: "errors.validation.servers.applicationFormTooLarge",
         path: [],
       });
+    }
+
+    // Cross-field check: every branching rule must reference fields that
+    // exist in `fields[]`, AND its `whenFieldKey` must appear earlier than
+    // its `targetFieldKey`. Per-field schemas only validate keys as plain
+    // strings, so without this an external caller can persist rules whose
+    // source field is missing — `computeVisibleFields` then yields an empty
+    // answer set and the target field stays permanently hidden, silently
+    // suppressing required questions and altering scoring behavior.
+    if (doc.branching && doc.branching.length > 0) {
+      const result = validateBranchingGraph(
+        doc.fields as ApplicationFormField[],
+        doc.branching as ApplicationFormBranchRule[],
+      );
+      if (!result.valid) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "errors.validation.servers.applicationFormBranchingInvalid",
+          path: ["branching", result.ruleIndex],
+        });
+      }
     }
   });
 
