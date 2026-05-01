@@ -106,20 +106,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     } catch {
       return NextResponse.json({ error: tCommon("invalidJson") }, { status: 400 });
     }
-    const parsed = adminServerActionSchema.safeParse(body, {
-      errorMap: getZodErrorMap(locale),
-    });
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
-        { status: 400 },
-      );
-    }
 
-    const bodyObj = body as Record<string, unknown>;
+    const hasActionKey =
+      typeof body === "object" && body !== null && "action" in (body as Record<string, unknown>);
 
     // Field-level patch: isVerified toggle or ownerId assignment (no "action" key).
-    if (!("action" in bodyObj)) {
+    if (!hasActionKey) {
       const fieldParsed = adminServerPatchSchema.safeParse(body, {
         errorMap: getZodErrorMap(locale),
       });
@@ -161,6 +153,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       if (ownerId !== undefined) messages.push(tAdmin("serverOwnerSet"));
 
       return NextResponse.json({ success: true, message: messages.join(" ") });
+    }
+
+    const parsed = adminServerActionSchema.safeParse(body, {
+      errorMap: getZodErrorMap(locale),
+    });
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: tCommon("validationFailed"), details: flattenZodErrorWithLocale(parsed.error, locale) },
+        { status: 400 },
+      );
     }
 
     const { action, reason } = parsed.data;
