@@ -643,6 +643,13 @@
     }
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    .player-hero-eyebrow .pulse,
+    .hero-widget-pulse-dot {
+      animation: none;
+    }
+  }
+
   .player-hero h1 {
     font-size: clamp(36px, 5vw, 56px);
     font-weight: 700;
@@ -650,6 +657,10 @@
     line-height: 1.05;
     margin: 0 0 20px;
     color: var(--m3-text);
+    /* text-wrap: balance asks the browser to even out line lengths so the EN
+       hero copy stops orphaning a single word like "Find your" on its own
+       line. Falls back gracefully on browsers that don't support it. */
+    text-wrap: balance;
   }
   .player-hero h1 .highlight {
     color: var(--m3-primary);
@@ -1027,17 +1038,10 @@
     aspect-ratio: 4 / 3;
     border-radius: 12px;
     overflow: hidden;
-    background: linear-gradient(135deg, #4a6b3d 0%, #2a4423 60%, #1a2c16 100%);
+    /* Background and the ::before glow come from the active .cover-{mode} class
+       (see "Server card cover gradients" further down). Falling back to a neutral
+       cover-vanilla keeps a server with no recognised tag from rendering blank. */
     border: 1px solid var(--m3-outline-strong);
-  }
-
-  .hero-widget-featured-cover::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background:
-      radial-gradient(ellipse 60% 40% at 30% 70%, rgba(180, 210, 140, 0.32), transparent 70%),
-      radial-gradient(ellipse 40% 30% at 80% 20%, rgba(204, 125, 94, 0.22), transparent 70%);
   }
 
   .hero-widget-featured-cover::after {
@@ -1645,7 +1649,7 @@
     background: rgba(192, 57, 43, 0.06);
     border-color: rgba(192, 57, 43, 0.18);
   }
-  .task-claim .task-ic {
+  .task-application .task-ic {
     color: var(--m3-text);
   }
   .task .task-body {

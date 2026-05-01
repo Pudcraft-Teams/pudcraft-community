@@ -12,6 +12,7 @@ import { SearchBar } from "@/components/SearchBar";
 import { ServerCard } from "@/components/ServerCard";
 import { SortButtons } from "@/components/SortButtons";
 import { useToast } from "@/hooks/useToast";
+import { pickCoverClass } from "@/lib/server-cover";
 import { normalizeServerListResponse } from "@/lib/serverListResponse";
 import { buildServerListPath, type ServerSort } from "@/lib/serverListQuery";
 import type { ServerListItem } from "@/lib/types";
@@ -329,10 +330,8 @@ export function HomePageClient({
                 })}
               </span>
               <h1>
-                {t("heroTitleLeft")}
-                <br />
-                <span className="highlight">{t("heroTitleHighlight")}</span>
-                <br />
+                {t("heroTitleLeft")}{" "}
+                <span className="highlight">{t("heroTitleHighlight")}</span>{" "}
                 {t("heroTitleTrail")}
               </h1>
               <p className="player-hero-lede">{t("heroSubtext")}</p>
@@ -393,7 +392,15 @@ export function HomePageClient({
                   </div>
                 </div>
                 <div className="hero-widget-progress">
-                  <div className="hero-widget-progress-row" data-tone="today">
+                  <div
+                    className="hero-widget-progress-row"
+                    data-tone="today"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(dateInfo?.todayProgress ?? 0)}
+                    aria-label={t("heroWidgetTodayLabel")}
+                  >
                     <span className="hero-widget-progress-label">
                       {t("heroWidgetTodayLabel")}
                     </span>
@@ -404,7 +411,15 @@ export function HomePageClient({
                       {dateInfo ? `${dateInfo.todayProgress.toFixed(1)}%` : "—"}
                     </span>
                   </div>
-                  <div className="hero-widget-progress-row" data-tone="month">
+                  <div
+                    className="hero-widget-progress-row"
+                    data-tone="month"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(dateInfo?.monthProgress ?? 0)}
+                    aria-label={t("heroWidgetMonthLabel")}
+                  >
                     <span className="hero-widget-progress-label">
                       {t("heroWidgetMonthLabel")}
                     </span>
@@ -415,7 +430,15 @@ export function HomePageClient({
                       {dateInfo ? `${dateInfo.monthProgress.toFixed(1)}%` : "—"}
                     </span>
                   </div>
-                  <div className="hero-widget-progress-row" data-tone="year">
+                  <div
+                    className="hero-widget-progress-row"
+                    data-tone="year"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(dateInfo?.yearProgress ?? 0)}
+                    aria-label={t("heroWidgetYearLabel")}
+                  >
                     <span className="hero-widget-progress-label">
                       {t("heroWidgetYearLabel")}
                     </span>
@@ -470,7 +493,9 @@ export function HomePageClient({
                     </span>
                   </div>
                   <div className="hero-widget-featured-body">
-                    <div className="hero-widget-featured-cover" />
+                    <div
+                      className={`hero-widget-featured-cover ${pickCoverClass(featuredServer.tags)}`}
+                    />
                     <div className="hero-widget-featured-meta">
                       <h3 className="hero-widget-featured-name">{featuredServer.name}</h3>
                       <div className="hero-widget-featured-host">

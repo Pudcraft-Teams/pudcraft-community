@@ -141,8 +141,8 @@ export default async function ConsoleRootPage() {
     const name = serverNameById.get(app.serverId) ?? "";
     const applicantName = app.user?.name?.trim() || app.user?.misskeyUsername || "";
     tasks.push({
-      id: `claim-${app.id}`,
-      kind: "claim",
+      id: `application-${app.id}`,
+      kind: "application",
       serverName: name,
       text: tDash("taskApplication", { name, applicant: applicantName }),
       createdAt: app.createdAt,

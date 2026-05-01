@@ -21,6 +21,7 @@ export function Tabs({ items, className = "" }: TabsProps) {
         <Link
           key={item.href}
           href={item.href}
+          aria-current={item.active ? "page" : undefined}
           className="relative px-4 py-3 text-[13.5px] font-medium transition-colors"
           style={
             item.active

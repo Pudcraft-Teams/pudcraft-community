@@ -92,9 +92,8 @@ function parseStatsPayload(raw: unknown): StatsPayload {
 
 export default function ConsoleOverviewPage() {
   const params = useParams<{ serverId: string }>();
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const tStats = useTranslations("console.stats");
-  const tPage = useTranslations("console.page");
   const [period, setPeriod] = useState<StatsPeriod>("24h");
   const [server, setServer] = useState<ServerDetail | null>(null);
   const [stats, setStats] = useState<ConsoleStatsResponse | null>(null);

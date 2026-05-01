@@ -30,7 +30,7 @@ export interface DashboardServer {
 
 export interface DashboardTask {
   id: string;
-  kind: "alert" | "claim";
+  kind: "alert" | "application";
   text: string;
   serverName: string | null;
   createdAt: Date;
@@ -107,7 +107,7 @@ export async function Dashboard({ data, locale }: DashboardProps) {
       label: t("kpiVerified"),
       value: String(verifiedServers),
       sub: t("kpiVerifiedSub", {
-        unclaimed: Math.max(0, totalServers - verifiedServers),
+        pending: Math.max(0, totalServers - verifiedServers),
       }),
     },
     {
@@ -205,9 +205,9 @@ export async function Dashboard({ data, locale }: DashboardProps) {
                                   <span
                                     className="inline-flex items-center gap-1 rounded px-1.5 py-px text-[10.5px] font-medium"
                                     style={{
-                                      background: "rgba(92,140,78,0.1)",
-                                      color: "var(--m3-green)",
-                                      border: "1px solid rgba(92,140,78,0.22)",
+                                      background: "rgba(204,125,94,0.12)",
+                                      color: "var(--m3-primary)",
+                                      border: "1px solid rgba(204,125,94,0.28)",
                                     }}
                                   >
                                     {t("verifiedBadge")}
@@ -327,7 +327,7 @@ export async function Dashboard({ data, locale }: DashboardProps) {
                       }
                     >
                       {task.kind === "alert" ? <AlertIcon /> : null}
-                      {task.kind === "claim" ? <ClaimIcon /> : null}
+                      {task.kind === "application" ? <ApplicationIcon /> : null}
                     </div>
                     <div className="min-w-0 flex-1">
                       <span
@@ -439,7 +439,7 @@ function AlertIcon() {
   );
 }
 
-function ClaimIcon() {
+function ApplicationIcon() {
   return (
     <svg
       viewBox="0 0 16 16"
@@ -450,7 +450,8 @@ function ClaimIcon() {
       strokeLinejoin="round"
       className="h-3.5 w-3.5"
     >
-      <path d="M4 2.5h8a.5.5 0 0 1 .5.5v10.5L8 11l-4.5 2.5V3a.5.5 0 0 1 .5-.5Z" />
+      <rect x="2" y="3.5" width="12" height="9" rx="1" />
+      <path d="M2.5 4.2 8 8.6l5.5-4.4" />
     </svg>
   );
 }

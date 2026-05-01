@@ -20,8 +20,9 @@ const MOBILE_MENU_LINK_CLASS =
 
 /**
  * Top navigation authentication area.
- * Logged-out: shows login + register. Logged-in: shows avatar +
- * display name with a dropdown menu.
+ * Logged-out: shows the Café sign-in button (registration is via Misskey,
+ * there is no local sign-up). Logged-in: shows avatar + display name with a
+ * dropdown menu.
  */
 export function AuthButtons() {
   const { data: session, status, update } = useSession();
@@ -98,6 +99,8 @@ export function AuthButtons() {
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
+        aria-haspopup="menu"
+        aria-expanded={open}
         className="m3-btn m3-btn-tonal flex items-center gap-2 px-2 py-1.5"
       >
         <UserAvatar
@@ -367,13 +370,22 @@ export function MobileNavMenu() {
                     </button>
                   </>
                 ) : (
-                  <Link
-                    href="/login"
-                    className={MOBILE_MENU_LINK_CLASS}
-                    onClick={() => setOpen(false)}
-                  >
-                    {tAuth("login")}
-                  </Link>
+                  <>
+                    <Link
+                      href="/submit"
+                      className={MOBILE_MENU_LINK_CLASS}
+                      onClick={() => setOpen(false)}
+                    >
+                      {tAuth("submitServer")}
+                    </Link>
+                    <Link
+                      href="/login"
+                      className={MOBILE_MENU_LINK_CLASS}
+                      onClick={() => setOpen(false)}
+                    >
+                      {tAuth("login")}
+                    </Link>
+                  </>
                 )}
               </MobileMenuSection>
 
