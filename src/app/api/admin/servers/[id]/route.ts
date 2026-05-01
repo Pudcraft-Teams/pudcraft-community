@@ -148,6 +148,35 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         data: updateData,
       });
 
+      // Audit trail for the official-certification badge — without this entry
+      // the toggle becomes non-attributable after the row update succeeds.
+      // Best-effort: a logging failure must never roll back a successful
+      // admin action (mirrors the pattern in writeModerationLog).
+      if (isVerified !== undefined) {
+        prisma.moderationLog
+          .create({
+            data: {
+              contentType: "server",
+              contentId: resolvedId,
+              contentSnippet: isVerified
+                ? "Admin granted official certification badge"
+                : "Admin revoked official certification badge",
+              passed: true,
+              aiCategory: "admin_action",
+              aiReason: isVerified ? "verify_set" : "verify_unset",
+              userId: adminResult.userId,
+              reviewed: true,
+              adminNote: `isVerified=${isVerified} by admin ${adminResult.userId}`,
+            },
+          })
+          .catch((err: unknown) => {
+            logger.error(
+              "[api/admin/servers/[id]] Failed to write isVerified moderation log",
+              err,
+            );
+          });
+      }
+
       const messages: string[] = [];
       if (isVerified !== undefined) messages.push(tAdmin("serverVerifiedSet"));
       if (ownerId !== undefined) messages.push(tAdmin("serverOwnerSet"));
