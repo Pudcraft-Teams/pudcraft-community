@@ -16,6 +16,24 @@ function answerToValueSet(answer: string | string[] | undefined): Set<string> {
 }
 
 /**
+ * Answer value set for SCORING. For `select` (single-choice) fields, count
+ * at most one option even if the request body submitted an array — otherwise
+ * a client could POST `formData[key] = ["a","b","c"]` for a single-select
+ * question and stack every option's points, inflating `scorePercent` past
+ * the threshold check (`fieldMaxScore` for select assumes a single option).
+ * `multiselect` keeps the full set.
+ */
+function scoringAnswerValueSet(
+  field: ApplicationFormField,
+  answer: string | string[] | undefined,
+): Set<string> {
+  if (answer === undefined) return new Set();
+  if (field.type !== "select") return answerToValueSet(answer);
+  const first = Array.isArray(answer) ? answer[0] : answer;
+  return first === undefined ? new Set() : new Set([first]);
+}
+
+/**
  * Score awarded for a single selected option. Field type is irrelevant —
  * single-choice and multi-choice questions share the same per-option scoring
  * shape. Explicit `points` wins; `correct` is the legacy "+1" shorthand.
@@ -90,7 +108,7 @@ export function computeScore(
     if (!field.options) continue;
     if (!fieldHasScoring(field)) continue;
     hasScoring = true;
-    const answer = answerToValueSet(answers[field.key]);
+    const answer = scoringAnswerValueSet(field, answers[field.key]);
     for (const opt of field.options) {
       if (!answer.has(opt.value)) continue;
       total += getOptionScore(opt);

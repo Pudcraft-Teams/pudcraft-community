@@ -191,6 +191,78 @@ test("computeScore: only counts correct/points options for selected answers", ()
   assert.equal(total, 20);
 });
 
+test("computeScore: select field with array answer counts only one option (no point stacking)", () => {
+  // Regression: a client could POST formData[key] = ["a","b","c"] for a
+  // single-select question and stack every option's points, inflating
+  // scorePercent past the threshold check. Single-choice fields must count
+  // at most one option.
+  const form: OwnerFormConfig = {
+    version: 1,
+    fields: [
+      {
+        key: "rules",
+        label: "Quiz",
+        type: "select",
+        required: true,
+        options: [
+          { value: "a", label: "A", points: 5 },
+          { value: "b", label: "B", points: 10 },
+          { value: "c", label: "C", points: 20 },
+        ],
+      },
+    ],
+    settings: {
+      passingScore: 60,
+      showScoreToPlayerOnReject: false,
+      showRejectReasonToPlayerOnReject: false,
+    },
+    branching: [],
+  };
+  // Submit all three options as an array — without the fix, total would be 35.
+  const { total, hasScoring } = computeScore(form.fields, {
+    rules: ["a", "b", "c"],
+  });
+  assert.equal(hasScoring, true);
+  assert.ok(total <= 20, `select field score must not exceed fieldMaxScore (got ${total})`);
+
+  // And the full evaluator must not let the inflated score pass the threshold.
+  const result = evaluateApplication(form, { rules: ["a", "b", "c"] });
+  assert.equal(result.maxScore, 20);
+  assert.ok(
+    (result.scorePercent ?? 0) <= 100,
+    `scorePercent must stay ≤ 100 (got ${result.scorePercent})`,
+  );
+});
+
+test("computeScore: multiselect with array answer still sums all selected options", () => {
+  const form: OwnerFormConfig = {
+    version: 1,
+    fields: [
+      {
+        key: "skills",
+        label: "Pick your skills",
+        type: "multiselect",
+        required: true,
+        options: [
+          { value: "build", label: "Build", points: 5 },
+          { value: "redstone", label: "Redstone", points: 10 },
+          { value: "pvp", label: "PVP", points: 3 },
+        ],
+      },
+    ],
+    settings: {
+      passingScore: null,
+      showScoreToPlayerOnReject: false,
+      showRejectReasonToPlayerOnReject: false,
+    },
+    branching: [],
+  };
+  const { total } = computeScore(form.fields, {
+    skills: ["build", "redstone", "pvp"],
+  });
+  assert.equal(total, 18);
+});
+
 test("computeScore: returns hasScoring=false when no field has scoring", () => {
   const form: OwnerFormConfig = {
     version: 1,
