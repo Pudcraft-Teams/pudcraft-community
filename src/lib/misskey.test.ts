@@ -38,7 +38,11 @@ function makeStubRedis(initial: Record<string, string>) {
   const store = new Map(Object.entries(initial));
   return {
     store,
-    async getdel(key: string) {
+    // Match the contract documented in `consumeStartedMiAuthSession`: an EVAL
+    // that atomically GET+DELs `KEYS[1]`. Test-side we just simulate the
+    // semantics — we don't run actual Lua.
+    async eval(_script: string, _numKeys: number, ...keys: string[]) {
+      const key = keys[0];
       const value = store.get(key);
       if (value === undefined) return null;
       store.delete(key);

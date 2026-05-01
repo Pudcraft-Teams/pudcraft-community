@@ -39,9 +39,23 @@ export function isLocalMisskeyUser(user: Pick<MisskeyUser, "host">): boolean {
   return user.host === null;
 }
 
-interface RedisGetDel {
-  getdel(key: string): Promise<string | null>;
+/**
+ * Minimal Redis surface needed for atomic GET+DEL. We script it via EVAL so
+ * the helper works on every Redis ≥ 2.6 — the native `GETDEL` command is
+ * Redis 6.2+, and the repo doesn't pin a minimum server version.
+ */
+interface RedisEval {
+  eval(script: string, numKeys: number, ...keys: string[]): Promise<unknown>;
 }
+
+/**
+ * Atomic GET-then-DEL via Lua. EVAL bodies execute as a single Redis op,
+ * so this matches the replay-safety guarantee of the native GETDEL command
+ * without needing Redis 6.2+.
+ */
+const ATOMIC_GETDEL_LUA = `local v = redis.call('GET', KEYS[1])
+if v then redis.call('DEL', KEYS[1]) end
+return v`;
 
 export interface StartedMiAuthSession {
   callbackUrl: string;
@@ -61,13 +75,18 @@ export interface StartedMiAuthSession {
  * their account.
  */
 export async function consumeStartedMiAuthSession(
-  redis: RedisGetDel,
+  redis: RedisEval,
   sessionId: string,
 ): Promise<StartedMiAuthSession | null> {
-  const stored = await redis.getdel(`miauth:start:${sessionId}`);
-  if (stored === null) {
+  const raw = await redis.eval(
+    ATOMIC_GETDEL_LUA,
+    1,
+    `miauth:start:${sessionId}`,
+  );
+  if (typeof raw !== "string") {
     return null;
   }
+  const stored = raw;
   let parsed: unknown;
   try {
     parsed = JSON.parse(stored);
