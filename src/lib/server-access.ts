@@ -78,16 +78,28 @@ export function shouldExposeServerOwnerId(options: ServerVisibilityAccessOptions
   return isPrivilegedServerViewer(options);
 }
 
-export function getInitialServerSubmissionState(): {
-  status: "pending";
+export function getAutoApprovedSubmissionState(): {
+  status: "approved";
   reviewStatus: "unreviewed";
 } {
   return {
-    status: "pending",
+    status: "approved",
     reviewStatus: "unreviewed",
   };
 }
 
-export function toPublicUserLookupId(uid: number): string {
-  return String(uid);
+export function getRejectedSubmissionState(rejectReason: string): {
+  status: "rejected";
+  reviewStatus: "unreviewed";
+  rejectReason: string;
+} {
+  return {
+    status: "rejected",
+    reviewStatus: "unreviewed",
+    rejectReason,
+  };
+}
+
+export function toPublicUserLookupId(misskeyId: string): string {
+  return misskeyId;
 }

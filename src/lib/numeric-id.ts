@@ -1,5 +1,5 @@
 /**
- * PSID / UID 数字短链标识生成器。
+ * PSID 数字短链标识生成器。
  * 在事务中生成随机数字 ID 并写入 reserved_numeric_ids 表保证唯一性。
  */
 
@@ -14,13 +14,11 @@ type TransactionClient = Omit<
 
 const PSID_MIN = 100_000;
 const PSID_MAX = 999_999;
-const UID_MIN = 100_000_000;
-const UID_MAX = 999_999_999;
 const MAX_RETRIES = 20;
 
 async function generateAndReserve(
   tx: TransactionClient | Prisma.TransactionClient,
-  type: "psid" | "uid",
+  type: "psid",
   min: number,
   max: number,
 ): Promise<number> {
@@ -51,11 +49,4 @@ export async function generateAndReservePsid(
   tx: TransactionClient | Prisma.TransactionClient,
 ): Promise<number> {
   return generateAndReserve(tx, "psid", PSID_MIN, PSID_MAX);
-}
-
-/** 在事务内生成并预留一个 9 位 UID（100000000–999999999） */
-export async function generateAndReserveUid(
-  tx: TransactionClient | Prisma.TransactionClient,
-): Promise<number> {
-  return generateAndReserve(tx, "uid", UID_MIN, UID_MAX);
 }

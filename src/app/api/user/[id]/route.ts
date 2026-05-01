@@ -10,6 +10,7 @@ import { resolveUserCuid } from "@/lib/lookup";
 import { toPublicUserLookupId } from "@/lib/server-access";
 import { buildServerStatusResponse } from "@/lib/serverStatus";
 import { getPublicUrl } from "@/lib/storage";
+import { getUserImageUrl } from "@/lib/user-image";
 import type { ServerListItem } from "@/lib/types";
 import { userLookupIdSchema } from "@/lib/validation";
 
@@ -45,7 +46,8 @@ export async function GET(request: Request, { params }: RouteContext) {
       where: { id: resolvedId },
       select: {
         id: true,
-        uid: true,
+        misskeyId: true,
+        misskeyUsername: true,
         name: true,
         image: true,
         bio: true,
@@ -81,10 +83,11 @@ export async function GET(request: Request, { params }: RouteContext) {
 
     return NextResponse.json({
       data: {
-        id: toPublicUserLookupId(user.uid),
-        uid: user.uid,
+        id: toPublicUserLookupId(user.misskeyId),
+        misskeyId: user.misskeyId,
+        misskeyUsername: user.misskeyUsername,
         name: user.name,
-        image: getPublicUrl(user.image),
+        image: getUserImageUrl(user.image),
         bio: user.bio,
         createdAt: user.createdAt.toISOString(),
         servers,

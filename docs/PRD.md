@@ -11,7 +11,7 @@
 Pudcraft Community is positioned as a server-only community platform for Minecraft players:
 
 - Help players discover, filter, favorite, and comment on servers
-- Help server owners manage server info, claim flow, private-server members, and whitelist sync
+- Help server owners manage server info, private-server members, and whitelist sync via the owner console
 - Help platform admins run review, report handling, content moderation, and changelog publishing
 
 The historical forum / MoltBook shape has been removed from the live surface. Any circle, post feed, forum notifications, bookmarks, or topic-page capability is no longer part of the product.
@@ -21,17 +21,16 @@ The historical forum / MoltBook shape has been removed from the live surface. An
 | Role | Description | Core needs |
 |---|---|---|
 | Player | Minecraft players looking for and comparing servers | Fast discovery, filtering, favorites, applying to join, checking notifications |
-| Server owner | Administrators running a server | Submitting a server, claiming ownership, maintaining private-server members, syncing whitelists |
+| Server owner | Administrators running a server | Submitting a server (auto-approved), managing it via the console, maintaining private-server members, syncing whitelists |
 | Platform admin | Keeping the platform orderly and quality-controlled | Reviewing servers, handling reports, auditing moderation logs, publishing changelog entries |
-| Native-client user | Users who connect via the mobile client | Stable login, a lightweight notification inbox, unified unread state |
 
 ### 1.3 Product goals
 
 1. Provide a stable server discovery and search experience.
-2. Provide a clear loop for server submission, review, and claiming.
+2. Provide a frictionless server submission loop: submit → auto content moderation → owner immediately manages their server via the console.
 3. Support private-server applications, invites, member management, and whitelist sync.
 4. Keep favorites, comments, notifications, and reports working end-to-end.
-5. Give mobile usable login and notification capabilities through a minimal API surface.
+5. Use a single self-hosted Misskey instance as the only identity provider so the platform doesn't have to maintain its own credentials, email verification, or password reset.
 
 ## 2. Scope and non-goals
 
@@ -39,13 +38,14 @@ The historical forum / MoltBook shape has been removed from the live surface. An
 
 - Server list, search, sort, tag filters
 - Server detail, comments, favorites
-- Server submission, duplicate-entry prompts, admin review
-- MOTD-based claim verification
+- Server submission with auto content moderation (Alibaba Cloud Green); submitter becomes owner immediately on pass; duplicate-address prompts
+- Owner console at `/console` and `/console/{serverId}` (tabs: Overview, Settings, Members, Integration)
+- Admin `isVerified` toggle and `ownerId` assignment for legacy servers (no user-initiated claim flow)
 - Private-server settings, applications, invite codes, member management, API keys
 - Whitelist sync (HTTP + Redis + WebSocket)
 - Notification center, changelog, reports
 - Admin console (servers, users, moderation, reports, changelog)
-- Mobile session / inbox APIs
+- Misskey MiAuth sign-in (shown as "咖啡厅" in UI; single self-hosted instance, profile + role re-synced on every login)
 
 ### 2.2 Explicit non-goals
 
@@ -68,13 +68,13 @@ The repository may still contain historical design drafts, superpowers documents
 3. Open `/servers/{id}` to see details, status, modpacks, and comments
 4. Favorite the server or enter the apply / invite flow
 
-### 3.2 An owner submits and claims a server
+### 3.2 An owner submits a server
 
 1. Sign in, go to `/submit`
 2. Submit server info and icon
-3. If the address is already registered, the system prompts to jump to the claim page
-4. After admin approval, the owner starts MOTD verification via `/servers/{id}/verify`
-5. On success, the owner manages the server under `/console` and `/console/{serverId}`
+3. If the address is already registered, the system prompts with a duplicate-address notice
+4. Auto content moderation runs immediately (text + image); on pass, `reviewStatus = "approved"` and the submitter becomes `ownerId`
+5. The owner manages the server immediately under `/console` and `/console/{serverId}` (no MOTD verification step)
 
 ### 3.3 Private-server membership flow
 
@@ -94,10 +94,12 @@ The repository may still contain historical design drafts, superpowers documents
 
 ### 4.1 Accounts and profile
 
-- Email registration, login, password reset
-- Profile editing
-- Public user pages only surface server-related information
-- Banned users cannot continue to use capabilities that require an active account
+- Sign-in is exclusively through Misskey MiAuth (single self-hosted instance configured by `MISSKEY_HOST`); there is no local password, email registration, password reset, or email-verification flow
+- The local `User` is keyed by `misskeyId`; `name` / `image` / `bio` / `misskeyUsername` are overwritten on every login from the upstream Misskey profile
+- The local `role` is `admin` when the upstream Misskey user has `isAdmin || isModerator`, otherwise `user`; manual local edits are reset on the next login
+- Profile page is read-only — to change display name / avatar / bio, the user must change them on Misskey and sign in again
+- Public user pages only surface server-related information and identify the user by `misskeyId`
+- Banned users cannot continue to use capabilities that require an active account; ban state is stored locally and is independent of Misskey
 
 ### 4.2 Server discovery
 
@@ -113,17 +115,20 @@ The repository may still contain historical design drafts, superpowers documents
 - Favorite / unfavorite
 - Report on servers, comments, users
 
-### 4.4 Server submission and review
+### 4.4 Server submission
 
-- Signed-in users can submit a server
-- Duplicate address submissions prompt clearly and guide the user into the claim flow
-- Admin console handles approvals, rejections, and deletions
+- Signed-in users can submit a server at `/submit`
+- Duplicate address submissions show a clear prompt (no claim redirect)
+- Auto content moderation runs immediately on submit: Alibaba Cloud Green text moderation for name/description, image moderation for icon; pass → `reviewStatus = "approved"`, `ownerId = submitter`; fail → `reviewStatus = "rejected"` with reason
+- No admin review step for new submissions; no server-connectivity check on submit
+- Rejected submissions surface the rejection reason to the submitter
 
-### 4.5 Claiming and owner management
+### 4.5 Owner management
 
-- MOTD-token verification
-- After claiming, the owner can edit server info
-- Access statistics, sync status, members, applications, invite codes, API keys
+- Submitter is automatically the owner; no MOTD claim/verify flow
+- Owner console at `/console/{serverId}` with four tabs: Overview (stats, charts, recent comments), Settings (edit info, visibility, join mode), Members (applications, invites, member list), Integration (API key, whitelist sync, plugin config)
+- Admin can assign `ownerId` to legacy `ownerId=null` servers via `/admin/servers/{id}`
+- Admin can toggle `isVerified` (official certification badge) via `/admin/servers/{id}`; every toggle writes a `ModerationLog` entry
 
 ### 4.6 Private-server capabilities
 
@@ -140,13 +145,7 @@ The repository may still contain historical design drafts, superpowers documents
 - Covers server-only notification types
 - Changelog is public; admins maintain it from the console
 
-### 4.8 Mobile support
-
-- Mobile login and session management
-- Lightweight inbox and unread summary
-- The mobile API does not reinstate the legacy forum inbox structure
-
-### 4.9 Admin console
+### 4.8 Admin console
 
 - Server review and deletion
 - User ban / unban / management
@@ -164,21 +163,23 @@ The repository may still contain historical design drafts, superpowers documents
 - `/servers/{id}`
 - `/servers/{id}/apply`
 - `/servers/{id}/join/{code}`
-- `/servers/{id}/verify`
 - `/servers/{id}/edit`
 - `/servers/{id}/modpacks`
 - `/submit`
 - `/favorites`
 - `/notifications`
-- `/user/{id}`
+- `/u/{misskeyId}`
 - `/settings/profile`
-- `/login` / `/register` / `/forgot-password`
+- `/login` (Misskey MiAuth gateway)
 - `/changelog`
 
 ### Console / admin pages
 
 - `/console`
-- `/console/{serverId}`
+- `/console/{serverId}` (Overview tab, default)
+- `/console/{serverId}/settings`
+- `/console/{serverId}/members`
+- `/console/{serverId}/integration`
 - `/my-servers` (legacy redirect)
 - `/admin`
 - `/admin/servers`
@@ -194,7 +195,7 @@ The repository may still contain historical design drafts, superpowers documents
 - Server address validation continues to block localhost and private IPs
 - Every write operation must enforce permission on the server
 - API keys are shown once; only a hash is stored
-- Email verification codes keep cooldown and lockout
+- The cross-domain Misskey login ticket (`MISSKEY_TICKET_SECRET`) is signed with HMAC-SHA256, expires after 60s, and is one-shot consumed via Redis to prevent replay
 - Reports must have deduplication, abuse prevention, and reputation-based rate limiting
 
 ### 6.2 Performance

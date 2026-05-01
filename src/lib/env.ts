@@ -44,29 +44,6 @@ export function getRedisEnv(): ReturnType<typeof parseRedisConfig> {
   return _redisEnv;
 }
 
-// SMTP mail config.
-const envSchema = z.object({
-  SMTP_HOST: z.string().min(1),
-  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(465),
-  SMTP_SECURE: z
-    .enum(["true", "false"])
-    .default("true")
-    .transform((v) => v === "true"),
-  SMTP_USER: z.string().email(),
-  SMTP_PASS: z.string().min(1),
-  SMTP_FROM: z.string().min(1),
-});
-
-let _smtpEnv: z.infer<typeof envSchema> | null = null;
-
-/** SMTP config; validated lazily so modules that don't need SMTP still load. */
-export function getSmtpEnv(): z.infer<typeof envSchema> {
-  if (!_smtpEnv) {
-    _smtpEnv = envSchema.parse(process.env);
-  }
-  return _smtpEnv;
-}
-
 // Content moderation config (Alibaba Cloud Green 2.0).
 const contentModerationEnvSchema = z.object({
   CONTENT_MODERATION_ACCESS_KEY_ID: z.string().min(1).optional(),

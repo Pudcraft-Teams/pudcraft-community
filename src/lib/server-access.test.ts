@@ -3,15 +3,24 @@ import test from "node:test";
 import {
   canListServerInPublicOwnerContext,
   canViewServerDetails,
-  getInitialServerSubmissionState,
+  getAutoApprovedSubmissionState,
+  getRejectedSubmissionState,
   shouldExposeServerOwnerId,
   toPublicUserLookupId,
 } from "./server-access";
 
-test("getInitialServerSubmissionState keeps newly submitted servers pending review", () => {
-  assert.deepEqual(getInitialServerSubmissionState(), {
-    status: "pending",
+test("getAutoApprovedSubmissionState auto-approves submitted servers", () => {
+  assert.deepEqual(getAutoApprovedSubmissionState(), {
+    status: "approved",
     reviewStatus: "unreviewed",
+  });
+});
+
+test("getRejectedSubmissionState marks submitted servers as rejected with reason", () => {
+  assert.deepEqual(getRejectedSubmissionState("政治内容"), {
+    status: "rejected",
+    reviewStatus: "unreviewed",
+    rejectReason: "政治内容",
   });
 });
 
@@ -97,6 +106,6 @@ test("shouldExposeServerOwnerId stays false for public viewers", () => {
   );
 });
 
-test("toPublicUserLookupId returns the external uid string instead of a cuid", () => {
-  assert.equal(toPublicUserLookupId(100000001), "100000001");
+test("toPublicUserLookupId returns the upstream Misskey id verbatim", () => {
+  assert.equal(toPublicUserLookupId("9abc1234de"), "9abc1234de");
 });

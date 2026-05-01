@@ -33,16 +33,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly",
       priority: 0.3,
     },
-    {
-      url: `${SITE_URL}/register`,
-      changeFrequency: "monthly",
-      priority: 0.3,
-    },
-    {
-      url: `${SITE_URL}/forgot-password`,
-      changeFrequency: "monthly",
-      priority: 0.2,
-    },
   ];
 
   const serverPages: MetadataRoute.Sitemap = servers.map((server) => ({

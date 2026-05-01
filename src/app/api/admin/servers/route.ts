@@ -17,7 +17,7 @@ type ServerWithOwner = Prisma.ServerGetPayload<{
     owner: {
       select: {
         name: true;
-        email: true;
+        misskeyUsername: true;
       };
     };
   };
@@ -39,7 +39,7 @@ async function findServersWithOwner(
     orderBy: { createdAt: "desc" },
     include: {
       owner: {
-        select: { name: true, email: true },
+        select: { name: true, misskeyUsername: true },
       },
     },
   });
@@ -189,7 +189,7 @@ export async function GET(request: Request) {
       isVerified: server.isVerified,
       ownerId: server.ownerId,
       ownerName: server.owner?.name ?? null,
-      ownerEmail: server.owner?.email ?? null,
+      ownerHandle: server.owner?.misskeyUsername ?? null,
       createdAt: server.createdAt.toISOString(),
       ...(reportCountMap ? { reportCount: reportCountMap.get(server.id) ?? 0 } : {}),
     }));

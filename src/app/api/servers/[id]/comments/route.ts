@@ -14,7 +14,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/request-ip";
 import { canViewServerDetails, isPrivilegedServerViewer } from "@/lib/server-access";
 import { resolveServerCuid } from "@/lib/lookup";
-import { getPublicUrl } from "@/lib/storage";
+import { getUserImageUrl } from "@/lib/user-image";
 import type { ServerComment } from "@/lib/types";
 import { createCommentSchema, queryCommentsSchema, serverLookupIdSchema } from "@/lib/validation";
 
@@ -108,7 +108,8 @@ function mapComments(
     createdAt: Date;
     author: {
       id: string;
-      uid: number;
+      misskeyId: string;
+      misskeyUsername: string;
       name: string | null;
       image: string | null;
     };
@@ -118,7 +119,8 @@ function mapComments(
       createdAt: Date;
       author: {
         id: string;
-        uid: number;
+        misskeyId: string;
+        misskeyUsername: string;
         name: string | null;
         image: string | null;
       };
@@ -131,9 +133,10 @@ function mapComments(
     createdAt: comment.createdAt.toISOString(),
     author: {
       id: comment.author.id,
-      uid: comment.author.uid,
+      misskeyId: comment.author.misskeyId,
+      misskeyUsername: comment.author.misskeyUsername,
       name: comment.author.name,
-      image: getPublicUrl(comment.author.image),
+      image: getUserImageUrl(comment.author.image),
     },
     replies: comment.replies.map((reply) => ({
       id: reply.id,
@@ -141,9 +144,10 @@ function mapComments(
       createdAt: reply.createdAt.toISOString(),
       author: {
         id: reply.author.id,
-        uid: reply.author.uid,
+        misskeyId: reply.author.misskeyId,
+        misskeyUsername: reply.author.misskeyUsername,
         name: reply.author.name,
-        image: getPublicUrl(reply.author.image),
+        image: getUserImageUrl(reply.author.image),
       },
     })),
   }));
@@ -250,7 +254,8 @@ export async function GET(request: Request, { params }: RouteContext) {
           author: {
             select: {
               id: true,
-              uid: true,
+              misskeyId: true,
+              misskeyUsername: true,
               name: true,
               image: true,
             },
@@ -261,7 +266,8 @@ export async function GET(request: Request, { params }: RouteContext) {
               author: {
                 select: {
                   id: true,
-                  uid: true,
+                  misskeyId: true,
+                  misskeyUsername: true,
                   name: true,
                   image: true,
                 },
@@ -418,7 +424,8 @@ export async function POST(request: Request, { params }: RouteContext) {
         author: {
           select: {
             id: true,
-            uid: true,
+            misskeyId: true,
+            misskeyUsername: true,
             name: true,
             image: true,
           },
@@ -444,9 +451,10 @@ export async function POST(request: Request, { params }: RouteContext) {
           parentId: comment.parentId,
           author: {
             id: comment.author.id,
-            uid: comment.author.uid,
+            misskeyId: comment.author.misskeyId,
+            misskeyUsername: comment.author.misskeyUsername,
             name: comment.author.name,
-            image: getPublicUrl(comment.author.image),
+            image: getUserImageUrl(comment.author.image),
           },
         },
       },

@@ -10,6 +10,7 @@ const eslintConfig = [
       "next-env.d.ts",
       "node_modules/**",
       "dist/**",
+      "pudcraft-design-system/**",
     ],
   },
   ...nextCoreWebVitals,

@@ -63,7 +63,7 @@ export async function GET(request: Request) {
         orderBy: { createdAt: "desc" },
         include: {
           reporter: {
-            select: { id: true, name: true, email: true },
+            select: { id: true, name: true, misskeyUsername: true },
           },
         },
       }),

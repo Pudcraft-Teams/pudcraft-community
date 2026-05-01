@@ -20,6 +20,7 @@ const nextPublicStoragePublicBaseUrl = firstNonEmptyEnv(
   process.env.S3_PUBLIC_BASE_URL,
   process.env.OSS_PUBLIC_BASE_URL,
 );
+const allowLocalIpImageOptimization = process.env.NODE_ENV === "development";
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -30,6 +31,7 @@ const nextConfig: NextConfig = {
       }
     : undefined,
   images: {
+    dangerouslyAllowLocalIP: allowLocalIpImageOptimization,
     remotePatterns: buildStorageImageRemotePatterns({
       nextPublicStoragePublicBaseUrl: nextPublicStoragePublicBaseUrl,
       s3PublicBaseUrl: process.env.S3_PUBLIC_BASE_URL,
@@ -40,6 +42,7 @@ const nextConfig: NextConfig = {
       ossBucket: process.env.OSS_BUCKET,
       s3Region: process.env.S3_REGION,
       ossRegion: process.env.OSS_REGION,
+      misskeyHost: process.env.MISSKEY_HOST,
     }),
   },
   async headers() {

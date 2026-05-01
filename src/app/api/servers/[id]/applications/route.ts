@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getRequestLocale } from "@/i18n/locale";
@@ -9,6 +10,18 @@ import { isPrivateServersEnabled } from "@/lib/features";
 import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { resolveServerCuid } from "@/lib/lookup";
+import {
+  computeFormContentHash,
+  normalizeApplicationFormDocument,
+  readEmbeddedEvaluation,
+  stripInternalFormDataKeys,
+} from "@/lib/applicationFormDocument";
+import {
+  computeVisibleFields,
+  evaluateApplication,
+  findMissingRequiredFields,
+  pickPlayerEvaluationView,
+} from "@/lib/applicationFormEvaluation";
 import { canAccessServer } from "@/lib/server-access";
 import { getPublicUrl } from "@/lib/storage";
 import {
@@ -54,7 +67,13 @@ export async function POST(request: Request, { params }: RouteContext) {
 
     const server = await prisma.server.findUnique({
       where: { id: cuid },
-      select: { id: true, ownerId: true, joinMode: true, status: true },
+      select: {
+        id: true,
+        ownerId: true,
+        joinMode: true,
+        status: true,
+        applicationForm: true,
+      },
     });
 
     if (!server) {
@@ -76,11 +95,14 @@ export async function POST(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: tServers("applicationNotAccepted") }, { status: 400 });
     }
 
-    // Check for existing application or membership
+    // Check for existing application or membership. Pull the rejected record's
+    // formContentHash so we can refuse resubmits when the form changed between
+    // rejection and retry.
     const existingApplication = await prisma.serverApplication.findUnique({
       where: { unique_server_application: { serverId: server.id, userId } },
-      select: { id: true, status: true },
+      select: { id: true, status: true, formContentHash: true },
     });
+    const existingFormContentHash = existingApplication?.formContentHash ?? null;
 
     if (existingApplication) {
       if (existingApplication.status === "pending") {
@@ -105,33 +127,124 @@ export async function POST(request: Request, { params }: RouteContext) {
 
     const { mcUsername, formData } = parsed.data;
 
-    // Store mcUsername alongside formData for later retrieval
-    const storedFormData = { ...formData, mcUsername };
+    // ─── Server-side evaluation gate (Phase 4 hardening) ─────────────────
+    // Normalize the owner's stored applicationForm to the canonical OwnerFormConfig and run
+    // the shared evaluator. The evaluator is the SOLE truth source for hard-disqualify /
+    // score-threshold / pending verdicts. The player runtime never sees the gating data.
+    const ownerConfig = normalizeApplicationFormDocument(server.applicationForm);
+    const currentFormContentHash = computeFormContentHash(server.applicationForm);
 
-    // If a rejected application already exists, update it to pending
-    if (existingApplication && existingApplication.status === "rejected") {
-      const updated = await prisma.serverApplication.update({
-        where: { id: existingApplication.id },
+    // Resubmit-after-rejection: refuse if form content has changed since rejection so the
+    // player cannot game the gate by waiting for the owner to soften the form.
+    if (
+      existingApplication?.status === "rejected" &&
+      existingFormContentHash &&
+      existingFormContentHash !== currentFormContentHash
+    ) {
+      return NextResponse.json(
+        {
+          error: "form_changed",
+          errorKey: "errors.api.applications.formChangedSinceRejection",
+        },
+        { status: 409 },
+      );
+    }
+
+    // Required-field gate: a client can POST {} (or omit fields entirely) and the
+    // evaluator alone won't catch it — `autoReject` only triggers when an answer is
+    // present, so empty submissions slip past as `pending`. Reject 400 if any visible
+    // required field has no usable answer.
+    const submittedAnswers = formData ?? {};
+    if (ownerConfig) {
+      const visibleFields = computeVisibleFields(ownerConfig, submittedAnswers);
+      const missingRequired = findMissingRequiredFields(visibleFields, submittedAnswers);
+      if (missingRequired.length > 0) {
+        return NextResponse.json(
+          {
+            error: "missing_required_fields",
+            errorKey: "errors.api.applications.missingRequiredFields",
+            details: { missing: missingRequired },
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    const evalResult = ownerConfig
+      ? evaluateApplication(ownerConfig, submittedAnswers)
+      : null;
+
+    // Map the evaluator verdict to the persisted application status. `pending_review` is the
+    // existing manual-review queue; `score_below_threshold` and `hard_disqualify` auto-reject.
+    const initialStatus =
+      evalResult?.result === "hard_disqualify" || evalResult?.result === "score_below_threshold"
+        ? "rejected"
+        : "pending";
+
+    // Embed `_evaluation` inside formData (Decision 1 Option B). Strip helper guarantees this
+    // never reaches non-owner viewers — see GET applications response.
+    const storedFormData: Record<string, unknown> = {
+      ...formData,
+      mcUsername,
+      ...(evalResult ? { _evaluation: evalResult } : {}),
+    };
+
+    try {
+      // Project the evaluator output for the player. Owner sees the full result via GET; the
+      // applicant only ever receives what their owner-configured transparency toggles permit.
+      const playerEval = evalResult
+        ? pickPlayerEvaluationView(evalResult, ownerConfig?.settings ?? null)
+        : null;
+
+      // Resubmit-after-rejection (form unchanged path): re-use the existing record.
+      if (existingApplication?.status === "rejected") {
+        const updated = await prisma.serverApplication.update({
+          where: { id: existingApplication.id },
+          data: {
+            status: initialStatus,
+            formData: storedFormData as Prisma.InputJsonValue,
+            reviewNote: null,
+            reviewedBy: null,
+            formContentHash: currentFormContentHash,
+          },
+        });
+        return NextResponse.json(
+          { data: { id: updated.id, status: initialStatus, evaluationResult: playerEval } },
+          { status: 201 },
+        );
+      }
+
+      const application = await prisma.serverApplication.create({
         data: {
-          status: "pending",
-          formData: storedFormData,
-          reviewNote: null,
-          reviewedBy: null,
+          serverId: server.id,
+          userId,
+          status: initialStatus,
+          formData: storedFormData as Prisma.InputJsonValue,
+          formContentHash: currentFormContentHash,
         },
       });
 
-      return NextResponse.json({ data: { id: updated.id } }, { status: 201 });
+      return NextResponse.json(
+        { data: { id: application.id, status: initialStatus, evaluationResult: playerEval } },
+        { status: 201 },
+      );
+    } catch (writeErr) {
+      // Translate Prisma P2002 (unique constraint conflict) — this races when two parallel
+      // POSTs hit the same (serverId, userId) and the existence check above missed.
+      if (
+        writeErr instanceof Prisma.PrismaClientKnownRequestError &&
+        writeErr.code === "P2002"
+      ) {
+        return NextResponse.json(
+          {
+            error: "duplicate",
+            errorKey: "errors.api.applications.duplicateActiveApplication",
+          },
+          { status: 409 },
+        );
+      }
+      throw writeErr;
     }
-
-    const application = await prisma.serverApplication.create({
-      data: {
-        serverId: server.id,
-        userId,
-        formData: storedFormData,
-      },
-    });
-
-    return NextResponse.json({ data: { id: application.id } }, { status: 201 });
   } catch (err) {
     logger.error("[api/servers/[id]/applications] Unexpected POST error", err);
     return NextResponse.json({ error: tCommon("internal") }, { status: 500 });
@@ -169,17 +282,27 @@ export async function GET(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
-    // Check server ownership
+    // Check caller scope: owner/admin sees all, applicant sees own, others 403.
     const server = await prisma.server.findUnique({
       where: { id: cuid },
-      select: { id: true, ownerId: true },
+      select: { id: true, ownerId: true, applicationForm: true },
     });
 
     if (!server) {
       return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
-    if (server.ownerId !== userId) {
+    const isOwnerOrAdmin = server.ownerId === userId || authResult.user.role === "admin";
+    let isApplicant = false;
+    if (!isOwnerOrAdmin) {
+      const ownApplication = await prisma.serverApplication.findUnique({
+        where: { unique_server_application: { serverId: server.id, userId } },
+        select: { id: true },
+      });
+      isApplicant = ownApplication !== null;
+    }
+
+    if (!isOwnerOrAdmin && !isApplicant) {
       return NextResponse.json({ error: tAuth("forbidden") }, { status: 403 });
     }
 
@@ -205,10 +328,17 @@ export async function GET(request: Request, { params }: RouteContext) {
 
     const { page, limit, status } = parsedQuery.data;
 
-    const where: { serverId: string; status?: string } = { serverId: server.id };
+    const where: { serverId: string; status?: string; userId?: string } = { serverId: server.id };
     if (status !== "all") {
       where.status = status;
     }
+    // Applicants can only see their own application(s).
+    if (!isOwnerOrAdmin) {
+      where.userId = userId;
+    }
+    const ownerSettings = isOwnerOrAdmin
+      ? null
+      : normalizeApplicationFormDocument(server.applicationForm)?.settings ?? null;
 
     const [total, applications] = await Promise.all([
       prisma.serverApplication.count({ where }),
@@ -233,12 +363,12 @@ export async function GET(request: Request, { params }: RouteContext) {
       const mcUsername =
         typeof rawFormData?.mcUsername === "string" ? rawFormData.mcUsername : "";
 
-      // Build formData without mcUsername for response
+      // Strip internal keys (mcUsername + _evaluation) via shared helper, then narrow to string|string[].
+      const stripped = stripInternalFormDataKeys(rawFormData);
       let responseFormData: Record<string, string | string[]> | null = null;
-      if (rawFormData) {
+      if (stripped) {
         const cleaned: Record<string, string | string[]> = {};
-        for (const [key, value] of Object.entries(rawFormData)) {
-          if (key === "mcUsername") continue;
+        for (const [key, value] of Object.entries(stripped)) {
           if (typeof value === "string") {
             cleaned[key] = value;
           } else if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
@@ -248,6 +378,13 @@ export async function GET(request: Request, { params }: RouteContext) {
         responseFormData = Object.keys(cleaned).length > 0 ? cleaned : null;
       }
 
+      const rawEvaluation = readEmbeddedEvaluation(rawFormData);
+      const evaluationResult =
+        rawEvaluation && !isOwnerOrAdmin
+          ? pickPlayerEvaluationView(rawEvaluation, ownerSettings)
+          : rawEvaluation;
+      const formContentHash = app.formContentHash ?? null;
+
       return {
         id: app.id,
         userId: app.user.id,
@@ -256,6 +393,8 @@ export async function GET(request: Request, { params }: RouteContext) {
         mcUsername,
         status: app.status as ServerApplicationItem["status"],
         formData: responseFormData,
+        evaluationResult,
+        formContentHash,
         reviewNote: app.reviewNote,
         reviewerName: app.reviewer?.name ?? null,
         createdAt: app.createdAt.toISOString(),

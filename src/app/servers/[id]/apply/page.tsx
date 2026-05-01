@@ -87,14 +87,23 @@ export default function ApplyPage() {
         return;
       }
 
+      // The API split-brain projects to PlayerFormView for non-owner viewers (no points/correct/
+      // autoReject/passingScore/branching ever ship to the player bundle). Apply page is always
+      // a non-owner viewer, so we expect the projected `{ version, fields }` shape — but accept
+      // a legacy v0 array shape too in case the projection layer is ever bypassed.
+      const rawForm = (s as { applicationForm?: unknown }).applicationForm;
+      const playerFields: ApplicationFormField[] | null = Array.isArray(rawForm)
+        ? (rawForm as ApplicationFormField[])
+        : rawForm && typeof rawForm === "object" && Array.isArray((rawForm as { fields?: unknown }).fields)
+          ? ((rawForm as { fields: ApplicationFormField[] }).fields)
+          : null;
+
       setServerInfo({
         name: typeof s.name === "string" ? s.name : t("unknownServer"),
         psid: typeof s.psid === "number" ? s.psid : 0,
         iconUrl: typeof s.iconUrl === "string" ? s.iconUrl : null,
         joinMode,
-        applicationForm: Array.isArray(s.applicationForm)
-          ? (s.applicationForm as ApplicationFormField[])
-          : null,
+        applicationForm: playerFields,
       });
 
       if (membershipRes.ok) {

@@ -9,8 +9,8 @@ import { logger } from "@/lib/logger";
 import { requireAdmin, isAdminError, translateAdminError } from "@/lib/admin";
 import { adminQueryUsersSchema } from "@/lib/validation";
 import type { Prisma } from "@prisma/client";
-import { getPublicUrl } from "@/lib/storage";
 import type { AdminUserItem } from "@/lib/types";
+import { getUserImageUrl } from "@/lib/user-image";
 
 /**
  * GET /api/admin/users — admin-only user listing.
@@ -58,7 +58,8 @@ export async function GET(request: Request) {
     if (search) {
       where.OR = [
         { name: { contains: search, mode: "insensitive" } },
-        { email: { contains: search, mode: "insensitive" } },
+        { misskeyUsername: { contains: search, mode: "insensitive" } },
+        { misskeyId: { contains: search, mode: "insensitive" } },
       ];
     }
 
@@ -71,9 +72,9 @@ export async function GET(request: Request) {
         orderBy: { createdAt: "desc" },
         select: {
           id: true,
-          uid: true,
+          misskeyId: true,
+          misskeyUsername: true,
           name: true,
-          email: true,
           image: true,
           role: true,
           isBanned: true,
@@ -94,10 +95,10 @@ export async function GET(request: Request) {
 
     const data: AdminUserItem[] = users.map((user) => ({
       id: user.id,
-      uid: user.uid,
+      misskeyId: user.misskeyId,
+      misskeyUsername: user.misskeyUsername,
       name: user.name,
-      email: user.email,
-      image: getPublicUrl(user.image),
+      image: getUserImageUrl(user.image),
       role: user.role,
       isBanned: user.isBanned,
       banReason: user.banReason,

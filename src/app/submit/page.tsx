@@ -1,7 +1,6 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
@@ -128,12 +127,6 @@ export default function SubmitServerPage() {
                 hint: duplicateServer.hint,
               })}
             </p>
-            <Link
-              href={`/servers/${duplicateServer.psid ?? duplicateServer.id}/verify`}
-              className="m3-link mt-2 inline-flex text-sm"
-            >
-              {t("duplicateGoVerify")}
-            </Link>
           </div>
         )}
         <ServerForm mode="create" cancelHref="/console" onSubmit={handleCreateServer} />

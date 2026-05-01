@@ -20,8 +20,9 @@ const MOBILE_MENU_LINK_CLASS =
 
 /**
  * Top navigation authentication area.
- * Logged-out: shows login + register. Logged-in: shows avatar +
- * display name with a dropdown menu.
+ * Logged-out: shows the Café sign-in button (registration is via Misskey,
+ * there is no local sign-up). Logged-in: shows avatar + display name with a
+ * dropdown menu.
  */
 export function AuthButtons() {
   const { data: session, status, update } = useSession();
@@ -78,18 +79,15 @@ export function AuthButtons() {
   if (!session?.user) {
     return (
       <div className="flex items-center gap-2">
-        <Link href="/login" className="m3-btn m3-btn-tonal px-3 py-1.5">
+        <Link href="/login" className="m3-btn m3-btn-primary px-3 py-1.5">
           {t("login")}
-        </Link>
-        <Link href="/register" className="m3-btn m3-btn-primary px-3 py-1.5">
-          {t("register")}
         </Link>
       </div>
     );
   }
 
   const displayName =
-    session.user.name?.trim() || session.user.email?.split("@")[0] || t("displayNameFallback");
+    session.user.name?.trim() || session.user.misskeyUsername || t("displayNameFallback");
 
   return (
     <div ref={menuRef} className="relative flex items-center gap-2">
@@ -101,12 +99,14 @@ export function AuthButtons() {
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
+        aria-haspopup="menu"
+        aria-expanded={open}
         className="m3-btn m3-btn-tonal flex items-center gap-2 px-2 py-1.5"
       >
         <UserAvatar
           src={session.user.image}
           name={session.user.name}
-          email={session.user.email}
+          handle={session.user.misskeyUsername}
           className="h-6 w-6"
           fallbackClassName="bg-accent text-white"
         />
@@ -115,28 +115,12 @@ export function AuthButtons() {
 
       {open && (
         <div className="m3-surface absolute right-0 top-11 z-50 w-44 p-2">
-          {session.user.uid !== undefined && (
-            <Link
-              href={`/u/${session.user.uid}`}
-              className="block rounded-lg px-3 py-2 text-sm text-warm-800 transition-colors hover:bg-warm-100"
-              onClick={() => setOpen(false)}
-            >
-              {t("myHome")}
-            </Link>
-          )}
-          <Link
-            href="/settings/profile"
-            className="block rounded-lg px-3 py-2 text-sm text-warm-800 transition-colors hover:bg-warm-100"
-            onClick={() => setOpen(false)}
-          >
-            {t("profileSettings")}
-          </Link>
           <Link
             href="/console"
             className="block rounded-lg px-3 py-2 text-sm text-warm-800 transition-colors hover:bg-warm-100"
             onClick={() => setOpen(false)}
           >
-            {t("console")}
+            {t("myServers")}
           </Link>
           <Link
             href="/favorites"
@@ -144,6 +128,20 @@ export function AuthButtons() {
             onClick={() => setOpen(false)}
           >
             {t("myFavorites")}
+          </Link>
+          <Link
+            href="/notifications"
+            className="block rounded-lg px-3 py-2 text-sm text-warm-800 transition-colors hover:bg-warm-100"
+            onClick={() => setOpen(false)}
+          >
+            {t("myNotifications")}
+          </Link>
+          <Link
+            href="/settings/profile"
+            className="block rounded-lg px-3 py-2 text-sm text-warm-800 transition-colors hover:bg-warm-100"
+            onClick={() => setOpen(false)}
+          >
+            {t("profileSettings")}
           </Link>
           {session.user.role === "admin" && (
             <Link
@@ -202,7 +200,7 @@ export function MobileNavMenu() {
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   const displayName =
-    session?.user?.name?.trim() || session?.user?.email?.split("@")[0] || tAuth("displayNameFallback");
+    session?.user?.name?.trim() || session?.user?.misskeyUsername || tAuth("displayNameFallback");
 
   useEffect(() => {
     setOpen(false);
@@ -289,13 +287,15 @@ export function MobileNavMenu() {
                   <UserAvatar
                     src={session.user.image}
                     name={session.user.name}
-                    email={session.user.email}
+                    handle={session.user.misskeyUsername}
                     className="h-10 w-10"
                     fallbackClassName="bg-accent text-white"
                   />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-warm-800">{displayName}</p>
-                    <p className="truncate text-xs text-warm-400">{session.user.email}</p>
+                    {session.user.misskeyUsername && (
+                      <p className="truncate text-xs text-warm-400">@{session.user.misskeyUsername}</p>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -330,34 +330,11 @@ export function MobileNavMenu() {
                       {tAuth("submitServer")}
                     </Link>
                     <Link
-                      href="/notifications"
-                      className={MOBILE_MENU_LINK_CLASS}
-                      onClick={() => setOpen(false)}
-                    >
-                      {tMobile("notifications")}
-                    </Link>
-                    {session.user.uid !== undefined && (
-                      <Link
-                        href={`/u/${session.user.uid}`}
-                        className={MOBILE_MENU_LINK_CLASS}
-                        onClick={() => setOpen(false)}
-                      >
-                        {tAuth("myHome")}
-                      </Link>
-                    )}
-                    <Link
-                      href="/settings/profile"
-                      className={MOBILE_MENU_LINK_CLASS}
-                      onClick={() => setOpen(false)}
-                    >
-                      {tAuth("profileSettings")}
-                    </Link>
-                    <Link
                       href="/console"
                       className={MOBILE_MENU_LINK_CLASS}
                       onClick={() => setOpen(false)}
                     >
-                      {tAuth("console")}
+                      {tAuth("myServers")}
                     </Link>
                     <Link
                       href="/favorites"
@@ -365,6 +342,20 @@ export function MobileNavMenu() {
                       onClick={() => setOpen(false)}
                     >
                       {tAuth("myFavorites")}
+                    </Link>
+                    <Link
+                      href="/notifications"
+                      className={MOBILE_MENU_LINK_CLASS}
+                      onClick={() => setOpen(false)}
+                    >
+                      {tAuth("myNotifications")}
+                    </Link>
+                    <Link
+                      href="/settings/profile"
+                      className={MOBILE_MENU_LINK_CLASS}
+                      onClick={() => setOpen(false)}
+                    >
+                      {tAuth("profileSettings")}
                     </Link>
                     <button
                       type="button"
@@ -381,18 +372,18 @@ export function MobileNavMenu() {
                 ) : (
                   <>
                     <Link
+                      href="/submit"
+                      className={MOBILE_MENU_LINK_CLASS}
+                      onClick={() => setOpen(false)}
+                    >
+                      {tAuth("submitServer")}
+                    </Link>
+                    <Link
                       href="/login"
                       className={MOBILE_MENU_LINK_CLASS}
                       onClick={() => setOpen(false)}
                     >
                       {tAuth("login")}
-                    </Link>
-                    <Link
-                      href="/register"
-                      className={MOBILE_MENU_LINK_CLASS}
-                      onClick={() => setOpen(false)}
-                    >
-                      {tAuth("register")}
                     </Link>
                   </>
                 )}

@@ -70,6 +70,9 @@ export async function loadServerListPageData(
 ): Promise<{
   servers: ServerListItem[];
   totalPages: number;
+  total: number;
+  totalOnlineServers: number;
+  totalActivePlayers: number;
 }> {
   const [{ prisma }, { buildServerStatusResponse }, { getPublicUrl }] = await Promise.all([
     import("@/lib/db"),
@@ -93,7 +96,12 @@ export async function loadServerListPageData(
     ];
   }
 
-  const [total, servers] = await Promise.all([
+  const baseWhere: Prisma.ServerWhereInput = {
+    status: "approved",
+    NOT: { visibility: "private", discoverable: false },
+  };
+
+  const [total, servers, totalOnlineServers, playerSum] = await Promise.all([
     prisma.server.count({ where }),
     prisma.server.findMany({
       where,
@@ -120,6 +128,11 @@ export async function loadServerListPageData(
         visibility: true,
         ownerId: true,
       },
+    }),
+    prisma.server.count({ where: { ...baseWhere, isOnline: true } }),
+    prisma.server.aggregate({
+      where: { ...baseWhere, isOnline: true },
+      _sum: { playerCount: true },
     }),
   ]);
 
@@ -172,5 +185,8 @@ export async function loadServerListPageData(
   return {
     servers: data,
     totalPages,
+    total,
+    totalOnlineServers,
+    totalActivePlayers: playerSum._sum.playerCount ?? 0,
   };
 }

@@ -11,6 +11,15 @@
 
 import { z } from "zod";
 
+import {
+  MAX_APPLICATION_FORM_BYTES,
+  validateBranchingGraph,
+} from "@/lib/applicationFormDocument";
+import type {
+  ApplicationFormBranchRule,
+  ApplicationFormField,
+} from "@/lib/types";
+
 // ─── Base field schemas ─────────────────────────
 
 /** Host patterns that must be rejected (SSRF defense: blocks localhost / private IPs / IPv6 loopback). */
@@ -63,11 +72,22 @@ export const serverLookupIdSchema = z
     "errors.validation.servers.invalidId",
   );
 
-/** User URL parameter validation (CUID or 9-digit UID). */
+/**
+ * User URL parameter validation. Accepts:
+ *   - Misskey aid (10–32 alphanumeric)
+ *   - Local cuid (legacy direct lookups)
+ *   - Legacy placeholder `legacy-{cuid|numeric}` produced by the
+ *     20260429120000_replace_credentials_with_misskey migration. Without
+ *     this branch every link to a pre-MiAuth account 400s before the
+ *     lookup helper can resolve it.
+ */
 export const userLookupIdSchema = z
   .string()
   .refine(
-    (v) => /^\d{9}$/.test(v) || z.string().cuid().safeParse(v).success,
+    (v) =>
+      /^[a-z0-9]{10,32}$/i.test(v) ||
+      /^legacy-[a-z0-9]{1,40}$/i.test(v) ||
+      z.string().cuid().safeParse(v).success,
     "errors.validation.servers.invalidUserId",
   );
 
@@ -143,22 +163,106 @@ export const serverVisibilitySchema = z.enum(["public", "private", "unlisted"]);
 /** Server join mode. */
 export const serverJoinModeSchema = z.enum(["open", "apply", "invite", "apply_and_invite"]);
 
+/**
+ * Application form option config (single option for select/multiselect).
+ * Accepts either the legacy `string` shape (treated as `{ value, label }`) or
+ * the v1 object shape with optional gating metadata that the runtime
+ * normalizer in src/lib/applicationFormDocument.ts already understands.
+ */
+const applicationFormOptionSchema = z.union([
+  z.string().min(1).max(100),
+  z.object({
+    value: z.string().min(1).max(100),
+    label: z.string().min(1).max(100),
+    points: z.number().int().min(-99).max(99).optional(),
+    correct: z.boolean().optional(),
+    autoReject: z.boolean().optional(),
+  }),
+]);
+
 /** Application form field config (single field). */
 const applicationFormFieldSchema = z.object({
   key: z.string().min(1).max(50),
   label: z.string().min(1).max(100),
   type: z.enum(["text", "textarea", "select", "multiselect"]),
   required: z.boolean().default(true),
-  options: z.array(z.string().max(100)).max(20).optional(),
+  options: z.array(applicationFormOptionSchema).max(20).optional(),
   placeholder: z.string().max(200).optional(),
 });
+
+/** Form-level scoring + transparency settings (v1 OwnerFormConfig.settings). */
+const applicationFormSettingsSchema = z.object({
+  // Whole-percent threshold (0–100). `null` disables the gate.
+  passingScore: z.number().int().min(0).max(100).nullable().optional(),
+  showScoreToPlayerOnReject: z.boolean().optional(),
+  showRejectReasonToPlayerOnReject: z.boolean().optional(),
+});
+
+/** Branching rule (v1 OwnerFormConfig.branching item). */
+const applicationFormBranchingRuleSchema = z.object({
+  targetFieldKey: z.string().min(1).max(50),
+  whenFieldKey: z.string().min(1).max(50),
+  allowedValues: z.array(z.string().min(1).max(100)).min(1).max(20),
+});
+
+/** v1 OwnerFormConfig document — fields + scoring settings + branching graph. */
+const applicationFormDocumentSchema = z
+  .object({
+    version: z.literal(1),
+    fields: z.array(applicationFormFieldSchema).max(100),
+    settings: applicationFormSettingsSchema.optional(),
+    branching: z.array(applicationFormBranchingRuleSchema).max(100).optional(),
+  })
+  // Per-field length and array-count caps don't bound the serialized size on
+  // their own — at the documented 100 fields × 20 options × ~140 chars each,
+  // the JSON can blow past the 64 KiB ceiling and bloat row/payload size.
+  // Enforce the cap at the schema boundary so PUT /settings rejects oversized
+  // documents before they hit the DB. TextEncoder works in both Node and
+  // edge/client runtimes, unlike Node's Buffer.
+  .superRefine((doc, ctx) => {
+    const bytes = new TextEncoder().encode(JSON.stringify(doc)).length;
+    if (bytes > MAX_APPLICATION_FORM_BYTES) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "errors.validation.servers.applicationFormTooLarge",
+        path: [],
+      });
+    }
+
+    // Cross-field check: every branching rule must reference fields that
+    // exist in `fields[]`, AND its `whenFieldKey` must appear earlier than
+    // its `targetFieldKey`. Per-field schemas only validate keys as plain
+    // strings, so without this an external caller can persist rules whose
+    // source field is missing — `computeVisibleFields` then yields an empty
+    // answer set and the target field stays permanently hidden, silently
+    // suppressing required questions and altering scoring behavior.
+    if (doc.branching && doc.branching.length > 0) {
+      const result = validateBranchingGraph(
+        doc.fields as ApplicationFormField[],
+        doc.branching as ApplicationFormBranchRule[],
+      );
+      if (!result.valid) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "errors.validation.servers.applicationFormBranchingInvalid",
+          path: ["branching", result.ruleIndex],
+        });
+      }
+    }
+  });
 
 /** Server private settings. */
 export const updateServerSettingsSchema = z.object({
   visibility: serverVisibilitySchema.optional(),
   discoverable: z.boolean().optional(),
   joinMode: serverJoinModeSchema.optional(),
-  applicationForm: z.array(applicationFormFieldSchema).max(10).nullable().optional(),
+  applicationForm: z
+    .union([
+      z.array(applicationFormFieldSchema).max(30),
+      applicationFormDocumentSchema,
+    ])
+    .nullable()
+    .optional(),
 });
 
 /** Submit join application. */
@@ -231,57 +335,6 @@ export const queryServersSchema = z.object({
   search: z.string().max(100).optional(),
   sort: z.enum(["newest", "popular", "players", "name"]).default("newest"),
   ownerId: z.string().cuid().optional(),
-});
-
-/** Register request body. */
-export const registerSchema = z.object({
-  email: z
-    .string()
-    .email()
-    .transform((value) => value.toLowerCase().trim()),
-  password: z.string().min(8, "errors.validation.auth.passwordMin"),
-  code: z
-    .string()
-    .length(6, "errors.validation.auth.codeLength")
-    .regex(/^\d{6}$/),
-});
-
-/** Login request body. */
-export const loginSchema = z.object({
-  email: z
-    .string()
-    .email()
-    .transform((value) => value.toLowerCase().trim()),
-  password: z.string().min(1, "errors.validation.auth.passwordRequired"),
-});
-
-/** Send verification code request body. */
-export const sendCodeSchema = z.object({
-  email: z
-    .string()
-    .email()
-    .transform((value) => value.toLowerCase().trim()),
-});
-
-/** Send password reset code request body. */
-export const sendResetCodeSchema = z.object({
-  email: z
-    .string()
-    .email()
-    .transform((value) => value.toLowerCase().trim()),
-});
-
-/** Reset password request body. */
-export const resetPasswordSchema = z.object({
-  email: z
-    .string()
-    .email()
-    .transform((value) => value.toLowerCase().trim()),
-  code: z
-    .string()
-    .length(6, "errors.validation.auth.codeLength")
-    .regex(/^\d{6}$/),
-  newPassword: z.string().min(8, "errors.validation.auth.passwordMin"),
 });
 
 /** Post a comment / reply. */
@@ -375,6 +428,14 @@ export const adminServerActionSchema = z.object({
   reason: z.string().max(500).optional(),
 });
 
+/** Admin console server field-level patch (isVerified toggle, ownerId assignment). */
+export const adminServerPatchSchema = z.object({
+  isVerified: z.boolean().optional(),
+  ownerId: z.string().nullable().optional(),
+}).refine((d) => d.isVerified !== undefined || d.ownerId !== undefined, {
+  message: "At least one field (isVerified or ownerId) must be provided",
+});
+
 /** Admin console user list query params. */
 export const adminQueryUsersSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -446,11 +507,6 @@ export type CreateServerInput = z.infer<typeof createServerSchema>;
 export type UpdateServerInput = z.infer<typeof updateServerSchema>;
 export type QueryServersInput = z.infer<typeof queryServersSchema>;
 export type PingResult = z.infer<typeof pingResultSchema>;
-export type RegisterInput = z.infer<typeof registerSchema>;
-export type LoginInput = z.infer<typeof loginSchema>;
-export type SendCodeInput = z.infer<typeof sendCodeSchema>;
-export type SendResetCodeInput = z.infer<typeof sendResetCodeSchema>;
-export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type CreateCommentInput = z.infer<typeof createCommentSchema>;
 export type QueryCommentsInput = z.infer<typeof queryCommentsSchema>;
 export type QueryNotificationsInput = z.infer<typeof queryNotificationsSchema>;

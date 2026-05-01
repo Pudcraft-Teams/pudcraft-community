@@ -13,7 +13,7 @@ interface ServerActionsProps {
 
 /**
  * Console management action row.
- * Centralizes edit, claim, view-public, and delete operations for the owner.
+ * Centralizes edit, view-public, and delete operations for the owner.
  */
 export function ServerActions({ serverId, serverName, isVerified, onDeleted }: ServerActionsProps) {
   const t = useTranslations("console.actions");
@@ -26,14 +26,10 @@ export function ServerActions({ serverId, serverName, isVerified, onDeleted }: S
           {t("editInfo")}
         </Link>
 
-        {isVerified ? (
+        {isVerified && (
           <span className="inline-flex items-center rounded-full bg-accent-muted px-3 py-2 text-sm font-medium text-accent ring-1 ring-accent/20">
             {t("verifiedBadge")}
           </span>
-        ) : (
-          <Link href={`/servers/${serverId}/verify`} className="m3-btn m3-btn-tonal text-accent">
-            {t("goVerify")}
-          </Link>
         )}
 
         <Link

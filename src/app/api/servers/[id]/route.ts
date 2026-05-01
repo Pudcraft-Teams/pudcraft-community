@@ -33,11 +33,14 @@ import { moderateFields } from "@/lib/moderation";
 import { buildServerContent, extractServerContentMetadata } from "@/lib/serverContent";
 import { serverLookupIdSchema, updateServerSchema } from "@/lib/validation";
 import type {
-  ApplicationFormField,
   ServerDetail,
   ServerJoinMode,
   ServerVisibility,
 } from "@/lib/types";
+import {
+  normalizeApplicationFormDocument,
+  pickPlayerFormView,
+} from "@/lib/applicationFormDocument";
 
 function extractTextField(formData: FormData, key: string): string | undefined {
   const value = formData.get(key);
@@ -168,11 +171,23 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       visibility: server.visibility as ServerVisibility,
       joinMode: server.joinMode as ServerJoinMode,
       isMember,
-      // applicationForm: expose to owner always; expose to others when joinMode supports apply
+      // applicationForm: split-brain projection — only the actual owner gets the full
+      // OwnerFormConfig (gating data needed by the editor). Every other caller (members,
+      // admins viewing someone else's server, anonymous visitors) gets the PlayerFormView
+      // projection. Admin inspection of another owner's gating data goes through admin
+      // consoles, not the public detail API. See plan §"Two views, one document".
       ...(server.joinMode === "apply" || server.joinMode === "apply_and_invite"
-        ? {
-            applicationForm: (server.applicationForm as ApplicationFormField[] | null) ?? null,
-          }
+        ? (() => {
+            const ownerConfig = normalizeApplicationFormDocument(server.applicationForm, {
+              serverId: server.id,
+              onLegacyEncounter: (sid) =>
+                logger.warn("[applicationForm] v0 array shape encountered", { serverId: sid }),
+            });
+            const isOwner = !!session?.user?.id && server.ownerId === session.user.id;
+            return {
+              applicationForm: isOwner ? ownerConfig : pickPlayerFormView(ownerConfig),
+            };
+          })()
         : {}),
       ...(session?.user?.id && server.ownerId === session.user.id
         ? {

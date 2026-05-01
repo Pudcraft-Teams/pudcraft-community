@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { isPrivateServersEnabled } from "@/lib/features";
+import { TAG_TO_SWATCH, pickCoverClass } from "@/lib/server-cover";
 import type { ServerListItem } from "@/lib/types";
 
 interface ServerCardProps {
@@ -14,12 +15,9 @@ interface ServerCardProps {
   onFavoriteChange?: (serverId: string, favorited: boolean) => void;
   className?: string;
   style?: React.CSSProperties;
+  featured?: boolean;
 }
 
-/**
- * 服务器信息卡片 —— 展示名称、状态、玩家数、延迟、标签等核心信息。
- * 信息密度适中，字段顺序固定（见 .cursorrules）。
- */
 export function ServerCard({
   server,
   initialFavorited,
@@ -27,6 +25,7 @@ export function ServerCard({
   onFavoriteChange,
   className,
   style,
+  featured = false,
 }: ServerCardProps) {
   const {
     name,
@@ -43,11 +42,6 @@ export function ServerCard({
   const privateServersEnabled = isPrivateServersEnabled();
   const isStale = status.isStale;
   const isOnline = status.online;
-  const statusText = isStale
-    ? t("cardStatusUnknown")
-    : isOnline
-      ? t("cardStatusOnline")
-      : t("cardStatusOffline");
   const isAddressHidden = host === "hidden" && port === 0;
   const showApplyBadge =
     privateServersEnabled &&
@@ -56,115 +50,118 @@ export function ServerCard({
     privateServersEnabled &&
     (joinMode === "invite" || joinMode === "apply_and_invite");
 
+  const coverClass = pickCoverClass(tags);
+  const visibleTags = tags.slice(0, 2);
+  const onlineLabel = isStale
+    ? t("cardStatusUnknown")
+    : isOnline
+      ? `${status.playerCount}/${status.maxPlayers}`
+      : t("cardStatusOffline");
+  const onlineModifier = isStale || !isOnline ? " cover-online-off" : "";
+
   return (
     <article
-      className={`group relative rounded-xl border border-warm-200 bg-surface transition-all duration-150 ease-out hover:border-warm-300 hover:shadow-sm animate-card-in${className ? ` ${className}` : ""}`}
+      className={`player-card animate-card-in${featured ? " player-card-featured" : ""}${className ? ` ${className}` : ""}`}
       style={style}
     >
-      <Link href={`/servers/${server.psid}`} className="block">
-        <div className="p-4 pr-14">
-          {/* 1. 图标 + 名称 + 状态 */}
-          <div className="mb-3 flex items-start gap-3">
-            <span className="relative inline-flex h-10 w-10 shrink-0 overflow-hidden rounded-lg">
-              <Image
-                src={iconUrl || "/default-server-icon.png"}
-                alt={t("cardIconAlt", { name })}
-                width={40}
-                height={40}
-                className="h-full w-full object-cover"
-              />
-            </span>
+      <Link href={`/servers/${server.psid}`} className="block no-underline">
+        <div className={`player-card-cover ${coverClass}`}>
+          <div className="cover-tags">
+            {visibleTags.map((tag) => (
+              <span
+                key={tag}
+                className="mode-tag"
+                style={{ ["--swatch" as string]: TAG_TO_SWATCH[tag] ?? "#fff" }}
+              >
+                <span className="swatch" aria-hidden />
+                {tag}
+              </span>
+            ))}
+            {featured ? (
+              <span className="mode-tag mode-tag-featured">
+                {t("cardBadgeFeatured")}
+              </span>
+            ) : null}
+            {isVerified ? (
+              <span className="mode-tag mode-tag-verified">
+                {t("cardBadgeVerified")}
+              </span>
+            ) : null}
+            {showApplyBadge ? (
+              <span className="mode-tag">
+                {t("cardBadgeApply")}
+              </span>
+            ) : null}
+            {showInviteBadge ? (
+              <span className="mode-tag">
+                {t("cardBadgeInvite")}
+              </span>
+            ) : null}
+          </div>
+          <div className={`cover-online${onlineModifier}`}>
+            <span className="dot" aria-hidden />
+            {onlineLabel}
+          </div>
+        </div>
 
+        <div className="player-card-body">
+          <div className="flex items-start gap-3">
+            {iconUrl ? (
+              <span className="relative inline-flex h-9 w-9 shrink-0 overflow-hidden rounded-md border border-warm-200">
+                <Image
+                  src={iconUrl}
+                  alt={t("cardIconAlt", { name })}
+                  width={36}
+                  height={36}
+                  className="h-full w-full object-cover"
+                />
+              </span>
+            ) : null}
             <div className="min-w-0 flex-1">
-              <h3 className="truncate text-sm font-semibold text-warm-800 transition-colors group-hover:text-accent">
-                {name}
-              </h3>
-              {/* 地址 */}
+              <div className="player-card-title truncate">{name}</div>
               {isAddressHidden ? (
-                <p className="mt-0.5 text-xs text-warm-400">{t("cardAddressHidden")}</p>
+                <div className="player-card-host">{t("cardAddressHidden")}</div>
               ) : (
-                <p className="mt-0.5 break-all font-mono text-xs text-warm-400">
+                <div className="player-card-host break-all">
                   {host}
                   {port !== 25565 ? `:${port}` : ""}
-                </p>
+                </div>
               )}
             </div>
           </div>
 
-          {/* 2. 描述 */}
-          {description && (
-            <p className="mb-3 line-clamp-2 text-[13px] leading-relaxed text-warm-500">{description}</p>
-          )}
+          {description ? (
+            <p className="player-card-desc">{description}</p>
+          ) : null}
 
-          {/* 3. 底部信息栏 */}
-          <div className="flex items-center justify-between gap-2">
-            {/* 标签 */}
-            <div className="flex min-w-0 flex-wrap gap-1">
-              {tags.slice(0, 3).map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded bg-warm-100 px-1.5 py-0.5 text-[11px] font-medium text-warm-500"
-                >
-                  {tag}
+          <div className="player-card-foot">
+            <div className="player-card-meta">
+              {(server.favoriteCount ?? 0) > 0 ? (
+                <span className="text-warm-500">
+                  {t("favoriteCount", { count: server.favoriteCount ?? 0 })}
                 </span>
-              ))}
-              {tags.length > 3 && (
-                <span className="rounded bg-warm-100 px-1.5 py-0.5 text-[11px] font-medium text-warm-400">
-                  +{tags.length - 3}
-                </span>
-              )}
-              {isVerified && (
-                <span className="rounded bg-accent-muted px-1.5 py-0.5 text-[11px] font-medium text-accent">
-                  {t("cardBadgeVerified")}
-                </span>
-              )}
-              {showApplyBadge && (
-                <span className="rounded bg-warm-100 px-1.5 py-0.5 text-[11px] font-medium text-warm-500">
-                  {t("cardBadgeApply")}
-                </span>
-              )}
-              {showInviteBadge && (
-                <span className="rounded bg-warm-100 px-1.5 py-0.5 text-[11px] font-medium text-warm-500">
-                  {t("cardBadgeInvite")}
-                </span>
-              )}
+              ) : null}
             </div>
-
-            {/* 状态 + 人数 */}
-            <div className="flex shrink-0 items-center gap-2">
-              {!isStale && isOnline && (
-                <>
-                  <span className="text-xs font-medium tabular-nums text-forest">
-                    {status.playerCount}/{status.maxPlayers}
-                  </span>
-                  <span className="h-1.5 w-1.5 rounded-full bg-forest" />
-                </>
-              )}
-              {(isStale || !isOnline) && (
-                <>
-                  <span className="text-xs text-warm-400" suppressHydrationWarning>
-                    {statusText}
-                  </span>
-                  <span className={`h-1.5 w-1.5 rounded-full ${isStale ? "bg-warm-300" : "bg-warm-400"}`} />
-                </>
-              )}
-            </div>
+            {tags.length > 2 ? (
+              <span className="adm-tag">+{tags.length - 2}</span>
+            ) : null}
           </div>
         </div>
       </Link>
 
-      {showFavoriteButton && (
-        <div className="absolute right-4 top-4">
+      {showFavoriteButton ? (
+        <div className="player-card-fav">
           <FavoriteButton
             serverId={server.id}
             size="sm"
+            className="player-card-fav-button"
             initialFavorited={initialFavorited}
             onChange={(favorited) => {
               onFavoriteChange?.(server.id, favorited);
             }}
           />
         </div>
-      )}
+      ) : null}
     </article>
   );
 }

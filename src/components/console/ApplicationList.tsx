@@ -6,12 +6,22 @@ import { Pagination } from "@/components/Pagination";
 import { UserAvatar } from "@/components/UserAvatar";
 import { defaultLocale, isLocale } from "@/i18n/config";
 import { timeAgo } from "@/lib/time";
-import type { ApplicationStatus, ServerApplicationItem } from "@/lib/types";
+import type {
+  ApplicationStatus,
+  OwnerFormConfig,
+  ServerApplicationItem,
+} from "@/lib/types";
 
 type TabStatus = "pending" | "approved" | "rejected";
 
 interface ApplicationListProps {
   serverId: string;
+  /**
+   * Owner-scope form document. Used to resolve the raw `offendingFieldKey`
+   * stored in evaluation results back to the human-readable field label.
+   * Optional — when missing the badge falls back to the raw key.
+   */
+  applicationForm?: OwnerFormConfig | null;
 }
 
 interface ApplicationsPayload {
@@ -83,14 +93,88 @@ function resolveUserName(
   return app.userName?.trim() || t("anonymousUser");
 }
 
+function EvaluationBadge({
+  app,
+  t,
+  formData,
+  fieldLabels,
+}: {
+  app: ServerApplicationItem;
+  t: ReturnType<typeof useTranslations>;
+  formData: ServerApplicationItem["formData"];
+  fieldLabels: Record<string, string>;
+}) {
+  const result = app.evaluationResult;
+  if (!result) {
+    if (formData && Object.keys(formData).length > 0) {
+      return (
+        <span className="inline-flex items-center rounded-full bg-warm-100 px-2.5 py-0.5 text-xs font-medium text-warm-500">
+          {t("badge.noEvaluation")}
+        </span>
+      );
+    }
+    return null;
+  }
+
+  if (result.result === "hard_disqualify") {
+    const rawKey = result.offendingFieldKey ?? "";
+    const fieldLabel = fieldLabels[rawKey] || rawKey;
+    return (
+      <span className="inline-flex items-center rounded-full bg-coral-light px-2.5 py-0.5 text-xs font-medium text-coral ring-1 ring-coral/20">
+        {t("badge.hardDisqualify", { fieldLabel })}
+      </span>
+    );
+  }
+
+  if (result.result === "score_below_threshold") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-coral-light px-2.5 py-0.5 text-xs font-medium text-coral ring-1 ring-coral/20">
+        {t("badge.scoreBelowThreshold", {
+          score: result.scorePercent ?? 0,
+          passingScore: result.passingScore ?? 0,
+        })}
+      </span>
+    );
+  }
+
+  // pending_review
+  if (
+    typeof result.scorePercent === "number" &&
+    typeof result.passingScore === "number"
+  ) {
+    return (
+      <span className="inline-flex items-center rounded-full bg-forest-light px-2.5 py-0.5 text-xs font-medium text-forest-dark ring-1 ring-forest/20">
+        {t("badge.passedAutoScreen", {
+          score: result.scorePercent,
+          passingScore: result.passingScore,
+        })}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center rounded-full bg-warm-100 px-2.5 py-0.5 text-xs font-medium text-warm-600">
+      {t("badge.awaitingReview")}
+    </span>
+  );
+}
+
 /**
  * Application review list.
  * Owners can view and moderate (approve / reject) player join applications.
  */
-export function ApplicationList({ serverId }: ApplicationListProps) {
+export function ApplicationList({ serverId, applicationForm }: ApplicationListProps) {
   const t = useTranslations("console.applications");
   const rawLocale = useLocale();
   const appLocale = isLocale(rawLocale) ? rawLocale : defaultLocale;
+  const fieldLabels = (() => {
+    const map: Record<string, string> = {};
+    if (applicationForm?.fields) {
+      for (const field of applicationForm.fields) {
+        map[field.key] = field.label;
+      }
+    }
+    return map;
+  })();
   const [activeTab, setActiveTab] = useState<TabStatus>("pending");
   const [page, setPage] = useState(1);
   const [applications, setApplications] = useState<ServerApplicationItem[]>([]);
@@ -284,7 +368,13 @@ export function ApplicationList({ serverId }: ApplicationListProps) {
                   </div>
                 </div>
 
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                  <EvaluationBadge
+                    app={app}
+                    t={t}
+                    formData={app.formData}
+                    fieldLabels={fieldLabels}
+                  />
                   <StatusBadge status={app.status} t={t} />
                   <span className="text-xs text-warm-400">{timeAgo(app.createdAt, appLocale)}</span>
                 </div>

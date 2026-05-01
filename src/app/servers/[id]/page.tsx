@@ -20,6 +20,7 @@ import { resolveServerCuid } from "@/lib/lookup";
 import { canAccessServer, isServerOwner } from "@/lib/server-access";
 import { canSeeServerAddress } from "@/lib/server-membership";
 import { getPublicUrl } from "@/lib/storage";
+import { getUserImageUrl } from "@/lib/user-image";
 import { timeAgo } from "@/lib/time";
 import type { ApplicationStatus, ServerComment } from "@/lib/types";
 import { serverLookupIdSchema } from "@/lib/validation";
@@ -68,7 +69,8 @@ function mapComments(
     createdAt: Date;
     author: {
       id: string;
-      uid: number;
+      misskeyId: string;
+      misskeyUsername: string;
       name: string | null;
       image: string | null;
     };
@@ -78,7 +80,8 @@ function mapComments(
       createdAt: Date;
       author: {
         id: string;
-        uid: number;
+        misskeyId: string;
+        misskeyUsername: string;
         name: string | null;
         image: string | null;
       };
@@ -91,9 +94,10 @@ function mapComments(
     createdAt: comment.createdAt.toISOString(),
     author: {
       id: comment.author.id,
-      uid: comment.author.uid,
+      misskeyId: comment.author.misskeyId,
+      misskeyUsername: comment.author.misskeyUsername,
       name: comment.author.name,
-      image: getPublicUrl(comment.author.image),
+      image: getUserImageUrl(comment.author.image),
     },
     replies: comment.replies.map((reply) => ({
       id: reply.id,
@@ -101,9 +105,10 @@ function mapComments(
       createdAt: reply.createdAt.toISOString(),
       author: {
         id: reply.author.id,
-        uid: reply.author.uid,
+        misskeyId: reply.author.misskeyId,
+        misskeyUsername: reply.author.misskeyUsername,
         name: reply.author.name,
-        image: getPublicUrl(reply.author.image),
+        image: getUserImageUrl(reply.author.image),
       },
     })),
   }));
@@ -161,7 +166,8 @@ const getServerPageData = cache(async (rawId: string) => {
         author: {
           select: {
             id: true,
-            uid: true,
+            misskeyId: true,
+            misskeyUsername: true,
             name: true,
             image: true,
           },
@@ -172,7 +178,8 @@ const getServerPageData = cache(async (rawId: string) => {
             author: {
               select: {
                 id: true,
-                uid: true,
+                misskeyId: true,
+                misskeyUsername: true,
                 name: true,
                 image: true,
               },
@@ -232,8 +239,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title: t("metaOgTitleSuffix", { name: server.name }),
       description:
-        server.description?.trim() ||
-        t("metaOgDescriptionFallback", { name: server.name }),
+        server.description?.trim() || t("metaOgDescriptionFallback", { name: server.name }),
       images: server.iconUrl
         ? [{ url: toAbsoluteUrl(getPublicUrl(server.iconUrl) ?? "/default-server-icon.png") }]
         : [],
@@ -265,8 +271,6 @@ export default async function ServerDetailPage({ params }: Props) {
   const isOwner = isServerOwner(server.ownerId, currentUserId);
   const isLoggedIn = !!currentUserId;
   const privateServersEnabled = isPrivateServersEnabled();
-  const canClaimUnverified = isLoggedIn && !server.isVerified;
-  const canReclaimVerified = isLoggedIn && server.isVerified && server.ownerId !== currentUserId;
   const canAccessCurrentServer = canAccessServer({
     status: server.status,
     ownerId: server.ownerId,
@@ -399,7 +403,7 @@ export default async function ServerDetailPage({ params }: Props) {
       </nav>
 
       <section className="m3-surface mb-6 p-4 sm:p-6">
-        {(isOwner || canClaimUnverified || canReclaimVerified || !isLoggedIn) && (
+        {isOwner && (
           <div className="mb-4 flex flex-wrap items-center gap-2">
             {isOwner && (
               <Link
@@ -419,15 +423,6 @@ export default async function ServerDetailPage({ params }: Props) {
               </Link>
             )}
 
-            {canClaimUnverified && (
-              <Link
-                href={`/servers/${server.psid}/verify`}
-                className="m3-btn m3-btn-tonal rounded-lg px-3 py-1.5 text-xs text-accent"
-              >
-                {t("actionClaim")}
-              </Link>
-            )}
-
             {isOwner && (
               <Link
                 href={`/console/${server.id}`}
@@ -437,14 +432,6 @@ export default async function ServerDetailPage({ params }: Props) {
               </Link>
             )}
 
-            {!isLoggedIn && !server.isVerified && (
-              <Link
-                href={`/login?callbackUrl=${encodeURIComponent(`/servers/${server.psid}/verify`)}`}
-                className="text-xs text-warm-400 underline underline-offset-4"
-              >
-                {t("actionClaimAfterLogin")}
-              </Link>
-            )}
           </div>
         )}
 
@@ -484,28 +471,6 @@ export default async function ServerDetailPage({ params }: Props) {
                   >
                     {t("badgeClaimed")}
                   </span>
-                  {(canReclaimVerified || !isLoggedIn) && (
-                    <details className="group relative">
-                      <summary
-                        className="cursor-pointer list-none rounded-md px-1.5 py-0.5 text-xs text-warm-400 transition-colors hover:bg-warm-100 hover:text-warm-500"
-                        aria-label={t("actionMoreAriaLabel")}
-                      >
-                        ...
-                      </summary>
-                      <div className="absolute left-0 top-6 z-10 whitespace-nowrap rounded-md border border-warm-200 bg-surface px-2 py-1 shadow-sm">
-                        <Link
-                          href={
-                            isLoggedIn
-                              ? `/servers/${server.id}/verify`
-                              : `/login?callbackUrl=${encodeURIComponent(`/servers/${server.id}/verify`)}`
-                          }
-                          className="text-xs text-warm-500 underline underline-offset-4"
-                        >
-                          {isLoggedIn ? t("actionReclaim") : t("actionClaimAfterLogin")}
-                        </Link>
-                      </div>
-                    </details>
-                  )}
                 </div>
               )}
             </div>
@@ -521,7 +486,9 @@ export default async function ServerDetailPage({ params }: Props) {
         </div>
 
         {server.isVerified && verifiedAtLabel && (
-          <p className="mb-4 text-xs text-accent">{t("verifiedAtHint", { time: verifiedAtLabel })}</p>
+          <p className="mb-4 text-xs text-accent">
+            {t("verifiedAtHint", { time: verifiedAtLabel })}
+          </p>
         )}
 
         {isOwner && server.status !== "approved" && (
@@ -677,9 +644,7 @@ export default async function ServerDetailPage({ params }: Props) {
           <h2 className="mb-4 text-lg font-semibold text-warm-800">{t("introHeading")}</h2>
           <MarkdownRenderer
             content={
-              canSeeAddress
-                ? server.content
-                : server.content.replace(/^- QQ 群：.*$/m, "").trim()
+              canSeeAddress ? server.content : server.content.replace(/^- QQ 群：.*$/m, "").trim()
             }
           />
         </section>
@@ -720,7 +685,9 @@ export default async function ServerDetailPage({ params }: Props) {
                     <span>{t("modpackGameVersion", { value: modpack.gameVersion ?? "--" })}</span>
                     <span>{t("modpackMods", { count: modpack.modsCount })}</span>
                     <span>{t("modpackFileSize", { size: formatFileSize(modpack.fileSize) })}</span>
-                    <span>{t("modpackUploadedAt", { time: formatDate(modpack.createdAt, appLocale) })}</span>
+                    <span>
+                      {t("modpackUploadedAt", { time: formatDate(modpack.createdAt, appLocale) })}
+                    </span>
                     <span>
                       {modpack.hasOverrides
                         ? t("modpackWithOverrides")
