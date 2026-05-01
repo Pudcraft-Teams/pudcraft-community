@@ -4,12 +4,16 @@ import { signIn } from "@/lib/auth";
 import { issueTicket } from "@/lib/auth-ticket";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { checkMiAuthSession, deriveLocalRoleFromMisskey } from "@/lib/misskey";
+import {
+  checkMiAuthSession,
+  consumeStartedMiAuthSession,
+  deriveLocalRoleFromMisskey,
+  isLocalMisskeyUser,
+  isValidMiAuthSessionId,
+} from "@/lib/misskey";
 import { getRedisConnection } from "@/lib/redis";
 
 export const dynamic = "force-dynamic";
-
-const REDIS_KEY_PREFIX = "miauth:start:";
 
 function safeRedirect(origin: string, target: string): NextResponse {
   return NextResponse.redirect(new URL(target, origin), { status: 302 });
@@ -19,18 +23,21 @@ export async function GET(request: NextRequest) {
   const origin = request.nextUrl.origin;
   const sessionId = request.nextUrl.searchParams.get("session");
 
-  if (!sessionId) {
+  if (!isValidMiAuthSessionId(sessionId)) {
     return safeRedirect(origin, "/login?error=misskey_failed");
   }
 
-  let callbackUrl = "/";
+  let callbackUrl: string;
   try {
     const redis = getRedisConnection();
-    const stored = await redis.get(`${REDIS_KEY_PREFIX}${sessionId}`);
-    if (stored) {
-      callbackUrl = stored;
+    const consumed = await consumeStartedMiAuthSession(redis, sessionId);
+    if (!consumed) {
+      // Either expired, replayed, or never minted by our /start route.
+      // Fail closed — never sign anyone in for a session we did not mint.
+      logger.warn("misskey callback rejected unknown session", { sessionId });
+      return safeRedirect(origin, "/login?error=misskey_failed");
     }
-    await redis.del(`${REDIS_KEY_PREFIX}${sessionId}`);
+    callbackUrl = consumed.callbackUrl;
   } catch (err) {
     logger.error("misskey callback redis lookup failed", { err: String(err) });
     return safeRedirect(origin, "/login?error=misskey_failed");
@@ -42,6 +49,14 @@ export async function GET(request: NextRequest) {
   }
 
   const { user: misskeyUser } = checkResult;
+  if (!isLocalMisskeyUser(misskeyUser)) {
+    logger.warn("misskey callback rejected federated user", {
+      sessionId,
+      remoteHost: misskeyUser.host,
+    });
+    return safeRedirect(origin, "/login?error=misskey_failed");
+  }
+
   const role = deriveLocalRoleFromMisskey(misskeyUser);
   const now = new Date();
 

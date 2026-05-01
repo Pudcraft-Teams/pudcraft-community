@@ -18,6 +18,49 @@ export interface MisskeyUser {
   host: string | null;
 }
 
+const SESSION_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Reject anything that does not look like the UUID issued by start route.
+ * Treating arbitrary strings as session IDs lets an attacker probe MiAuth
+ * with values they fully control.
+ */
+export function isValidMiAuthSessionId(value: unknown): value is string {
+  return typeof value === "string" && SESSION_UUID_RE.test(value);
+}
+
+/**
+ * The product is bound to a single self-hosted Misskey instance.
+ * Federated users (host !== null) are not authoritative for our identity
+ * model and must not be allowed to sign in.
+ */
+export function isLocalMisskeyUser(user: Pick<MisskeyUser, "host">): boolean {
+  return user.host === null;
+}
+
+interface RedisGetDel {
+  getdel(key: string): Promise<string | null>;
+}
+
+/**
+ * Atomically consume the start-route redis state. Returns the stored
+ * callbackUrl if (and only if) start route had registered this sessionId.
+ * If no state exists the caller MUST fail closed — the sessionId was
+ * not minted by us, so trusting Misskey's response would let an attacker
+ * who approves their own MiAuth session log a victim into their account.
+ */
+export async function consumeStartedMiAuthSession(
+  redis: RedisGetDel,
+  sessionId: string,
+): Promise<{ callbackUrl: string } | null> {
+  const stored = await redis.getdel(`miauth:start:${sessionId}`);
+  if (stored === null) {
+    return null;
+  }
+  return { callbackUrl: stored };
+}
+
 export interface MiAuthCheckResult {
   token: string;
   user: MisskeyUser;
