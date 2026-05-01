@@ -1,3 +1,5 @@
+import { timingSafeEqual } from "node:crypto";
+import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { signIn } from "@/lib/auth";
@@ -15,8 +17,31 @@ import { getRedisConnection } from "@/lib/redis";
 
 export const dynamic = "force-dynamic";
 
-function safeRedirect(origin: string, target: string): NextResponse {
-  return NextResponse.redirect(new URL(target, origin), { status: 302 });
+const NONCE_COOKIE_NAME = "miauth_nonce";
+const NONCE_COOKIE_PATH = "/api/auth/misskey";
+
+function clearNonceCookie(response: NextResponse): NextResponse {
+  response.cookies.set(NONCE_COOKIE_NAME, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 0,
+    path: NONCE_COOKIE_PATH,
+  });
+  return response;
+}
+
+function failClosed(origin: string): NextResponse {
+  return clearNonceCookie(
+    NextResponse.redirect(new URL("/login?error=misskey_failed", origin), { status: 302 }),
+  );
+}
+
+function nonceMatches(provided: string, stored: string): boolean {
+  if (provided.length !== stored.length) {
+    return false;
+  }
+  return timingSafeEqual(Buffer.from(provided, "utf8"), Buffer.from(stored, "utf8"));
 }
 
 export async function GET(request: NextRequest) {
@@ -24,7 +49,13 @@ export async function GET(request: NextRequest) {
   const sessionId = request.nextUrl.searchParams.get("session");
 
   if (!isValidMiAuthSessionId(sessionId)) {
-    return safeRedirect(origin, "/login?error=misskey_failed");
+    return failClosed(origin);
+  }
+
+  const cookieNonce = request.cookies.get(NONCE_COOKIE_NAME)?.value ?? null;
+  if (!cookieNonce) {
+    logger.warn("misskey callback missing browser-binding cookie", { sessionId });
+    return failClosed(origin);
   }
 
   let callbackUrl: string;
@@ -35,17 +66,26 @@ export async function GET(request: NextRequest) {
       // Either expired, replayed, or never minted by our /start route.
       // Fail closed — never sign anyone in for a session we did not mint.
       logger.warn("misskey callback rejected unknown session", { sessionId });
-      return safeRedirect(origin, "/login?error=misskey_failed");
+      return failClosed(origin);
+    }
+    if (!nonceMatches(cookieNonce, consumed.nonce)) {
+      // The session ID was minted by /start, but the cookie does not match
+      // the nonce stored alongside it — meaning the request reached this
+      // endpoint from a different browser than the one that initiated
+      // login. Refuse, and burn the consumed redis entry (already gone via
+      // GETDEL) so the attacker cannot retry against a fresh victim.
+      logger.warn("misskey callback browser-binding nonce mismatch", { sessionId });
+      return failClosed(origin);
     }
     callbackUrl = consumed.callbackUrl;
   } catch (err) {
     logger.error("misskey callback redis lookup failed", { err: String(err) });
-    return safeRedirect(origin, "/login?error=misskey_failed");
+    return failClosed(origin);
   }
 
   const checkResult = await checkMiAuthSession(sessionId);
   if (!checkResult) {
-    return safeRedirect(origin, "/login?error=misskey_failed");
+    return failClosed(origin);
   }
 
   const { user: misskeyUser } = checkResult;
@@ -54,7 +94,7 @@ export async function GET(request: NextRequest) {
       sessionId,
       remoteHost: misskeyUser.host,
     });
-    return safeRedirect(origin, "/login?error=misskey_failed");
+    return failClosed(origin);
   }
 
   const role = deriveLocalRoleFromMisskey(misskeyUser);
@@ -89,14 +129,31 @@ export async function GET(request: NextRequest) {
       misskeyId: misskeyUser.id,
       err: String(err),
     });
-    return safeRedirect(origin, "/login?error=misskey_failed");
+    return failClosed(origin);
   }
 
   if (localUser.isBanned) {
-    return safeRedirect(origin, "/login?error=banned");
+    return clearNonceCookie(
+      NextResponse.redirect(new URL("/login?error=banned", origin), { status: 302 }),
+    );
   }
 
   const ticket = issueTicket(localUser.id);
+
+  // The browser-binding nonce has done its job — burn it before handing off
+  // to NextAuth so the success response sent back to the browser also clears
+  // the cookie. We use the next/headers store because signIn() throws
+  // NEXT_REDIRECT and never returns a NextResponse we could attach to.
+  const cookieStore = await cookies();
+  cookieStore.set({
+    name: NONCE_COOKIE_NAME,
+    value: "",
+    maxAge: 0,
+    path: NONCE_COOKIE_PATH,
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
 
   // signIn() throws NEXT_REDIRECT on success, which Next.js converts into a
   // 302 to callbackUrl with the auth cookie set. Do not wrap in try/catch
@@ -104,5 +161,5 @@ export async function GET(request: NextRequest) {
   await signIn("misskey", { ticket, redirectTo: callbackUrl });
 
   // Should be unreachable; defensive fallback if signIn ever returns.
-  return safeRedirect(origin, callbackUrl);
+  return clearNonceCookie(NextResponse.redirect(new URL(callbackUrl, origin), { status: 302 }));
 }

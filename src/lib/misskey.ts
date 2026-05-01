@@ -43,22 +43,48 @@ interface RedisGetDel {
   getdel(key: string): Promise<string | null>;
 }
 
+export interface StartedMiAuthSession {
+  callbackUrl: string;
+  /** Random nonce minted by /start and mirrored in a HttpOnly cookie on the
+   * initiating browser. Callback compares the cookie value against this so
+   * an attacker cannot ride a session ID they minted into a victim's browser. */
+  nonce: string;
+}
+
 /**
  * Atomically consume the start-route redis state. Returns the stored
- * callbackUrl if (and only if) start route had registered this sessionId.
- * If no state exists the caller MUST fail closed — the sessionId was
- * not minted by us, so trusting Misskey's response would let an attacker
- * who approves their own MiAuth session log a victim into their account.
+ * callback URL and browser-binding nonce if (and only if) /start had
+ * registered this sessionId. If no state exists, or the stored payload is
+ * malformed, the caller MUST fail closed — the sessionId was not minted
+ * by us (or the schema drifted), so trusting Misskey's response would let
+ * an attacker who approves their own MiAuth session log a victim into
+ * their account.
  */
 export async function consumeStartedMiAuthSession(
   redis: RedisGetDel,
   sessionId: string,
-): Promise<{ callbackUrl: string } | null> {
+): Promise<StartedMiAuthSession | null> {
   const stored = await redis.getdel(`miauth:start:${sessionId}`);
   if (stored === null) {
     return null;
   }
-  return { callbackUrl: stored };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stored);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object") {
+    return null;
+  }
+  const obj = parsed as Record<string, unknown>;
+  if (typeof obj.callbackUrl !== "string" || typeof obj.nonce !== "string") {
+    return null;
+  }
+  if (obj.nonce.length === 0) {
+    return null;
+  }
+  return { callbackUrl: obj.callbackUrl, nonce: obj.nonce };
 }
 
 export interface MiAuthCheckResult {

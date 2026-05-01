@@ -47,12 +47,13 @@ function makeStubRedis(initial: Record<string, string>) {
   };
 }
 
-test("consumeStartedMiAuthSession returns the stored callbackUrl and deletes the key", async () => {
+test("consumeStartedMiAuthSession returns the stored callbackUrl plus nonce and deletes the key", async () => {
   const sessionId = "11111111-2222-4333-8444-555555555555";
-  const redis = makeStubRedis({ [`miauth:start:${sessionId}`]: "/console" });
+  const stored = JSON.stringify({ callbackUrl: "/console", nonce: "abc123" });
+  const redis = makeStubRedis({ [`miauth:start:${sessionId}`]: stored });
 
   const first = await consumeStartedMiAuthSession(redis, sessionId);
-  assert.deepEqual(first, { callbackUrl: "/console" });
+  assert.deepEqual(first, { callbackUrl: "/console", nonce: "abc123" });
   assert.equal(redis.store.size, 0, "key must be removed after consumption");
 
   const second = await consumeStartedMiAuthSession(redis, sessionId);
@@ -66,4 +67,21 @@ test("consumeStartedMiAuthSession returns null when start route never minted the
   const result = await consumeStartedMiAuthSession(redis, forged);
 
   assert.equal(result, null);
+});
+
+test("consumeStartedMiAuthSession returns null when stored payload is malformed", async () => {
+  const sessionId = "22222222-2222-4222-8222-222222222222";
+
+  for (const malformed of [
+    "not json",
+    JSON.stringify("plain string"),
+    JSON.stringify({ callbackUrl: "/console" }),
+    JSON.stringify({ callbackUrl: "/console", nonce: "" }),
+    JSON.stringify({ callbackUrl: 42, nonce: "abc" }),
+    JSON.stringify(null),
+  ]) {
+    const redis = makeStubRedis({ [`miauth:start:${sessionId}`]: malformed });
+    const result = await consumeStartedMiAuthSession(redis, sessionId);
+    assert.equal(result, null, `malformed payload must be rejected: ${malformed}`);
+  }
 });
