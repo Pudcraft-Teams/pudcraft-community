@@ -157,10 +157,23 @@ function buildPayload(
     return { ...field, options };
   });
 
-  const fieldKeys = new Set(cleanedFields.map((f) => f.key));
-  const survivingBranching = existingBranching.filter(
-    (rule) => fieldKeys.has(rule.targetFieldKey) && fieldKeys.has(rule.whenFieldKey),
-  );
+  const fieldByKey = new Map(cleanedFields.map((f) => [f.key, f]));
+  // Keep a rule only when both endpoints still exist AND, for choice sources,
+  // its `allowedValues` still match at least one current option. Without the
+  // value check, deleting/regenerating an option would leave a rule that no
+  // submitted answer can ever satisfy, which permanently hides the target
+  // field and silently breaks existing conditional forms.
+  const survivingBranching = existingBranching.flatMap((rule) => {
+    const target = fieldByKey.get(rule.targetFieldKey);
+    const source = fieldByKey.get(rule.whenFieldKey);
+    if (!target || !source) return [];
+    const sourceIsChoice = source.type === "select" || source.type === "multiselect";
+    if (!sourceIsChoice) return [rule];
+    const optionValues = new Set((source.options ?? []).map((o) => o.value));
+    const survivingValues = rule.allowedValues.filter((v) => optionValues.has(v));
+    if (survivingValues.length === 0) return [];
+    return [{ ...rule, allowedValues: survivingValues }];
+  });
 
   return {
     version: 1,
