@@ -16,7 +16,7 @@ import {
   readEmbeddedEvaluation,
   stripInternalFormDataKeys,
 } from "@/lib/applicationFormDocument";
-import { evaluateApplication } from "@/lib/applicationFormEvaluation";
+import { evaluateApplication, pickPlayerEvaluationView } from "@/lib/applicationFormEvaluation";
 import { canAccessServer } from "@/lib/server-access";
 import { getPublicUrl } from "@/lib/storage";
 import {
@@ -90,22 +90,14 @@ export async function POST(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: tServers("applicationNotAccepted") }, { status: 400 });
     }
 
-    // Check for existing application or membership. Fetch the rejected record's formContentHash
-    // (if any) so we can refuse resubmits when the form changed between rejection and retry.
+    // Check for existing application or membership. Pull the rejected record's
+    // formContentHash so we can refuse resubmits when the form changed between
+    // rejection and retry.
     const existingApplication = await prisma.serverApplication.findUnique({
       where: { unique_server_application: { serverId: server.id, userId } },
-      select: { id: true, status: true },
+      select: { id: true, status: true, formContentHash: true },
     });
-    // formContentHash lives on the model but the Prisma client type may lag the schema until
-    // `pnpm prisma migrate dev` runs. Read defensively.
-    const existingFormContentHash = existingApplication
-      ? await prisma.serverApplication
-          .findUnique({
-            where: { id: existingApplication.id },
-            select: { id: true } as { id: true; formContentHash?: true },
-          })
-          .then((row) => (row as { formContentHash?: string | null } | null)?.formContentHash ?? null)
-      : null;
+    const existingFormContentHash = existingApplication?.formContentHash ?? null;
 
     if (existingApplication) {
       if (existingApplication.status === "pending") {
@@ -173,9 +165,13 @@ export async function POST(request: Request, { params }: RouteContext) {
     };
 
     try {
+      // Project the evaluator output for the player. Owner sees the full result via GET; the
+      // applicant only ever receives what their owner-configured transparency toggles permit.
+      const playerEval = evalResult
+        ? pickPlayerEvaluationView(evalResult, ownerConfig?.settings ?? null)
+        : null;
+
       // Resubmit-after-rejection (form unchanged path): re-use the existing record.
-      // Cast widens to allow the new formContentHash field, which the Prisma client type may
-      // lag the schema for until the user runs `prisma migrate dev`.
       if (existingApplication?.status === "rejected") {
         const updated = await prisma.serverApplication.update({
           where: { id: existingApplication.id },
@@ -185,10 +181,10 @@ export async function POST(request: Request, { params }: RouteContext) {
             reviewNote: null,
             reviewedBy: null,
             formContentHash: currentFormContentHash,
-          } as Prisma.ServerApplicationUpdateInput & { formContentHash: string },
+          },
         });
         return NextResponse.json(
-          { data: { id: updated.id, status: initialStatus, evaluationResult: evalResult } },
+          { data: { id: updated.id, status: initialStatus, evaluationResult: playerEval } },
           { status: 201 },
         );
       }
@@ -200,11 +196,11 @@ export async function POST(request: Request, { params }: RouteContext) {
           status: initialStatus,
           formData: storedFormData as Prisma.InputJsonValue,
           formContentHash: currentFormContentHash,
-        } as Prisma.ServerApplicationUncheckedCreateInput & { formContentHash: string },
+        },
       });
 
       return NextResponse.json(
-        { data: { id: application.id, status: initialStatus, evaluationResult: evalResult } },
+        { data: { id: application.id, status: initialStatus, evaluationResult: playerEval } },
         { status: 201 },
       );
     } catch (writeErr) {
@@ -261,17 +257,27 @@ export async function GET(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
-    // Check server ownership
+    // Check caller scope: owner/admin sees all, applicant sees own, others 403.
     const server = await prisma.server.findUnique({
       where: { id: cuid },
-      select: { id: true, ownerId: true },
+      select: { id: true, ownerId: true, applicationForm: true },
     });
 
     if (!server) {
       return NextResponse.json({ error: tServers("notFound") }, { status: 404 });
     }
 
-    if (server.ownerId !== userId) {
+    const isOwnerOrAdmin = server.ownerId === userId || authResult.user.role === "admin";
+    let isApplicant = false;
+    if (!isOwnerOrAdmin) {
+      const ownApplication = await prisma.serverApplication.findUnique({
+        where: { unique_server_application: { serverId: server.id, userId } },
+        select: { id: true },
+      });
+      isApplicant = ownApplication !== null;
+    }
+
+    if (!isOwnerOrAdmin && !isApplicant) {
       return NextResponse.json({ error: tAuth("forbidden") }, { status: 403 });
     }
 
@@ -297,10 +303,17 @@ export async function GET(request: Request, { params }: RouteContext) {
 
     const { page, limit, status } = parsedQuery.data;
 
-    const where: { serverId: string; status?: string } = { serverId: server.id };
+    const where: { serverId: string; status?: string; userId?: string } = { serverId: server.id };
     if (status !== "all") {
       where.status = status;
     }
+    // Applicants can only see their own application(s).
+    if (!isOwnerOrAdmin) {
+      where.userId = userId;
+    }
+    const ownerSettings = isOwnerOrAdmin
+      ? null
+      : normalizeApplicationFormDocument(server.applicationForm)?.settings ?? null;
 
     const [total, applications] = await Promise.all([
       prisma.serverApplication.count({ where }),
@@ -340,11 +353,12 @@ export async function GET(request: Request, { params }: RouteContext) {
         responseFormData = Object.keys(cleaned).length > 0 ? cleaned : null;
       }
 
-      const evaluationResult = readEmbeddedEvaluation(rawFormData);
-      // formContentHash column lands once `prisma migrate dev --name add_application_form_content_hash` runs;
-      // until then the Prisma type lacks it and we fall back to null.
-      const formContentHash =
-        (app as { formContentHash?: string | null }).formContentHash ?? null;
+      const rawEvaluation = readEmbeddedEvaluation(rawFormData);
+      const evaluationResult =
+        rawEvaluation && !isOwnerOrAdmin
+          ? pickPlayerEvaluationView(rawEvaluation, ownerSettings)
+          : rawEvaluation;
+      const formContentHash = app.formContentHash ?? null;
 
       return {
         id: app.id,

@@ -6,8 +6,13 @@ import {
   computeVisibleFields,
   evaluateApplication,
   findHardDisqualify,
+  pickPlayerEvaluationView,
 } from "@/lib/applicationFormEvaluation";
-import type { OwnerFormConfig } from "@/lib/types";
+import type {
+  ApplicationFormEvaluationResult,
+  ApplicationFormSettings,
+  OwnerFormConfig,
+} from "@/lib/types";
 
 function makeForm(): OwnerFormConfig {
   return {
@@ -201,4 +206,117 @@ test("evaluator embeds evaluatedAt timestamp", () => {
   const after = Date.now();
   const ts = new Date(result.evaluatedAt).getTime();
   assert.ok(ts >= before && ts <= after, `evaluatedAt ${ts} outside [${before}, ${after}]`);
+});
+
+const baseEvaluatedAt = "2026-04-30T16:00:00.000Z";
+
+const settingsBothOff: ApplicationFormSettings = {
+  passingScore: 20,
+  showScoreToPlayerOnReject: false,
+  showRejectReasonToPlayerOnReject: false,
+};
+const settingsScoreOn: ApplicationFormSettings = {
+  passingScore: 20,
+  showScoreToPlayerOnReject: true,
+  showRejectReasonToPlayerOnReject: false,
+};
+const settingsReasonOn: ApplicationFormSettings = {
+  passingScore: 20,
+  showScoreToPlayerOnReject: false,
+  showRejectReasonToPlayerOnReject: true,
+};
+const settingsBothOn: ApplicationFormSettings = {
+  passingScore: 20,
+  showScoreToPlayerOnReject: true,
+  showRejectReasonToPlayerOnReject: true,
+};
+
+const hardDisqualify: ApplicationFormEvaluationResult = {
+  result: "hard_disqualify",
+  offendingFieldKey: "premium",
+  evaluatedAt: baseEvaluatedAt,
+};
+const scoreBelow: ApplicationFormEvaluationResult = {
+  result: "score_below_threshold",
+  score: 5,
+  passingScore: 20,
+  evaluatedAt: baseEvaluatedAt,
+};
+const pendingWithScoring: ApplicationFormEvaluationResult = {
+  result: "pending_review",
+  score: 25,
+  passingScore: 20,
+  evaluatedAt: baseEvaluatedAt,
+};
+
+test("pickPlayerEvaluationView with both toggles off strips offendingFieldKey/score/passingScore", () => {
+  assert.deepEqual(pickPlayerEvaluationView(hardDisqualify, settingsBothOff), {
+    result: "hard_disqualify",
+    evaluatedAt: baseEvaluatedAt,
+  });
+  assert.deepEqual(pickPlayerEvaluationView(scoreBelow, settingsBothOff), {
+    result: "score_below_threshold",
+    evaluatedAt: baseEvaluatedAt,
+  });
+});
+
+test("pickPlayerEvaluationView with showScoreToPlayerOnReject=true reveals score+passingScore for score path only", () => {
+  assert.deepEqual(pickPlayerEvaluationView(scoreBelow, settingsScoreOn), {
+    result: "score_below_threshold",
+    score: 5,
+    passingScore: 20,
+    evaluatedAt: baseEvaluatedAt,
+  });
+  // hard_disqualify path is not affected by score toggle alone
+  assert.deepEqual(pickPlayerEvaluationView(hardDisqualify, settingsScoreOn), {
+    result: "hard_disqualify",
+    evaluatedAt: baseEvaluatedAt,
+  });
+});
+
+test("pickPlayerEvaluationView with showRejectReasonToPlayerOnReject=true reveals offendingFieldKey for hard_disqualify only", () => {
+  assert.deepEqual(pickPlayerEvaluationView(hardDisqualify, settingsReasonOn), {
+    result: "hard_disqualify",
+    offendingFieldKey: "premium",
+    evaluatedAt: baseEvaluatedAt,
+  });
+  // score path is not affected by reason toggle alone
+  assert.deepEqual(pickPlayerEvaluationView(scoreBelow, settingsReasonOn), {
+    result: "score_below_threshold",
+    evaluatedAt: baseEvaluatedAt,
+  });
+});
+
+test("pickPlayerEvaluationView with both toggles on returns the full result for both reject paths", () => {
+  assert.deepEqual(pickPlayerEvaluationView(hardDisqualify, settingsBothOn), {
+    result: "hard_disqualify",
+    offendingFieldKey: "premium",
+    evaluatedAt: baseEvaluatedAt,
+  });
+  assert.deepEqual(pickPlayerEvaluationView(scoreBelow, settingsBothOn), {
+    result: "score_below_threshold",
+    score: 5,
+    passingScore: 20,
+    evaluatedAt: baseEvaluatedAt,
+  });
+});
+
+test("pickPlayerEvaluationView never reveals threshold metadata for pending_review", () => {
+  for (const settings of [settingsBothOff, settingsScoreOn, settingsReasonOn, settingsBothOn]) {
+    assert.deepEqual(pickPlayerEvaluationView(pendingWithScoring, settings), {
+      result: "pending_review",
+      evaluatedAt: baseEvaluatedAt,
+    });
+  }
+});
+
+test("pickPlayerEvaluationView with null settings (legacy v0) returns minimal projection", () => {
+  assert.deepEqual(pickPlayerEvaluationView(scoreBelow, null), {
+    result: "score_below_threshold",
+    evaluatedAt: baseEvaluatedAt,
+  });
+  assert.deepEqual(pickPlayerEvaluationView(hardDisqualify, null), {
+    result: "hard_disqualify",
+    evaluatedAt: baseEvaluatedAt,
+  });
 });

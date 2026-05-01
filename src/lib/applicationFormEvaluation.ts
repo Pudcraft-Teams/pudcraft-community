@@ -2,6 +2,7 @@ import type {
   ApplicationFormBranchRule,
   ApplicationFormEvaluationResult,
   ApplicationFormField,
+  ApplicationFormSettings,
   OwnerFormConfig,
 } from "@/lib/types";
 
@@ -128,4 +129,50 @@ export function evaluateApplication(
     ...(passingScore !== null ? { passingScore } : {}),
     evaluatedAt,
   };
+}
+
+/**
+ * Project an evaluation result for the applicant. Removes anything the owner
+ * did not explicitly opt to disclose. The full result still flows to owner-
+ * scoped responses; this helper guards every applicant-facing surface.
+ *
+ * Disclosure rules:
+ *   - pending_review     → result + evaluatedAt only (never reveal threshold).
+ *   - hard_disqualify    → keep offendingFieldKey only when
+ *                          settings.showRejectReasonToPlayerOnReject is true.
+ *   - score_below_threshold → keep score and passingScore only when
+ *                             settings.showScoreToPlayerOnReject is true.
+ *
+ * If settings is null (legacy v0 form has no toggles) we default to the
+ * minimal projection so legacy installs cannot accidentally leak.
+ */
+export function pickPlayerEvaluationView(
+  result: ApplicationFormEvaluationResult,
+  settings: ApplicationFormSettings | null,
+): ApplicationFormEvaluationResult {
+  const base: ApplicationFormEvaluationResult = {
+    result: result.result,
+    evaluatedAt: result.evaluatedAt,
+  };
+
+  if (!settings || result.result === "pending_review") {
+    return base;
+  }
+
+  if (result.result === "hard_disqualify") {
+    if (settings.showRejectReasonToPlayerOnReject && result.offendingFieldKey !== undefined) {
+      return { ...base, offendingFieldKey: result.offendingFieldKey };
+    }
+    return base;
+  }
+
+  // score_below_threshold
+  if (settings.showScoreToPlayerOnReject) {
+    return {
+      ...base,
+      ...(result.score !== undefined ? { score: result.score } : {}),
+      ...(result.passingScore !== undefined ? { passingScore: result.passingScore } : {}),
+    };
+  }
+  return base;
 }

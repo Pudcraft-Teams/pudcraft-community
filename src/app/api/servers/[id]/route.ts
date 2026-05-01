@@ -171,10 +171,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       visibility: server.visibility as ServerVisibility,
       joinMode: server.joinMode as ServerJoinMode,
       isMember,
-      // applicationForm: split-brain projection — owners (and admins) get the full OwnerFormConfig
-      // (gating data needed by the editor); apply-eligible non-owners get only the PlayerFormView
-      // projection (no points/correct/autoReject/passingScore/branching ever reaches the player bundle).
-      // See plan §"Two views, one document" and architect-review-v2 §N (security partition).
+      // applicationForm: split-brain projection — only the actual owner gets the full
+      // OwnerFormConfig (gating data needed by the editor). Every other caller (members,
+      // admins viewing someone else's server, anonymous visitors) gets the PlayerFormView
+      // projection. Admin inspection of another owner's gating data goes through admin
+      // consoles, not the public detail API. See plan §"Two views, one document".
       ...(server.joinMode === "apply" || server.joinMode === "apply_and_invite"
         ? (() => {
             const ownerConfig = normalizeApplicationFormDocument(server.applicationForm, {
@@ -182,13 +183,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
               onLegacyEncounter: (sid) =>
                 logger.warn("[applicationForm] v0 array shape encountered", { serverId: sid }),
             });
-            const isOwnerOrAdmin =
-              !!session?.user?.id &&
-              (server.ownerId === session.user.id || session.user.role === "admin");
+            const isOwner = !!session?.user?.id && server.ownerId === session.user.id;
             return {
-              applicationForm: isOwnerOrAdmin
-                ? ownerConfig
-                : pickPlayerFormView(ownerConfig),
+              applicationForm: isOwner ? ownerConfig : pickPlayerFormView(ownerConfig),
             };
           })()
         : {}),

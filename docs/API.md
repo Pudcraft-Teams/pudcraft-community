@@ -10,7 +10,7 @@ This document describes only the live server-only endpoints. Forum / MoltBook en
 ### Authentication
 
 - Web: session cookie (NextAuth v5 / JWT). Sign-in is exclusively through Misskey MiAuth (single self-hosted instance configured by `MISSKEY_HOST`); the legacy local credentials, registration, password reset, and `/api/mobile/*` flows have been removed.
-- Plugin / sync / plugin claim: bearer API key or claim key
+- Plugin / sync: bearer API key
 
 ### Response format
 
@@ -136,8 +136,8 @@ In this document both are written as `{id}`.
 |---|---|---|---|
 | PUT | `/servers/{id}/settings` | Owner | Update visibility, join mode, application form, etc. |
 | GET | `/servers/{id}/membership` | Signed in | Current user's member / application state |
-| GET | `/servers/{id}/applications` | Owner | Application list |
-| POST | `/servers/{id}/applications` | Signed in | Submit a join application |
+| GET | `/servers/{id}/applications` | Owner / admin / applicant | Owner & admin see every application; the applicant sees only their own; everyone else gets `403`. Applicant rows have `evaluationResult` projected via `pickPlayerEvaluationView` (see "Player evaluation projection" below). |
+| POST | `/servers/{id}/applications` | Signed in | Submit a join application. The response `evaluationResult` is projected for the applicant; the full `evaluationResult` (including `score`, `passingScore`, `offendingFieldKey`) only ever flows to owner-scoped reads. |
 | PUT | `/servers/{id}/applications/{appId}` | Owner | Review an application |
 | GET | `/servers/{id}/invites` | Owner | Invite codes |
 | POST | `/servers/{id}/invites` | Owner | Create an invite code |
@@ -146,6 +146,21 @@ In this document both are written as `{id}`.
 | GET | `/servers/{id}/members` | Owner | Member list |
 | DELETE | `/servers/{id}/members/{memberId}` | Owner | Remove a member |
 | POST | `/servers/{id}/api-key` | Owner | Generate or reset the plugin API key |
+
+#### Player evaluation projection
+
+Applicant-scoped responses pass `evaluationResult` through `pickPlayerEvaluationView` (`src/lib/applicationFormEvaluation.ts`) before serialization. The projection rule is:
+
+- `pending_review` always returns `{ result, evaluatedAt }` only — no score / threshold leakage even when the applicant passed.
+- `hard_disqualify` keeps `offendingFieldKey` only when `OwnerFormConfig.settings.showRejectReasonToPlayerOnReject` is `true`.
+- `score_below_threshold` keeps `score` and `passingScore` only when `OwnerFormConfig.settings.showScoreToPlayerOnReject` is `true`.
+- Legacy v0 forms (no `settings` block) fall back to the minimal projection.
+
+Owners and admins receive the full `ApplicationFormEvaluationResult` shape via the owner-scoped GET. Resubmits after rejection are gated on `formContentHash` (see `errors.api.applications.formChangedSinceRejection`); a unique `(serverId, userId)` constraint translates to `errors.api.applications.duplicateActiveApplication` on race.
+
+#### Application form projection on `GET /servers/{id}`
+
+`GET /api/servers/{id}` returns the full `OwnerFormConfig` only when the caller is the actual `ownerId`. Every other caller — including admins viewing someone else's server, members, and anonymous visitors — receives the `PlayerFormView` projection (no `points` / `correct` / `autoReject` / `passingScore` / `branching`). Admins inspecting another owner's gating data go through the owner console with admin impersonation, not the public detail endpoint.
 
 ### Modpacks
 

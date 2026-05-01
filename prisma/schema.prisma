@@ -60,9 +60,9 @@ model Server {
   ownerId            String?   @map("owner_id")
   owner              User?     @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   isVerified         Boolean   @default(false) @map("is_verified")
-  verifyToken        String?   @map("verify_token")
-  verifyExpiresAt    DateTime? @map("verify_expires_at")
-  verifyUserId       String?   @map("verify_user_id")
+  // verifiedAt is the admin-assigned official-certification timestamp.
+  // The legacy MOTD claim/verify flow was removed; verify_token / verify_expires_at /
+  // verify_user_id columns were dropped in the same change.
   verifiedAt         DateTime? @map("verified_at")
   favoriteCount      Int       @default(0) @map("favorite_count")
   isOnline           Boolean   @default(false) @map("is_online")
@@ -82,9 +82,6 @@ model Server {
   lastPluginReportAt DateTime? @map("last_plugin_report_at")
 
   content String? @db.Text // Markdown 详细介绍
-
-  // 未来扩展字段（认领）：
-  // claimToken  String?  @unique @map("claim_token")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
