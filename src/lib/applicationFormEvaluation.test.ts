@@ -6,6 +6,7 @@ import {
   computeVisibleFields,
   evaluateApplication,
   findHardDisqualify,
+  findMissingRequiredFields,
   pickPlayerEvaluationView,
 } from "@/lib/applicationFormEvaluation";
 import type {
@@ -395,6 +396,62 @@ test("pickPlayerEvaluationView never reveals threshold metadata for pending_revi
       evaluatedAt: baseEvaluatedAt,
     });
   }
+});
+
+test("findMissingRequiredFields flags empty answers on visible required fields", () => {
+  // Regression: an empty POST body bypassed the gate because the evaluator only
+  // triggers autoReject / scoring when answers are PRESENT. The submit route now
+  // must reject 400 when any visible required field has no usable answer.
+  const form = makeForm();
+
+  // Both required fields missing entirely → both flagged.
+  assert.deepEqual(findMissingRequiredFields(form.fields, {}).sort(), [
+    "premium",
+    "rules",
+  ]);
+
+  // Empty string answer → still flagged (whitespace doesn't count).
+  assert.deepEqual(
+    findMissingRequiredFields(form.fields, { premium: "   ", rules: "b" }),
+    ["premium"],
+  );
+
+  // Empty array answer → flagged.
+  assert.deepEqual(
+    findMissingRequiredFields(form.fields, { premium: [], rules: "b" }),
+    ["premium"],
+  );
+
+  // All required filled → empty list (pvp_experience is not required).
+  assert.deepEqual(
+    findMissingRequiredFields(form.fields, { premium: "yes", rules: "b" }),
+    [],
+  );
+});
+
+test("findMissingRequiredFields ignores hidden required fields (branching)", () => {
+  // Add a required follow-up that is only visible when rules === "c".
+  const form = makeForm();
+  form.fields[2] = {
+    key: "pvp_experience",
+    label: "Describe PVP experience",
+    type: "textarea",
+    required: true,
+  };
+  // rules="b" hides pvp_experience entirely — even though it's required, the
+  // applicant can't answer it, so the gate must not flag it.
+  const visible = computeVisibleFields(form, { premium: "yes", rules: "b" });
+  assert.deepEqual(
+    findMissingRequiredFields(visible, { premium: "yes", rules: "b" }),
+    [],
+  );
+
+  // rules="c" makes pvp_experience visible — now missing it must be flagged.
+  const visibleWhenShown = computeVisibleFields(form, { premium: "yes", rules: "c" });
+  assert.deepEqual(
+    findMissingRequiredFields(visibleWhenShown, { premium: "yes", rules: "c" }),
+    ["pvp_experience"],
+  );
 });
 
 test("pickPlayerEvaluationView with null settings (legacy v0) returns minimal projection", () => {

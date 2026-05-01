@@ -300,7 +300,8 @@
       },
       "applications": {
         "formChangedSinceRejection": "The owner updated the application form. Review the new questions and submit again.",
-        "duplicateActiveApplication": "You already have an open application — give the owner a moment to review it."
+        "duplicateActiveApplication": "You already have an open application — give the owner a moment to review it.",
+        "missingRequiredFields": "Please answer every required question before submitting."
       }
     },
     "moderation": {

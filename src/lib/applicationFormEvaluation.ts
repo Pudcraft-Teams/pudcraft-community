@@ -135,6 +135,38 @@ export function computeMaxScore(visibleFields: ApplicationFormField[]): number {
 }
 
 /**
+ * Required-field check. Returns the keys of visible required fields whose
+ * answer is missing or empty. Used by the submit route as a pre-evaluation
+ * gate — without it, a client can POST `formData = {}` (or omit the field
+ * entirely) to skip every `autoReject` choice and still receive a `pending`
+ * verdict, defeating the submit-time rejection flow.
+ *
+ * "Empty" means: undefined, an empty/whitespace-only string, or an array
+ * with no non-empty string entries.
+ */
+export function findMissingRequiredFields(
+  visibleFields: ApplicationFormField[],
+  answers: AnswerMap,
+): string[] {
+  const missing: string[] = [];
+  for (const field of visibleFields) {
+    if (!field.required) continue;
+    const answer = answers[field.key];
+    if (answer === undefined) {
+      missing.push(field.key);
+      continue;
+    }
+    if (typeof answer === "string") {
+      if (answer.trim() === "") missing.push(field.key);
+      continue;
+    }
+    const hasNonEmpty = answer.some((v) => typeof v === "string" && v.trim() !== "");
+    if (!hasNonEmpty) missing.push(field.key);
+  }
+  return missing;
+}
+
+/**
  * Find the first field whose answer triggers a hard-disqualify (`autoReject` option selected).
  * Considers ONLY visible fields. Returns the field key (and which option was the offender).
  */

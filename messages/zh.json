@@ -301,7 +301,8 @@
       },
       "applications": {
         "formChangedSinceRejection": "服主已更新申请表，请重新查看后再提交",
-        "duplicateActiveApplication": "已有进行中的申请，请勿重复提交"
+        "duplicateActiveApplication": "已有进行中的申请，请勿重复提交",
+        "missingRequiredFields": "请填写所有必填项后再提交"
       }
     },
     "moderation": {

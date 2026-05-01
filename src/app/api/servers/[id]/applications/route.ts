@@ -16,7 +16,12 @@ import {
   readEmbeddedEvaluation,
   stripInternalFormDataKeys,
 } from "@/lib/applicationFormDocument";
-import { evaluateApplication, pickPlayerEvaluationView } from "@/lib/applicationFormEvaluation";
+import {
+  computeVisibleFields,
+  evaluateApplication,
+  findMissingRequiredFields,
+  pickPlayerEvaluationView,
+} from "@/lib/applicationFormEvaluation";
 import { canAccessServer } from "@/lib/server-access";
 import { getPublicUrl } from "@/lib/storage";
 import {
@@ -145,8 +150,28 @@ export async function POST(request: Request, { params }: RouteContext) {
       );
     }
 
+    // Required-field gate: a client can POST {} (or omit fields entirely) and the
+    // evaluator alone won't catch it — `autoReject` only triggers when an answer is
+    // present, so empty submissions slip past as `pending`. Reject 400 if any visible
+    // required field has no usable answer.
+    const submittedAnswers = formData ?? {};
+    if (ownerConfig) {
+      const visibleFields = computeVisibleFields(ownerConfig, submittedAnswers);
+      const missingRequired = findMissingRequiredFields(visibleFields, submittedAnswers);
+      if (missingRequired.length > 0) {
+        return NextResponse.json(
+          {
+            error: "missing_required_fields",
+            errorKey: "errors.api.applications.missingRequiredFields",
+            details: { missing: missingRequired },
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     const evalResult = ownerConfig
-      ? evaluateApplication(ownerConfig, formData ?? {})
+      ? evaluateApplication(ownerConfig, submittedAnswers)
       : null;
 
     // Map the evaluator verdict to the persisted application status. `pending_review` is the
