@@ -24,7 +24,6 @@ import {
   validateImageFile,
 } from "@/lib/storage";
 import { moderateFields } from "@/lib/moderation";
-import { moderateImage } from "@/lib/image-moderation";
 import { buildServerContent } from "@/lib/serverContent";
 import { createServerSchema, queryServersSchema } from "@/lib/validation";
 import type { ServerListItem, ServerVisibility, ServerJoinMode } from "@/lib/types";
@@ -413,7 +412,7 @@ export async function POST(request: Request) {
       throw error;
     }
 
-    // ─── 图标上传 + 图片内容审查 ───
+    // ─── 图标上传（uploadImage 内部已做图片内容审查，失败会抛 ImageModerationError） ───
     if (iconBuffer && iconMimeType) {
       try {
         iconKey = await uploadServerIcon(iconBuffer, server.id, iconMimeType, {
@@ -425,13 +424,26 @@ export async function POST(request: Request) {
           data: { iconUrl: iconKey },
         });
       } catch (error) {
-        if (error instanceof ImageValidationError) {
-          logger.info("[api/servers] Server icon failed validation", {
+        if (error instanceof ImageModerationError) {
+          // Icon moderation rejected — do NOT auto-approve. Mark the
+          // submission rejected and bail out so an unsafe icon can't slip
+          // through behind a recovered upload path.
+          logger.info("[api/servers] Server icon rejected by moderation during upload", {
             serverId: server.id,
             reason: error.message,
           });
-        } else if (error instanceof ImageModerationError) {
-          logger.info("[api/servers] Server icon rejected by moderation during upload", {
+          const rejectReason = error.message || tServers("contentModerated");
+          await prisma.server.update({
+            where: { id: server.id },
+            data: getRejectedSubmissionState(rejectReason),
+          });
+          return NextResponse.json(
+            { error: tServers("contentModerated"), details: rejectReason },
+            { status: 422 },
+          );
+        }
+        if (error instanceof ImageValidationError) {
+          logger.info("[api/servers] Server icon failed validation", {
             serverId: server.id,
             reason: error.message,
           });
@@ -442,29 +454,6 @@ export async function POST(request: Request) {
           });
         }
         iconKey = null;
-      }
-    }
-
-    // ─── 图片内容审查（对已上传的图标 URL 执行） ───
-    if (iconKey) {
-      const iconUrl = getPublicUrl(iconKey);
-      if (iconUrl) {
-        const imgModResult = await moderateImage(iconUrl, "server-icon", {
-          contentId: server.id,
-          userId,
-          userIp: clientIpForMod,
-        });
-        if (!imgModResult.passed) {
-          const rejectReason = imgModResult.reason ?? tServers("contentModerated");
-          await prisma.server.update({
-            where: { id: server.id },
-            data: getRejectedSubmissionState(rejectReason),
-          });
-          return NextResponse.json(
-            { error: tServers("contentModerated"), details: rejectReason },
-            { status: 422 },
-          );
-        }
       }
     }
 
