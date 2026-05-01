@@ -63,11 +63,22 @@ export const serverLookupIdSchema = z
     "errors.validation.servers.invalidId",
   );
 
-/** User URL parameter validation (CUID or Misskey id). */
+/**
+ * User URL parameter validation. Accepts:
+ *   - Misskey aid (10–32 alphanumeric)
+ *   - Local cuid (legacy direct lookups)
+ *   - Legacy placeholder `legacy-{cuid|numeric}` produced by the
+ *     20260429120000_replace_credentials_with_misskey migration. Without
+ *     this branch every link to a pre-MiAuth account 400s before the
+ *     lookup helper can resolve it.
+ */
 export const userLookupIdSchema = z
   .string()
   .refine(
-    (v) => /^[a-z0-9]{10,32}$/i.test(v) || z.string().cuid().safeParse(v).success,
+    (v) =>
+      /^[a-z0-9]{10,32}$/i.test(v) ||
+      /^legacy-[a-z0-9]{1,40}$/i.test(v) ||
+      z.string().cuid().safeParse(v).success,
     "errors.validation.servers.invalidUserId",
   );
 
