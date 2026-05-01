@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MAX_FORM_FIELDS } from "@/lib/applicationFormDocument";
 import type {
+  ApplicationFormBranchRule,
   ApplicationFormField,
   ApplicationFormOption,
   ApplicationFormSettings,
@@ -128,11 +129,17 @@ function readSettings(form: OwnerFormConfig | null): ApplicationFormSettings {
  * When `scoringEnabled` is false we strip every gating field from options and
  * reset settings to defaults — owner can flip the flag without losing field
  * structure but enabling/disabling has predictable persisted semantics.
+ *
+ * Branching is NOT editable from this UI; we carry forward whatever the
+ * server already has (filtering out rules whose referenced fields no longer
+ * exist after this edit) so saving form-text edits doesn't silently delete
+ * the owner's conditional-field graph.
  */
 function buildPayload(
   fields: ApplicationFormField[],
   settings: ApplicationFormSettings,
   scoringEnabled: boolean,
+  existingBranching: ApplicationFormBranchRule[],
 ): OwnerFormConfig {
   const cleanedFields = fields.map((field) => {
     if (!field.options) return { ...field };
@@ -150,11 +157,16 @@ function buildPayload(
     return { ...field, options };
   });
 
+  const fieldKeys = new Set(cleanedFields.map((f) => f.key));
+  const survivingBranching = existingBranching.filter(
+    (rule) => fieldKeys.has(rule.targetFieldKey) && fieldKeys.has(rule.whenFieldKey),
+  );
+
   return {
     version: 1,
     fields: cleanedFields,
     settings: scoringEnabled ? { ...settings } : { ...DEFAULT_SETTINGS },
-    branching: [],
+    branching: survivingBranching,
   };
 }
 
@@ -194,6 +206,10 @@ export function ApplicationFormEditor({
     return () => clearTimeout(id);
   }, [saveSuccess]);
 
+  const initialBranching = useMemo<ApplicationFormBranchRule[]>(
+    () => initialApplicationForm?.branching ?? [],
+    [initialApplicationForm],
+  );
   const initialPayload = useMemo(
     () =>
       JSON.stringify(
@@ -201,13 +217,14 @@ export function ApplicationFormEditor({
           initialApplicationForm?.fields ?? [],
           readSettings(initialApplicationForm),
           detectScoringConfigured(initialApplicationForm),
+          initialBranching,
         ),
       ),
-    [initialApplicationForm],
+    [initialApplicationForm, initialBranching],
   );
   const currentPayload = useMemo(
-    () => JSON.stringify(buildPayload(fields, settings, scoringEnabled)),
-    [fields, settings, scoringEnabled],
+    () => JSON.stringify(buildPayload(fields, settings, scoringEnabled, initialBranching)),
+    [fields, settings, scoringEnabled, initialBranching],
   );
   const hasChanges = currentPayload !== initialPayload;
   const canAddField = fields.length < MAX_FORM_FIELDS;
@@ -334,7 +351,7 @@ export function ApplicationFormEditor({
         throw new Error(t("errorPassingScoreInvalid"));
       }
 
-      const payload = buildPayload(fields, settings, scoringEnabled);
+      const payload = buildPayload(fields, settings, scoringEnabled, initialBranching);
 
       const response = await fetch(`/api/servers/${serverId}/settings`, {
         method: "PUT",
@@ -354,7 +371,7 @@ export function ApplicationFormEditor({
     } finally {
       setIsSaving(false);
     }
-  }, [fields, settings, scoringEnabled, serverId, t, onSaved]);
+  }, [fields, settings, scoringEnabled, serverId, t, onSaved, initialBranching]);
 
   if (!isApplyMode) {
     return (
