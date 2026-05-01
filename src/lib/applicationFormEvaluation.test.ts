@@ -47,7 +47,10 @@ function makeForm(): OwnerFormConfig {
       },
     ],
     settings: {
-      passingScore: 20,
+      // Form-level percentage threshold: applicants must score ≥ 60% of the
+      // form's max points (which equals 20 — only the `rules` field has scoring
+      // and the `b` option is its sole positive option).
+      passingScore: 60,
       showScoreToPlayerOnReject: true,
       showRejectReasonToPlayerOnReject: true,
     },
@@ -69,7 +72,7 @@ test("hard-disqualify wins over score threshold", () => {
   assert.equal(result.score, undefined);
 });
 
-test("score below threshold rejects", () => {
+test("score below threshold rejects (percent below passingScore)", () => {
   const form = makeForm();
   const result = evaluateApplication(form, {
     premium: "yes",
@@ -77,7 +80,9 @@ test("score below threshold rejects", () => {
   });
   assert.equal(result.result, "score_below_threshold");
   assert.equal(result.score, 0);
-  assert.equal(result.passingScore, 20);
+  assert.equal(result.maxScore, 20);
+  assert.equal(result.scorePercent, 0);
+  assert.equal(result.passingScore, 60);
 });
 
 test("score at or above threshold passes (pending review)", () => {
@@ -88,7 +93,9 @@ test("score at or above threshold passes (pending review)", () => {
   });
   assert.equal(result.result, "pending_review");
   assert.equal(result.score, 20);
-  assert.equal(result.passingScore, 20);
+  assert.equal(result.maxScore, 20);
+  assert.equal(result.scorePercent, 100);
+  assert.equal(result.passingScore, 60);
 });
 
 test("legacy v0 form (no scoring, no branching) returns pending without score", () => {
@@ -211,22 +218,22 @@ test("evaluator embeds evaluatedAt timestamp", () => {
 const baseEvaluatedAt = "2026-04-30T16:00:00.000Z";
 
 const settingsBothOff: ApplicationFormSettings = {
-  passingScore: 20,
+  passingScore: 60,
   showScoreToPlayerOnReject: false,
   showRejectReasonToPlayerOnReject: false,
 };
 const settingsScoreOn: ApplicationFormSettings = {
-  passingScore: 20,
+  passingScore: 60,
   showScoreToPlayerOnReject: true,
   showRejectReasonToPlayerOnReject: false,
 };
 const settingsReasonOn: ApplicationFormSettings = {
-  passingScore: 20,
+  passingScore: 60,
   showScoreToPlayerOnReject: false,
   showRejectReasonToPlayerOnReject: true,
 };
 const settingsBothOn: ApplicationFormSettings = {
-  passingScore: 20,
+  passingScore: 60,
   showScoreToPlayerOnReject: true,
   showRejectReasonToPlayerOnReject: true,
 };
@@ -239,13 +246,17 @@ const hardDisqualify: ApplicationFormEvaluationResult = {
 const scoreBelow: ApplicationFormEvaluationResult = {
   result: "score_below_threshold",
   score: 5,
-  passingScore: 20,
+  maxScore: 20,
+  scorePercent: 25,
+  passingScore: 60,
   evaluatedAt: baseEvaluatedAt,
 };
 const pendingWithScoring: ApplicationFormEvaluationResult = {
   result: "pending_review",
   score: 25,
-  passingScore: 20,
+  maxScore: 30,
+  scorePercent: 83,
+  passingScore: 60,
   evaluatedAt: baseEvaluatedAt,
 };
 
@@ -260,11 +271,13 @@ test("pickPlayerEvaluationView with both toggles off strips offendingFieldKey/sc
   });
 });
 
-test("pickPlayerEvaluationView with showScoreToPlayerOnReject=true reveals score+passingScore for score path only", () => {
+test("pickPlayerEvaluationView with showScoreToPlayerOnReject=true reveals score+percent+threshold for score path only", () => {
   assert.deepEqual(pickPlayerEvaluationView(scoreBelow, settingsScoreOn), {
     result: "score_below_threshold",
     score: 5,
-    passingScore: 20,
+    maxScore: 20,
+    scorePercent: 25,
+    passingScore: 60,
     evaluatedAt: baseEvaluatedAt,
   });
   // hard_disqualify path is not affected by score toggle alone
@@ -296,7 +309,9 @@ test("pickPlayerEvaluationView with both toggles on returns the full result for 
   assert.deepEqual(pickPlayerEvaluationView(scoreBelow, settingsBothOn), {
     result: "score_below_threshold",
     score: 5,
-    passingScore: 20,
+    maxScore: 20,
+    scorePercent: 25,
+    passingScore: 60,
     evaluatedAt: baseEvaluatedAt,
   });
 });

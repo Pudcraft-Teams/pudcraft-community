@@ -2,6 +2,7 @@ import type {
   ApplicationFormBranchRule,
   ApplicationFormEvaluationResult,
   ApplicationFormField,
+  ApplicationFormOption,
   ApplicationFormSettings,
   OwnerFormConfig,
 } from "@/lib/types";
@@ -12,6 +13,36 @@ function answerToValueSet(answer: string | string[] | undefined): Set<string> {
   if (answer === undefined) return new Set();
   if (Array.isArray(answer)) return new Set(answer);
   return new Set([answer]);
+}
+
+/**
+ * Score awarded for a single selected option. Field type is irrelevant —
+ * single-choice and multi-choice questions share the same per-option scoring
+ * shape. Explicit `points` wins; `correct` is the legacy "+1" shorthand.
+ *
+ * Non-selected options contribute `0`. `autoReject` short-circuits the
+ * evaluator before this is called, so we don't special-case it here.
+ */
+function getOptionScore(opt: ApplicationFormOption): number {
+  if (typeof opt.points === "number") return opt.points;
+  if (opt.correct === true) return 1;
+  return 0;
+}
+
+/** Maximum a single field can contribute to the total. See `computeMaxScore` for context. */
+function fieldMaxScore(field: ApplicationFormField): number {
+  if (!field.options) return 0;
+  const safeOptions = field.options.filter((opt) => opt.autoReject !== true);
+  if (safeOptions.length === 0) return 0;
+  if (field.type === "select") {
+    // Single-choice: best-case is picking the highest-scoring safe option.
+    return Math.max(0, ...safeOptions.map(getOptionScore));
+  }
+  // multiselect: best-case is picking every positive option.
+  return safeOptions
+    .map(getOptionScore)
+    .filter((s) => s > 0)
+    .reduce((a, b) => a + b, 0);
 }
 
 /**
@@ -40,7 +71,15 @@ export function computeVisibleFields(
   });
 }
 
-/** Sum of points for the player's answers across visible fields with `correct` options. */
+/** Does this field carry any scoring intent? */
+function fieldHasScoring(field: ApplicationFormField): boolean {
+  if (!field.options) return false;
+  return field.options.some(
+    (opt) => opt.correct === true || typeof opt.points === "number",
+  );
+}
+
+/** Sum of points for the player's selected answers across visible scoring fields. */
 export function computeScore(
   visibleFields: ApplicationFormField[],
   answers: AnswerMap,
@@ -49,22 +88,32 @@ export function computeScore(
   let hasScoring = false;
   for (const field of visibleFields) {
     if (!field.options) continue;
-    const fieldHasScoring = field.options.some(
-      (opt) => opt.correct === true || typeof opt.points === "number",
-    );
-    if (!fieldHasScoring) continue;
+    if (!fieldHasScoring(field)) continue;
     hasScoring = true;
     const answer = answerToValueSet(answers[field.key]);
     for (const opt of field.options) {
       if (!answer.has(opt.value)) continue;
-      if (typeof opt.points === "number") {
-        total += opt.points;
-      } else if (opt.correct === true) {
-        total += 1;
-      }
+      total += getOptionScore(opt);
     }
   }
   return { total, hasScoring };
+}
+
+/**
+ * Maximum possible score across visible fields, used as the denominator for
+ * percentage display. For `select` we take the highest single option (or the
+ * field-level `totalPoints` when at least one correct option exists); for
+ * `multiselect` we sum the positive option points (the player can pick them
+ * all). `autoReject` options are excluded — selecting them rejects the
+ * application outright, so they can't be part of a "best-case" answer set.
+ */
+export function computeMaxScore(visibleFields: ApplicationFormField[]): number {
+  let max = 0;
+  for (const field of visibleFields) {
+    if (!fieldHasScoring(field)) continue;
+    max += fieldMaxScore(field);
+  }
+  return max;
 }
 
 /**
@@ -113,11 +162,21 @@ export function evaluateApplication(
 
   const passingScore = doc.settings.passingScore;
   const { total, hasScoring } = computeScore(visibleFields, answers);
+  const maxScore = hasScoring ? computeMaxScore(visibleFields) : 0;
+  const scorePercent =
+    hasScoring && maxScore > 0 ? Math.round((total / maxScore) * 100) : null;
 
-  if (passingScore !== null && hasScoring && total < passingScore) {
+  if (
+    passingScore !== null &&
+    hasScoring &&
+    scorePercent !== null &&
+    scorePercent < passingScore
+  ) {
     return {
       result: "score_below_threshold",
       score: total,
+      maxScore,
+      scorePercent,
       passingScore,
       evaluatedAt,
     };
@@ -125,7 +184,13 @@ export function evaluateApplication(
 
   return {
     result: "pending_review",
-    ...(hasScoring ? { score: total } : {}),
+    ...(hasScoring
+      ? {
+          score: total,
+          maxScore,
+          ...(scorePercent !== null ? { scorePercent } : {}),
+        }
+      : {}),
     ...(passingScore !== null ? { passingScore } : {}),
     evaluatedAt,
   };
@@ -171,6 +236,8 @@ export function pickPlayerEvaluationView(
     return {
       ...base,
       ...(result.score !== undefined ? { score: result.score } : {}),
+      ...(result.maxScore !== undefined ? { maxScore: result.maxScore } : {}),
+      ...(result.scorePercent !== undefined ? { scorePercent: result.scorePercent } : {}),
       ...(result.passingScore !== undefined ? { passingScore: result.passingScore } : {}),
     };
   }

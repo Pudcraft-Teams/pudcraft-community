@@ -4,9 +4,7 @@ import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
-import { ApplicationList } from "@/components/console/ApplicationList";
-import { InviteManager } from "@/components/console/InviteManager";
-import { MemberList } from "@/components/console/MemberList";
+import { ApplicationFormEditor } from "@/components/console/ApplicationFormEditor";
 import { PageLoading } from "@/components/PageLoading";
 import { isPrivateServersEnabled } from "@/lib/features";
 import type { ServerDetail } from "@/lib/types";
@@ -28,7 +26,7 @@ function parseServerPayload(raw: unknown): ServerDetailPayload {
   };
 }
 
-export default function ConsoleMembersPage() {
+export default function ConsoleFormEditorPage() {
   const params = useParams<{ serverId: string }>();
   const { data: session, status } = useSession();
   const tPage = useTranslations("console.page");
@@ -67,6 +65,10 @@ export default function ConsoleMembersPage() {
     void fetchServer();
   }, [fetchServer, status]);
 
+  if (!isPrivateServersEnabled()) {
+    return <div className="m3-alert-error p-4">{tPage("serverNotFoundOrForbidden")}</div>;
+  }
+
   if (status === "loading" || isLoading) {
     return <PageLoading text={tPage("loading")} />;
   }
@@ -79,30 +81,16 @@ export default function ConsoleMembersPage() {
     return <div className="m3-alert-error p-4">{tPage("serverNotFoundOrForbidden")}</div>;
   }
 
-  if (!isPrivateServersEnabled()) {
-    return null;
-  }
-
-  const showApply = server.joinMode === "apply" || server.joinMode === "apply_and_invite";
-  const showInvite = server.joinMode === "invite" || server.joinMode === "apply_and_invite";
-  const showMembers = server.visibility !== "public";
+  const initialApplicationForm =
+    server.applicationForm && "settings" in server.applicationForm ? server.applicationForm : null;
 
   return (
-    <div className="space-y-4">
-      {showApply && (
-        <ApplicationList
-          serverId={String(server.psid)}
-          applicationForm={
-            server.applicationForm && "settings" in server.applicationForm
-              ? server.applicationForm
-              : null
-          }
-        />
-      )}
-      {showInvite && (
-        <InviteManager serverId={String(server.psid)} serverPsid={server.psid} />
-      )}
-      {showMembers && <MemberList serverId={String(server.psid)} />}
-    </div>
+    <ApplicationFormEditor
+      serverId={String(server.psid)}
+      serverPsid={server.psid ?? null}
+      joinMode={server.joinMode ?? "open"}
+      initialApplicationForm={initialApplicationForm}
+      onSaved={fetchServer}
+    />
   );
 }

@@ -13,8 +13,8 @@ import type {
 } from "@/lib/types";
 
 /** Single source of truth — also re-exported for tests / settings PUT / editor UI. */
-export const MAX_FORM_FIELDS = 30;
-export const MAX_APPLICATION_FORM_BYTES = 32 * 1024;
+export const MAX_FORM_FIELDS = 100;
+export const MAX_APPLICATION_FORM_BYTES = 64 * 1024;
 export const MAX_FORM_OPTIONS = 20;
 export const MAX_BRANCH_RULES_PER_FIELD = 3;
 
@@ -340,6 +340,9 @@ export function readEmbeddedEvaluation(
   const evaluatedAt =
     typeof record.evaluatedAt === "string" ? record.evaluatedAt : new Date(0).toISOString();
   const score = typeof record.score === "number" ? record.score : undefined;
+  const maxScore = typeof record.maxScore === "number" ? record.maxScore : undefined;
+  const scorePercent =
+    typeof record.scorePercent === "number" ? record.scorePercent : undefined;
   const passingScore =
     typeof record.passingScore === "number"
       ? record.passingScore
@@ -351,6 +354,8 @@ export function readEmbeddedEvaluation(
   return {
     result: result as ApplicationFormEvaluationResult["result"],
     ...(score !== undefined ? { score } : {}),
+    ...(maxScore !== undefined ? { maxScore } : {}),
+    ...(scorePercent !== undefined ? { scorePercent } : {}),
     ...(passingScore !== undefined ? { passingScore } : {}),
     ...(offendingFieldKey ? { offendingFieldKey } : {}),
     evaluatedAt,

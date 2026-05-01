@@ -349,6 +349,11 @@ export interface ApplicationFormOption {
 export interface ApplicationFormField {
   key: string;
   label: string;
+  /**
+   * Underlying field type. `select` / `multiselect` are surfaced in the editor as a
+   * single "choice" question with an "allow multiple" toggle; both share the same
+   * per-option scoring shape.
+   */
   type: "text" | "textarea" | "select" | "multiselect";
   required: boolean;
   /**
@@ -361,9 +366,16 @@ export interface ApplicationFormField {
 
 /** Owner-configurable form-level settings. Server-side / owner-side only. */
 export interface ApplicationFormSettings {
-  /** Total below this auto-rejects. `null` disables threshold gate. */
+  /**
+   * Passing percentage (0–100). When the applicant's `scorePercent` is below this
+   * value the application is auto-rejected. `null` disables the threshold gate.
+   *
+   * Stored as a whole number representing percent (e.g. `60` ≡ "must score ≥ 60% of
+   * the form's maximum points to advance to manual review"). The evaluator computes
+   * `scorePercent = round(score / maxScore * 100)` and compares it against this value.
+   */
   passingScore: number | null;
-  /** When auto-rejected for score, show the score to the player. */
+  /** When auto-rejected for score, show the score percentage to the player. */
   showScoreToPlayerOnReject: boolean;
   /** When auto-rejected, show the structured reason (which field / threshold) to the player. */
   showRejectReasonToPlayerOnReject: boolean;
@@ -382,9 +394,13 @@ export interface ApplicationFormBranchRule {
 /** Outcome of server-side evaluation. Persisted inside `ServerApplication.formData._evaluation`. */
 export interface ApplicationFormEvaluationResult {
   result: "hard_disqualify" | "score_below_threshold" | "pending_review";
-  /** Total awarded points (only when fields with `correct` options exist). */
+  /** Total awarded points (raw absolute value; only present when scoring applied). */
   score?: number;
-  /** The threshold that was applied (mirrored from settings.passingScore at submit time). */
+  /** Maximum possible points across visible scoring fields at evaluation time. */
+  maxScore?: number;
+  /** Whole-percent scoring (0–100): `round(score / maxScore * 100)`. */
+  scorePercent?: number;
+  /** Passing percentage threshold (0–100), mirrored from settings.passingScore at submit time. */
   passingScore?: number | null;
   /** For `hard_disqualify`, the field key whose answer triggered the disqualification. */
   offendingFieldKey?: string;

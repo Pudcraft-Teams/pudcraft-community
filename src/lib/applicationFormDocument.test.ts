@@ -199,8 +199,8 @@ test("stripInternalFormDataKeys returns null for null input", () => {
   assert.equal(stripInternalFormDataKeys(null), null);
 });
 
-test("MAX_FORM_FIELDS is 30", () => {
-  assert.equal(MAX_FORM_FIELDS, 30);
+test("MAX_FORM_FIELDS is 100", () => {
+  assert.equal(MAX_FORM_FIELDS, 100);
 });
 
 test("serializeApplicationFormDocument round-trips via normalize", () => {

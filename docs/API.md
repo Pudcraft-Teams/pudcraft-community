@@ -147,6 +147,27 @@ In this document both are written as `{id}`.
 | DELETE | `/servers/{id}/members/{memberId}` | Owner | Remove a member |
 | POST | `/servers/{id}/api-key` | Owner | Generate or reset the plugin API key |
 
+#### Application form payload on `PUT /settings`
+
+The `applicationForm` body field accepts either the legacy v0 `ApplicationFormField[]` array (no scoring) or the canonical v1 `OwnerFormConfig` document:
+
+```jsonc
+{
+  "applicationForm": {
+    "version": 1,
+    "fields": [/* ApplicationFormField[] */],
+    "settings": {
+      "passingScore": 6,
+      "showScoreToPlayerOnReject": false,
+      "showRejectReasonToPlayerOnReject": false
+    },
+    "branching": []
+  }
+}
+```
+
+`settings.passingScore` is `null` to disable the threshold gate. Per-option scoring fields (`points`, `correct`, `autoReject`) live on each option inside `fields[*].options[*]` — these never reach a non-owner viewer; the runtime projects to `PlayerFormView` at every non-owner API boundary.
+
 #### Player evaluation projection
 
 Applicant-scoped responses pass `evaluationResult` through `pickPlayerEvaluationView` (`src/lib/applicationFormEvaluation.ts`) before serialization. The projection rule is:

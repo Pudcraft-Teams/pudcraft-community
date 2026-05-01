@@ -143,14 +143,54 @@ export const serverVisibilitySchema = z.enum(["public", "private", "unlisted"]);
 /** Server join mode. */
 export const serverJoinModeSchema = z.enum(["open", "apply", "invite", "apply_and_invite"]);
 
+/**
+ * Application form option config (single option for select/multiselect).
+ * Accepts either the legacy `string` shape (treated as `{ value, label }`) or
+ * the v1 object shape with optional gating metadata that the runtime
+ * normalizer in src/lib/applicationFormDocument.ts already understands.
+ */
+const applicationFormOptionSchema = z.union([
+  z.string().min(1).max(100),
+  z.object({
+    value: z.string().min(1).max(100),
+    label: z.string().min(1).max(100),
+    points: z.number().int().min(-99).max(99).optional(),
+    correct: z.boolean().optional(),
+    autoReject: z.boolean().optional(),
+  }),
+]);
+
 /** Application form field config (single field). */
 const applicationFormFieldSchema = z.object({
   key: z.string().min(1).max(50),
   label: z.string().min(1).max(100),
   type: z.enum(["text", "textarea", "select", "multiselect"]),
   required: z.boolean().default(true),
-  options: z.array(z.string().max(100)).max(20).optional(),
+  options: z.array(applicationFormOptionSchema).max(20).optional(),
   placeholder: z.string().max(200).optional(),
+});
+
+/** Form-level scoring + transparency settings (v1 OwnerFormConfig.settings). */
+const applicationFormSettingsSchema = z.object({
+  // Whole-percent threshold (0–100). `null` disables the gate.
+  passingScore: z.number().int().min(0).max(100).nullable().optional(),
+  showScoreToPlayerOnReject: z.boolean().optional(),
+  showRejectReasonToPlayerOnReject: z.boolean().optional(),
+});
+
+/** Branching rule (v1 OwnerFormConfig.branching item). */
+const applicationFormBranchingRuleSchema = z.object({
+  targetFieldKey: z.string().min(1).max(50),
+  whenFieldKey: z.string().min(1).max(50),
+  allowedValues: z.array(z.string().min(1).max(100)).min(1).max(20),
+});
+
+/** v1 OwnerFormConfig document — fields + scoring settings + branching graph. */
+const applicationFormDocumentSchema = z.object({
+  version: z.literal(1),
+  fields: z.array(applicationFormFieldSchema).max(100),
+  settings: applicationFormSettingsSchema.optional(),
+  branching: z.array(applicationFormBranchingRuleSchema).max(100).optional(),
 });
 
 /** Server private settings. */
@@ -158,7 +198,13 @@ export const updateServerSettingsSchema = z.object({
   visibility: serverVisibilitySchema.optional(),
   discoverable: z.boolean().optional(),
   joinMode: serverJoinModeSchema.optional(),
-  applicationForm: z.array(applicationFormFieldSchema).max(10).nullable().optional(),
+  applicationForm: z
+    .union([
+      z.array(applicationFormFieldSchema).max(30),
+      applicationFormDocumentSchema,
+    ])
+    .nullable()
+    .optional(),
 });
 
 /** Submit join application. */

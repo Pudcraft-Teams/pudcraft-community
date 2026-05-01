@@ -97,11 +97,22 @@ export default function ConsoleServerLayout({ children }: { children: React.Reac
   const serverAddress = resolveServerAddress(server);
   const reviewStatus = server.reviewStatus ?? "approved";
   const isPrivate = isPrivateServersEnabled() && server.visibility !== "public";
+  const isApplyMode = server.joinMode === "apply" || server.joinMode === "apply_and_invite";
+  const showFormTab = isPrivate && isApplyMode;
   const base = `/console/${serverId}`;
 
   const tabs = [
     { href: base, label: tPage("tabOverview"), active: pathname === base },
     { href: `${base}/settings`, label: tPage("tabSettings"), active: pathname === `${base}/settings` },
+    ...(showFormTab
+      ? [
+          {
+            href: `${base}/form`,
+            label: tPage("tabForm"),
+            active: pathname === `${base}/form`,
+          },
+        ]
+      : []),
     ...(isPrivate
       ? [
           {
