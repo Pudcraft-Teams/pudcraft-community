@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
+import { safeSameOriginCallbackUrl } from "@/lib/auth-callback-url";
+
 interface LoginPageProps {
   searchParams: Promise<{
     error?: string;
@@ -15,15 +17,9 @@ const ERROR_KEYS: Record<string, string> = {
   signin_failed: "errors.signinFailed",
 };
 
-function sanitizeCallbackUrl(raw: string | undefined): string {
-  if (!raw) return "/";
-  if (raw.startsWith("/") && !raw.startsWith("//")) return raw;
-  return "/";
-}
-
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
-  const callbackUrl = sanitizeCallbackUrl(params.callbackUrl);
+  const callbackUrl = safeSameOriginCallbackUrl(params.callbackUrl);
   const errorKey = params.error ? ERROR_KEYS[params.error] : null;
 
   const t = await getTranslations("auth.login");

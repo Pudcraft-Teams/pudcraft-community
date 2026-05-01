@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { safeSameOriginCallbackUrl } from "@/lib/auth-callback-url";
 import { logger } from "@/lib/logger";
 import { buildMiAuthUrl } from "@/lib/misskey";
 import { getRedisConnection } from "@/lib/redis";
@@ -12,20 +13,10 @@ const TTL_SECONDS = 300;
 const NONCE_COOKIE_NAME = "miauth_nonce";
 const NONCE_COOKIE_PATH = "/api/auth/misskey";
 
-function sanitizeCallbackUrl(raw: string | null): string {
-  if (!raw) {
-    return "/";
-  }
-  // Only allow same-origin paths. Reject absolute URLs and protocol-relative
-  // forms ("//evil.com") to prevent open redirects after auth.
-  if (raw.startsWith("/") && !raw.startsWith("//")) {
-    return raw;
-  }
-  return "/";
-}
-
 export async function GET(request: NextRequest) {
-  const callbackUrl = sanitizeCallbackUrl(request.nextUrl.searchParams.get("callbackUrl"));
+  const callbackUrl = safeSameOriginCallbackUrl(
+    request.nextUrl.searchParams.get("callbackUrl"),
+  );
 
   let miAuthRedirect: string;
   let nonce: string;
