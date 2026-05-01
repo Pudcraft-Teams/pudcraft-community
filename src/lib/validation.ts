@@ -11,6 +11,8 @@
 
 import { z } from "zod";
 
+import { MAX_APPLICATION_FORM_BYTES } from "@/lib/applicationFormDocument";
+
 // ─── Base field schemas ─────────────────────────
 
 /** Host patterns that must be rejected (SSRF defense: blocks localhost / private IPs / IPv6 loopback). */
@@ -197,12 +199,29 @@ const applicationFormBranchingRuleSchema = z.object({
 });
 
 /** v1 OwnerFormConfig document — fields + scoring settings + branching graph. */
-const applicationFormDocumentSchema = z.object({
-  version: z.literal(1),
-  fields: z.array(applicationFormFieldSchema).max(100),
-  settings: applicationFormSettingsSchema.optional(),
-  branching: z.array(applicationFormBranchingRuleSchema).max(100).optional(),
-});
+const applicationFormDocumentSchema = z
+  .object({
+    version: z.literal(1),
+    fields: z.array(applicationFormFieldSchema).max(100),
+    settings: applicationFormSettingsSchema.optional(),
+    branching: z.array(applicationFormBranchingRuleSchema).max(100).optional(),
+  })
+  // Per-field length and array-count caps don't bound the serialized size on
+  // their own — at the documented 100 fields × 20 options × ~140 chars each,
+  // the JSON can blow past the 64 KiB ceiling and bloat row/payload size.
+  // Enforce the cap at the schema boundary so PUT /settings rejects oversized
+  // documents before they hit the DB. TextEncoder works in both Node and
+  // edge/client runtimes, unlike Node's Buffer.
+  .superRefine((doc, ctx) => {
+    const bytes = new TextEncoder().encode(JSON.stringify(doc)).length;
+    if (bytes > MAX_APPLICATION_FORM_BYTES) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "errors.validation.servers.applicationFormTooLarge",
+        path: [],
+      });
+    }
+  });
 
 /** Server private settings. */
 export const updateServerSettingsSchema = z.object({

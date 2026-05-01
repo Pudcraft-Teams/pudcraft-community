@@ -105,7 +105,8 @@
         "qqGroupFormat": "QQ 群号格式不正确",
         "mcUsernameMin": "MC 用户名至少 3 个字符",
         "mcUsernameMax": "MC 用户名最多 16 个字符",
-        "mcUsernameFormat": "MC 用户名只能包含字母、数字和下划线"
+        "mcUsernameFormat": "MC 用户名只能包含字母、数字和下划线",
+        "applicationFormTooLarge": "申请表过大，请精简后再保存"
       },
       "comments": {
         "contentRequired": "评论内容不能为空",
