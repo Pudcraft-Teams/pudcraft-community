@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { isPrivateServersEnabled } from "@/lib/features";
 import type {
   OwnerFormConfig,
   ServerJoinMode,
@@ -101,8 +100,6 @@ export function ServerSettings({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  const privateServersEnabled = isPrivateServersEnabled();
-
   useEffect(() => {
     if (visibility === "public") {
       setJoinMode("open");
@@ -161,10 +158,6 @@ export function ServerSettings({
       setIsSaving(false);
     }
   }, [visibility, discoverable, joinMode, serverId, showJoinModeSelector, onSaved, t]);
-
-  if (!privateServersEnabled) {
-    return null;
-  }
 
   return (
     <section className="m3-surface p-4 sm:p-5">

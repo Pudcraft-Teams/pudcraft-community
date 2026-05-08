@@ -8,7 +8,6 @@ import { prisma } from "@/lib/db";
 import { flattenZodErrorWithLocale, getZodErrorMap } from "@/lib/i18nZod";
 import { logger } from "@/lib/logger";
 import { resolveServerCuid } from "@/lib/lookup";
-import { isPrivateServersEnabled } from "@/lib/features";
 import {
   shouldInvalidateInvitesWhenJoinModeChanges,
 } from "@/lib/server-membership";
@@ -75,15 +74,6 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     }
 
     const { visibility, discoverable, joinMode, applicationForm } = parsed.data;
-
-    if (!isPrivateServersEnabled()) {
-      if (visibility && visibility !== "public") {
-        return NextResponse.json({ error: tServers("privateDisabled") }, { status: 403 });
-      }
-      if (joinMode && joinMode !== "open") {
-        return NextResponse.json({ error: tServers("privateDisabled") }, { status: 403 });
-      }
-    }
 
     const nextVisibility = visibility ?? existing.visibility;
     const nextDiscoverable =

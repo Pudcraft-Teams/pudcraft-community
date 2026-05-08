@@ -8,7 +8,6 @@ import { ApplicationList } from "@/components/console/ApplicationList";
 import { InviteManager } from "@/components/console/InviteManager";
 import { MemberList } from "@/components/console/MemberList";
 import { PageLoading } from "@/components/PageLoading";
-import { isPrivateServersEnabled } from "@/lib/features";
 import type { ServerDetail } from "@/lib/types";
 
 interface ServerDetailPayload {
@@ -77,10 +76,6 @@ export default function ConsoleMembersPage() {
 
   if (!server) {
     return <div className="m3-alert-error p-4">{tPage("serverNotFoundOrForbidden")}</div>;
-  }
-
-  if (!isPrivateServersEnabled()) {
-    return null;
   }
 
   const showApply = server.joinMode === "apply" || server.joinMode === "apply_and_invite";

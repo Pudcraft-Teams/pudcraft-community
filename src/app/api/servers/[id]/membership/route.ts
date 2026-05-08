@@ -5,7 +5,6 @@ import { getTranslations } from "next-intl/server";
 import { getRequestLocale } from "@/i18n/locale";
 import { isActiveUserError, requireActiveUser } from "@/lib/auth-guard";
 import { prisma } from "@/lib/db";
-import { isPrivateServersEnabled } from "@/lib/features";
 import { logger } from "@/lib/logger";
 import { resolveServerCuid } from "@/lib/lookup";
 import type { ApplicationStatus, MembershipStatus } from "@/lib/types";
@@ -24,10 +23,6 @@ export async function GET(request: Request, { params }: RouteContext) {
   const tCommon = await getTranslations({ locale, namespace: "errors.api" });
   const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
   try {
-    if (!isPrivateServersEnabled()) {
-      return NextResponse.json({ error: tServers("membershipDisabled") }, { status: 404 });
-    }
-
     const authResult = await requireActiveUser();
     if (isActiveUserError(authResult)) {
       return authResult.response;

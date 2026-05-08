@@ -4,7 +4,6 @@ import { NextResponse } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getRequestLocale } from "@/i18n/locale";
 import { prisma } from "@/lib/db";
-import { isPrivateServersEnabled } from "@/lib/features";
 import { logger } from "@/lib/logger";
 import { authenticatePlugin } from "@/lib/plugin-auth";
 import { resolveServerCuid } from "@/lib/lookup";
@@ -22,10 +21,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const tCommon = await getTranslations({ locale, namespace: "errors.api" });
   const tServers = await getTranslations({ locale, namespace: "errors.api.servers" });
   try {
-    if (!isPrivateServersEnabled()) {
-      return NextResponse.json({ error: tServers("privateNotEnabled") }, { status: 404 });
-    }
-
     const { id } = await params;
     const parsedId = serverLookupIdSchema.safeParse(id);
     if (!parsedId.success) {
