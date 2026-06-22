@@ -1,6 +1,6 @@
 # AGENTS.md
 
-本文件为遵循 `AGENTS.md` 约定的 AI 编码助手（Codex CLI、OpenCode、Cursor、Aider、Continue、Zed 等会自动加载 `AGENTS.md` 的工具）在此仓库工作时提供指引。Claude Code 读取的是 `CLAUDE.md`，从 `## 先读这个` 起两份文件**逐字一致**——选你的工具加载的那一份就好。
+本文件是本仓库所有 AI 编码助手共同参照的**项目规约唯一正本**。Codex CLI、OpenCode、Cursor、Aider、Continue、Zed 等遵循 `AGENTS.md` 约定的工具会自动加载它；Claude Code 不会自动读取本文件，改由根目录 `CLAUDE.md` 通过 `@AGENTS.md` 导入语法在会话开始时引入同一份内容。**规约只在这一份里维护**——`CLAUDE.md` 只是薄包装，不再保存任何重复全文，因此换工具时各 harness 看到的都是同一份正本。
 
 ## 项目简介
 
@@ -8,7 +8,7 @@ Pudcraft Community 当前是一个**仅 Minecraft 服务器**社区平台，已�
 
 ## 先读这个
 
-- 编辑规范文档时，`AGENTS.md` 与 `CLAUDE.md` 必须保持同步。如果某一份缺失，先恢复并对齐另一份。
+- `AGENTS.md` 是项目规约的**唯一正本**；`CLAUDE.md` 只是通过 `@AGENTS.md` 导入本文件的薄包装。编辑规约时**只改 `AGENTS.md`**，绝不把内容复制回 `CLAUDE.md`。新接入的 harness 一律用导入 / 包装指向本文件，不要再开第二份全文。
 - `docs/API.md` 是当前在线的接口契约文档；早期的设计草稿或论坛时代的规划文档（已不在本分支跟踪，本地 `docs/plans/` 或 `docs/superpowers/` 内若仍有也属于 gitignored 内容）仅供存档，不能覆盖当前行为。
 - 依赖升级策略见 `docs/dependency-pins.md`：原则是让在线运行栈保持新鲜，仅保留确实存在迁移成本的少量 pin。
 - UI 文案抽取与翻译规则见 `docs/i18n.md`。所有用户可见文案必须经由 `messages/<locale>.json` 通过 `next-intl` 引入；**不要**在已迁移的文件里再写裸字符串。
@@ -299,19 +299,19 @@ Import 顺序：
 
 ## 文档纪律
 
-- `AGENTS.md` 与 `CLAUDE.md` 从 `## 先读这个` 起**逐字一致**。仅顶部标题 + 简介段不同。每次同步修改，绝不让二者漂移。
-- 产品范围、路由、模型、API 发生改动时，必须**与代码同一个 commit / PR**地更新 `AGENTS.md`、`CLAUDE.md`、`docs/API.md`。文档漂移视为 bug，不是 follow-up。
+- `AGENTS.md` 是规约唯一正本，`CLAUDE.md` 是通过 `@AGENTS.md` 导入它的薄包装、**不保存任何重复正文**。规约改动只落在 `AGENTS.md`，绝不回填 `CLAUDE.md` 或新建并行副本。
+- 产品范围、路由、模型、API 发生改动时，必须**与代码同一个 commit / PR**地更新 `AGENTS.md` 与 `docs/API.md`（`CLAUDE.md` 是包装，随正本自动生效，无需单独改）。文档漂移视为 bug，不是 follow-up。
 - 标记任务完成前先做一遍 doc pass：「我这次改了什么是未来读者（包括下一个 Claude 会话）需要知道的？」 如果答案不是「没有」，就现在更新文档。
 - 影响在线表面的改动**不能**只反映在历史设计文档里。
 - 文档与代码冲突时，**代码与在线路由是事实**——立刻把文档改正。
 
 ## 过去的错误（不要重犯）
 
-把具体的踩坑记录在这里，避免同一种错误发生第二次。每次有新错误被发现（review、用户反馈、CI / 测试失败追溯到一个被遗漏的假设），就在 `CLAUDE.md` 与 `AGENTS.md` **两个文件**中追加一条。条目要短：发生了什么、为什么发生、下次怎么做。
+把具体的踩坑记录在这里，避免同一种错误发生第二次。每次有新错误被发现（review、用户反馈、CI / 测试失败追溯到一个被遗漏的假设），就在本文件（`AGENTS.md`，唯一正本）中追加一条。条目要短：发生了什么、为什么发生、下次怎么做。
 
-- **通过文档悄悄扩大范围（PR #55、#56）**。在产品决策已经定为「仅服务器」之后，论坛 / MoltBook 仍然被设计、部分实现并写进文档当作在线能力，最后必须做完整回滚。下次：如果某个能力不在上面「产品范围」一节里，就**不要**实现、不要接路由 / API、也不要把它写成当前行为。范围调整必须**先**落到 `CLAUDE.md` / `AGENTS.md`，再写代码。
-- **文档与代码漂移**。`docs/API.md`、`CLAUDE.md`、`AGENTS.md` 没有跟随代码同 PR 更新，导致后来的读者（包括 Claude 自己）把过期的指引当作现状继续叠加。下次：任何修改路由 / 模型 / API / 范围的 PR 必须在同一 PR 触及这三份文档，否则在 PR 描述里**显式**说明为什么不需要。
-- **让 `CLAUDE.md` 与 `AGENTS.md` 漂移**。一份被更新而另一份没更新，导致不同工具看到的指引互相矛盾。下次：编辑其中一份后立即 diff，从 `## 先读这个` 起必须 byte-for-byte 一致。
+- **通过文档悄悄扩大范围（PR #55、#56）**。在产品决策已经定为「仅服务器」之后，论坛 / MoltBook 仍然被设计、部分实现并写进文档当作在线能力，最后必须做完整回滚。下次：如果某个能力不在上面「产品范围」一节里，就**不要**实现、不要接路由 / API、也不要把它写成当前行为。范围调整必须**先**落到 `AGENTS.md`，再写代码。
+- **文档与代码漂移**。`docs/API.md` 与 `AGENTS.md` 没有跟随代码同 PR 更新，导致后来的读者（包括 Claude 自己）把过期的指引当作现状继续叠加。下次：任何修改路由 / 模型 / API / 范围的 PR 必须在同一 PR 触及这两份文档，否则在 PR 描述里**显式**说明为什么不需要。
+- **让 `CLAUDE.md` 与 `AGENTS.md` 漂移**。曾经两份文档各存一份全文、靠手工同步，反复出现一份改了另一份没改、不同工具看到矛盾指引的问题。已通过把规约收敛到单一正本（`AGENTS.md`）、让 `CLAUDE.md` 用 `@AGENTS.md` 薄包装导入根治。下次：**绝不**再让任何 harness 提示文件保存规约副本——新增 harness 一律用导入 / 包装指向 `AGENTS.md`。
 - **i18n 落地后又内联 UI 文案**。`next-intl` 接好之后，后续改动仍然在已迁移文件里写裸中文字符串，悄悄破坏翻译契约。下次：如果一个文件已经在用 `useTranslations` / `getTranslations`，新增任意用户可见文案都必须经由 `messages/*.json` 的新 key，**不**写字符串字面量。
 - **API 字段长得像展示字符串（例如 `peakTime: "暂无数据"`）**。在 API payload 里返回已渲染的人类可读字符串，把后端绑死在单一 locale 上。这个问题在 Batch 2 浮现，Batch 4 把 `/api/servers/[id]/stats` 重构为 `string | null` 才修复。下次：API 返回机器可读值（枚举、null、原始数据），UI 层负责展示格式与翻译。
 - **跨请求边界的 lib 函数返回内联错误文案**（例如 `requireAdmin` 返回 `{ error: "请先登录" }`）。它阻断了翻译，因为调用方不知道收件人 locale。Pattern：lib 返回 `errorKey`，调用方再 `getTranslations({ locale })` 翻译。`requireActiveUser` / `requireAdmin` / `resolveActiveUserResult` 就是这样重构的。
