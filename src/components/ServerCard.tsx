@@ -4,7 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { FavoriteButton } from "@/components/FavoriteButton";
-import { isPrivateServersEnabled } from "@/lib/features";
 import { TAG_TO_SWATCH, pickCoverClass } from "@/lib/server-cover";
 import type { ServerListItem } from "@/lib/types";
 
@@ -39,16 +38,13 @@ export function ServerCard({
     joinMode,
   } = server;
   const t = useTranslations("servers.common");
-  const privateServersEnabled = isPrivateServersEnabled();
   const isStale = status.isStale;
   const isOnline = status.online;
   const isAddressHidden = host === "hidden" && port === 0;
   const showApplyBadge =
-    privateServersEnabled &&
-    (joinMode === "apply" || joinMode === "apply_and_invite");
+    joinMode === "apply" || joinMode === "apply_and_invite";
   const showInviteBadge =
-    privateServersEnabled &&
-    (joinMode === "invite" || joinMode === "apply_and_invite");
+    joinMode === "invite" || joinMode === "apply_and_invite";
 
   const coverClass = pickCoverClass(tags);
   const visibleTags = tags.slice(0, 2);

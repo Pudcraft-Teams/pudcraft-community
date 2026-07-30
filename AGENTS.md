@@ -1,86 +1,90 @@
 # AGENTS.md
 
-This file provides guidance to AI coding agents that follow the `AGENTS.md` convention (Codex CLI, OpenCode, Cursor, Aider, Continue, Zed, and other tools that auto-load `AGENTS.md`) when working with code in this repository. Claude Code reads the same content from `CLAUDE.md` — the two files are kept byte-identical from the `## Read this first` section onwards, so pick whichever your tool loads and trust it.
+本文件是本仓库所有 AI 编码助手共同参照的**项目规约唯一正本**。Codex CLI、OpenCode、Cursor、Aider、Continue、Zed 等遵循 `AGENTS.md` 约定的工具会自动加载它；Claude Code 不会自动读取本文件，改由根目录 `CLAUDE.md` 通过 `@AGENTS.md` 导入语法在会话开始时引入同一份内容。**规约只在这一份里维护**——`CLAUDE.md` 只是薄包装，不再保存任何重复全文，因此换工具时各 harness 看到的都是同一份正本。
 
-## Overview
+## 项目简介
 
-Pudcraft Community is currently a server-only Minecraft server community platform. The live product surface only covers server discovery, submission (submit-and-own with auto content moderation), owner management via the console, comments, favorites, private-server membership flow, notifications, changelog, and the admin console. Historical forum / MoltBook features have been removed from this branch and must not be treated as live capabilities, developed against, or documented as current behavior.
+Pudcraft Community 当前是一个**仅 Minecraft 服务器**社区平台，已上线的功能范围仅包含：服务器发现、服务器提交（提交即拥有，配合内容自动审核）、通过控制台进行的服主管理、评论、收藏、私服成员申请流程、通知、更新日志，以及管理后台。历史的论坛 / MoltBook 相关功能已从本分支移除，**不要**把它们当作在线能力来开发或在文档中描述。
 
-## Read this first
+## 先读这个
 
-- When editing spec documents, `AGENTS.md` and `CLAUDE.md` must stay in sync. If one is missing, restore it and align it with the other.
-- `docs/API.md` and `docs/PRD.md` are the live documents. Older design drafts or forum-era planning docs (no longer tracked in this branch; some may exist locally under `docs/plans/` or `docs/superpowers/` but are gitignored) are archival only and do not override current behavior.
-- Dependency upgrade policy is in `docs/dependency-pins.md`. The rule: keep the live runtime stack fresh, retain only the few pins that still have a real migration cost.
-- UI text extraction and translation rules live in `docs/i18n.md`. All user-visible copy goes through `messages/<locale>.json` via `next-intl`; never inline new user-facing strings in a migrated file.
+- `AGENTS.md` 是项目规约的**唯一正本**；`CLAUDE.md` 只是通过 `@AGENTS.md` 导入本文件的薄包装。编辑规约时**只改 `AGENTS.md`**，绝不把内容复制回 `CLAUDE.md`。新接入的 harness 一律用导入 / 包装指向本文件，不要再开第二份全文。
+- `docs/API.md` 是当前在线的接口契约文档；早期的设计草稿或论坛时代的规划文档（已不在本分支跟踪，本地 `docs/plans/` 或 `docs/superpowers/` 内若仍有也属于 gitignored 内容）仅供存档，不能覆盖当前行为。
+- 依赖升级策略见 `docs/dependency-pins.md`：原则是让在线运行栈保持新鲜，仅保留确实存在迁移成本的少量 pin。
+- UI 文案抽取与翻译规则见 `docs/i18n.md`。所有用户可见文案必须经由 `messages/<locale>.json` 通过 `next-intl` 引入；**不要**在已迁移的文件里再写裸字符串。
 
-## Written output language
+## 写作语言约定
 
-Default all written output that lands in the repo or on GitHub to **English**:
+仓库与 GitHub 上的写作内容默认采用**简体中文**：
 
-- Commit messages (subject and body)
-- Pull request titles and descriptions
-- GitHub issue / PR / review comments
-- Documentation (`.md` files, including inline code fences)
-- Code comments, TODOs, JSDoc
-- Log statements and internal error messages (`logger.*`, thrown `Error` messages)
-- Branch names
+- 仓库内 `.md` 文档（包括内联代码块说明）
+- 贡献指南、设计说明、架构说明
+- GitHub Issue / PR / Review 中的中文沟通
 
-Exceptions — keep as-is, do not rewrite:
+不强制语言，沿用作者习惯：
 
-- Interactive conversation with the user (reply in whatever language the user writes in)
-- User-facing UI strings and API error responses visible to end users (these are product copy; change them only when the task is about copy)
-- Existing quoted content, screenshots, or data samples inside docs
-- Third-party content (upstream changelogs, dependency notes, vendor docs)
+- Commit message（subject 与 body）
+- PR 标题与描述
+- 分支名
 
-## Internationalization (i18n)
+**保持英文（不译）**：
 
-- Library: `next-intl`. Messages live in `messages/zh.json` (default) and `messages/en.json`. Config is under `src/i18n/`.
-- Locale is resolved per request from the `x-locale` header, then the `NEXT_LOCALE` cookie, then the best supported `Accept-Language` match by q-value, then falls back to `zh`. No URL prefix yet — adding path-based routing (`/en/...`) is a follow-up once English is ready to launch.
-- Every user-visible string in `.tsx` components must resolve through `useTranslations` (client) or `getTranslations` (server). Do not inline new Chinese or English UI copy in migrated files; new components should use translation keys from day one.
-- When adding a key, add it to **both** `messages/zh.json` and `messages/en.json` in the same change. English may be a draft, but the key must exist.
-- Do not extract `logger.*`, thrown `Error` messages, commit messages, code comments, or docs — those stay in English per the Written output language rules.
-- Full convention, namespace table, and rollout plan are in `docs/i18n.md`. Treat it as the single source of truth for i18n questions.
+- 代码注释、TODO、JSDoc
+- 日志语句与内部错误信息（`logger.*`、`throw new Error(...)`）
+- 第三方内容（上游 changelog、依赖说明、厂商文档）
+- 文档中已有的引用片段、截图、数据样本
 
-## Product scope
+**用户可见的 UI 文案与对外的 API 错误响应不属于以上分类**：它们是产品文案，必须走 `messages/<locale>.json` 与 `next-intl`，详见 `docs/i18n.md`。
 
-Current live scope:
+## 国际化（i18n）
 
-1. Server discovery and search: `/` and `/servers` share the server-list experience.
-2. Server submission: signed-in users submit a server; auto content moderation (Alibaba Cloud Green text + image) runs immediately. Pass → `reviewStatus = "approved"`, `ownerId = submitter`. Fail → `reviewStatus = "rejected"` with reason. No admin review step for new submissions; no server-connectivity check on submit.
-3. Owner management: submitter is automatically the owner. Owners manage their servers via `/console` and `/console/{serverId}` (tabs: Overview, Settings, Members, Integration). No MOTD claim/verify flow.
-4. Admin controls: `/admin/servers` lets admins set `ownerId` for legacy `ownerId=null` servers and toggle `isVerified` (official certification badge, writes `ModerationLog`). `isVerified` is admin-assigned only — no user-initiated verify flow.
-5. Server interaction: comments, favorites, notifications, public changelog, reports.
+- 库：`next-intl`。文案位于 `messages/zh.json`（默认）与 `messages/en.json`。配置在 `src/i18n/`。
+- 每次请求按以下顺序解析 locale：`x-locale` 请求头 → `NEXT_LOCALE` cookie → 按 q 值匹配 `Accept-Language` 中支持的最优项 → 兜底 `zh`。当前没有 URL 前缀；待英文准备好上线后再迁移到路径前缀路由（`/en/...`）。
+- 所有 `.tsx` 组件中的用户可见文案必须通过 `useTranslations`（客户端）或 `getTranslations`（服务端）解析。已迁移的文件**不允许**再内联中文或英文 UI 文案；新增组件从第一行起就要使用翻译键。
+- 新增 key 时，**同一次提交**内必须同时更新 `messages/zh.json` 与 `messages/en.json`。英文可以是占位草稿，但 key 不能缺。
+- `logger.*`、`throw new Error(...)`、commit message、代码注释、文档**不**走抽取流程，按上面的语言约定保持英文。
+- 完整命名空间表与推进计划见 `docs/i18n.md`，i18n 相关疑问以该文档为唯一事实源。
 
-Authentication: identities are sourced exclusively from a self-hosted Misskey instance via MiAuth (shown as "咖啡厅" in user-visible UI; code, routes, DB fields, and env vars keep "misskey"). There is no local password / email / verification-code flow; profile fields (name / avatar / bio / handle) and admin role are re-synced from Misskey on every login.
+## 产品范围
 
-Explicitly out of scope:
+当前在线范围：
 
-- Circles
-- Post feed
-- Forum bookmarks / forum notifications
-- Native mobile API surface (`/api/mobile/*` was removed; mobile clients are deferred until a dedicated MiAuth mobile flow ships)
-- Anything that would restore removed surfaces such as `src/components/forum/*`, `/c/*`, `/post/*`, `/explore`, `/new`
+1. **服务器发现与搜索**：`/` 与 `/servers` 共用服务器列表体验。
+2. **服务器提交**：登录用户提交服务器，提交时即时执行内容自动审核（阿里云 Green 文本 + 图片）。通过 → `reviewStatus = "approved"`，`ownerId = 提交者`。失败 → `reviewStatus = "rejected"` 并附拒绝原因。**没有**人工审核步骤，**也不**做服务器连通性检查。
+3. **服主管理**：提交者自动成为 owner。服主通过 `/console` 与 `/console/{serverId}` 进行管理（Tab：Overview / Settings / Members / Integration / Apply Form）。**没有** MOTD 认领 / 验证流程。
+4. **管理员控制**：`/admin/servers` 允许管理员为遗留 `ownerId=null` 的服务器指派 owner，并切换 `isVerified`（官方认证徽章，写入 `ModerationLog`）。`isVerified` **仅由管理员指派**——没有用户侧的认证申请流程。
+5. **服务器交互**：评论、收藏、通知、公开更新日志、举报。
 
-## Stack
+身份系统：账号信息**只**来源于自托管 Misskey 实例的 MiAuth（在用户可见 UI 中显示为「咖啡厅」；代码、路由、数据库字段、环境变量保留 `misskey` 命名）。**没有**本地密码 / 邮箱 / 验证码流程；用户字段（name / avatar / bio / handle）与管理员角色每次登录时从 Misskey 重新同步。
 
-- Framework: Next.js 16.2.4 (App Router) + React 19.2.5 + TypeScript 5.9.3 (strict)
-- Styling: Tailwind CSS 3 + Warm Clay Community UI
-- Database: Prisma ORM 6.19.2 + PostgreSQL
-- Auth: NextAuth v5 beta (JWT session) backed by Misskey MiAuth (single self-hosted instance via `MISSKEY_HOST`); a short-lived HMAC ticket bridges the MiAuth callback into NextAuth's Credentials provider
-- Queue: BullMQ 5.74.1 + Redis (ioredis 5.10.1)
-- Realtime: a standalone WebSocket process used for whitelist-sync push
-- Package manager: pnpm 10.28.x
-- Runtime: production minimum Node.js 20.9+; this working tree is validated on Node.js 25.2.1
+明确**不在**当前范围内：
 
-## Common commands
+- 圈子（Circles）
+- 帖子流（Post feed）
+- 论坛收藏 / 论坛通知
+- 原生移动端 API（`/api/mobile/*` 已移除；移动端等到专门的 MiAuth 移动流程上线后再做）
+- 任何会复活已删除界面的工作：`src/components/forum/*`、`/c/*`、`/post/*`、`/explore`、`/new`
+
+## 技术栈
+
+- 框架：Next.js 16.2.4（App Router） + React 19.2.5 + TypeScript 5.9.3（strict）
+- 样式：Tailwind CSS 3 + Warm Clay Community UI
+- 数据库：Prisma ORM 6.19.2 + PostgreSQL
+- 认证：NextAuth v5 beta（JWT session），后端是 Misskey MiAuth（通过 `MISSKEY_HOST` 指定的单一自托管实例）；MiAuth 回调通过短时 HMAC ticket 桥接到 NextAuth 的 Credentials provider
+- 队列：BullMQ 5.74.1 + Redis（ioredis 5.10.1）
+- 实时：独立 WebSocket 进程，仅用于白名单同步推送
+- 包管理：pnpm 10.28.x
+- Runtime：生产最低 Node.js 20.9+；本工作树在 Node.js 25.2.1 上验证
+
+## 常用命令
 
 ```bash
-# Development
-pnpm dev              # Next.js dev server
-pnpm worker:dev       # Worker (auto-restart)
-pnpm ws:dev           # WebSocket service (needed for whitelist / private-server integration work)
+# 开发
+pnpm dev              # Next.js 开发服务器
+pnpm worker:dev       # 后台 Worker（自动重启）
+pnpm ws:dev           # WebSocket 服务（白名单 / 私服集成相关工作时需要）
 
-# Checks
+# 检查
 pnpm lint
 pnpm tsc --noEmit
 pnpm test
@@ -88,87 +92,88 @@ pnpm build
 pnpm format
 pnpm format:check
 
-# Database
+# 数据库
 pnpm db:generate
 pnpm db:migrate
-pnpm db:push          # Local dev quick sync only; never use in production
+pnpm db:push          # 仅本地开发用的快速同步；生产环境绝不使用
 pnpm db:studio
 
-# Processes / build
+# 进程 / 构建
 pnpm worker
 pnpm ws
 pnpm build:worker
 ```
 
-Day-to-day local development needs at least `pnpm dev` and `pnpm worker:dev`; add `pnpm ws:dev` when working on whitelist sync or private-server integration.
+日常开发至少需要 `pnpm dev` 与 `pnpm worker:dev`；动到白名单同步或私服集成时再加 `pnpm ws:dev`。
 
-`pnpm test` first runs `set -a; . ./.env.example` to inject test env vars, then collects `*.test.ts(x)` and `*.spec.ts(x)` under `src` / `prisma` / `scripts` and runs them together. To run a single test file, replicate the env load yourself, for example:
+`pnpm test` 会先执行 `set -a; . ./.env.example` 注入测试环境变量，然后收集 `src` / `prisma` / `scripts` 下的 `*.test.ts(x)` 与 `*.spec.ts(x)` 一起运行。要单独跑一个测试文件，需要自己复刻同样的 env 加载流程，例如：
 
 ```bash
 sh -c 'set -a; . ./.env.example; set +a; node --import tsx --test src/lib/auth.test.ts'
 ```
 
-Running `tsx --test <file>` directly fails because env vars like `DATABASE_URL` are missing.
+直接 `tsx --test <file>` 会因为缺少 `DATABASE_URL` 等环境变量而失败。
 
-## Pre-commit checks
+## 提交前检查
 
-Before committing, run at minimum:
+提交前至少跑：
 
 1. `pnpm lint`
 2. `pnpm tsc --noEmit`
 3. `pnpm test`
-4. Confirm `.env*` files are not staged
+4. 确认 `.env*` 没有进暂存区
 
-Commit messages use `<type>: <description>`, e.g. `feat:` / `fix:` / `refactor:` / `docs:` / `chore:`.
+Commit message 推荐使用约定式前缀（不强制中英文）：`feat:` / `fix:` / `refactor:` / `docs:` / `chore:`。
 
-## Directory layout
+## 目录结构
 
-| Directory                 | Responsibility                                              | Do not put here                         |
-| ------------------------- | ----------------------------------------------------------- | --------------------------------------- |
-| `src/app/`                | Page containers and App Router routes                       | Business logic, database access         |
-| `src/app/api/`            | REST API Route Handlers                                     | Page components                         |
-| `src/app/admin/`          | Admin console pages                                         | Regular user features                   |
-| `src/app/console/`        | Owner console pages                                         | Admin-only logic                        |
-| `src/app/servers/`        | Server detail, apply, edit, modpack pages                   | Generic business logic                  |
-| `src/components/`         | Reusable UI components                                      | Direct database access                  |
-| `src/components/console/` | Console-only interactive components                         | Shared logic beyond console layout      |
-| `src/hooks/`              | React hooks                                                 | Page routing, database access           |
-| `src/lib/`                | Business logic, data-access wrappers, validation, utilities | React components                        |
-| `src/i18n/`               | `next-intl` config (`config.ts`, `request.ts`)              | Message JSON, UI components             |
-| `src/worker/`             | ping / verify / sync background jobs                        | API Routes                              |
-| `src/ws/`                 | Whitelist-sync WebSocket service                            | Page components                         |
-| `messages/`               | `next-intl` message bundles, one JSON per locale            | Anything other than translation strings |
-| `prisma/`                 | Schema and migrations                                       | Application UI code                     |
-| `docs/`                   | Live documents and archival material                        | Source implementation                   |
+| 目录                      | 职责                                                          | 不要放这里                                |
+| ------------------------- | ------------------------------------------------------------- | ----------------------------------------- |
+| `src/app/`                | 页面容器与 App Router 路由                                    | 业务逻辑、数据库访问                      |
+| `src/app/api/`            | REST API Route Handlers                                       | 页面组件                                  |
+| `src/app/admin/`          | 管理后台页面                                                  | 普通用户功能                              |
+| `src/app/console/`        | 服主控制台页面                                                | 仅管理员才能用的逻辑                      |
+| `src/app/servers/`        | 服务器详情、申请、编辑、整合包页面                            | 通用业务逻辑                              |
+| `src/components/`         | 可复用 UI 组件                                                | 直接的数据库访问                          |
+| `src/components/console/` | 仅控制台使用的交互组件                                        | 跨控制台的共享逻辑                        |
+| `src/hooks/`              | React hooks                                                   | 页面路由、数据库访问                      |
+| `src/lib/`                | 业务逻辑、数据访问封装、校验、工具方法                        | React 组件                                |
+| `src/i18n/`               | `next-intl` 配置（`config.ts`、`request.ts`）                 | 文案 JSON、UI 组件                        |
+| `src/worker/`             | ping / sync 后台作业                                          | API Route                                 |
+| `src/ws/`                 | 白名单同步 WebSocket 服务                                     | 页面组件                                  |
+| `messages/`               | `next-intl` 文案包，每个 locale 一个 JSON                     | 翻译以外的任何东西                        |
+| `prisma/`                 | Schema 与迁移                                                 | 应用 UI 代码                              |
+| `docs/`                   | 当前在线的文档与归档                                          | 源代码实现                                |
 
-## Live page routes
+## 路由清单
 
-User / public pages:
+**用户 / 公开页面**
 
-- `/`: server discovery home
-- `/servers`: server list
-- `/search`: legacy search entry, redirects to `/servers`
-- `/servers/{id}`: server detail
-- `/servers/{id}/apply`: apply to a private server
-- `/servers/{id}/join/{code}`: join via invite code
-- `/servers/{id}/edit`: owner edits server
-- `/servers/{id}/modpacks`: modpacks page
-- `/submit`: submit a server
-- `/favorites`: my favorites
-- `/notifications`: notification center
-- `/u/{misskeyId}`: public user profile (server-centric)
-- `/settings/profile`: read-only profile view (synced from Misskey on every login)
-- `/login`: Misskey MiAuth gateway (the only sign-in entry point)
+- `/`：服务器发现首页
+- `/servers`：服务器列表
+- `/search`：旧的搜索入口，重定向到 `/servers`
+- `/servers/{id}`：服务器详情
+- `/servers/{id}/apply`：申请加入私服
+- `/servers/{id}/join/{code}`：通过邀请码加入
+- `/servers/{id}/edit`：服主编辑服务器
+- `/servers/{id}/modpacks`：整合包页面
+- `/submit`：提交服务器
+- `/favorites`：我的收藏
+- `/notifications`：通知中心
+- `/u/{misskeyId}`：公开用户主页（以服务器为中心）
+- `/settings/profile`：只读资料页（每次登录从 Misskey 同步）
+- `/login`：Misskey MiAuth 登录入口（**唯一**登录入口）
 - `/changelog`
 
-Console / admin pages:
+**控制台 / 管理后台**
 
-- `/console`: my servers and console entry
-- `/console/{serverId}`: owner console (Overview tab, default)
-- `/console/{serverId}/settings`: Settings tab
-- `/console/{serverId}/members`: Members tab
-- `/console/{serverId}/integration`: Integration tab
-- `/my-servers`: legacy entry, redirects to `/console`
+- `/console`：我的服务器与控制台入口
+- `/console/{serverId}`：服主控制台（默认 Overview Tab）
+- `/console/{serverId}/settings`：Settings Tab
+- `/console/{serverId}/members`：Members Tab
+- `/console/{serverId}/integration`：Integration Tab
+- `/console/{serverId}/form`：Apply Form Tab（私服申请表单编辑器，含评分与分支规则）
+- `/my-servers`：旧入口，重定向到 `/console`
 - `/admin`
 - `/admin/servers`
 - `/admin/users`
@@ -176,76 +181,77 @@ Console / admin pages:
 - `/admin/moderation`
 - `/admin/changelog`
 
-## API modules
+## API 模块
 
-Full interface reference lives in `docs/API.md`. The live API surface should be maintained only around these modules:
+完整接口参考见 `docs/API.md`。在线 API 表面应当**仅**围绕以下模块维护：
 
-- Auth: `/api/auth/[...nextauth]`, `/api/auth/misskey/start`, `/api/auth/misskey/callback`
-- Servers: `/api/servers`, `/api/servers/{id}`
-- Favorites: `/api/servers/{id}/favorite`, `/api/user/favorites*`
-- Comments: `/api/servers/{id}/comments*`
-- Private servers: `settings` / `applications` / `invites` / `membership` / `members` / `api-key`
-- Sync: `/api/servers/{id}/sync/*`, `/api/sync/{syncId}/ack`
-- Notifications: `/api/notifications*`
-- Reports: `/api/reports`, `/api/admin/reports*`
-- Admin: `/api/admin/servers*`, `/api/admin/users*`, `/api/admin/moderation*`, `/api/admin/changelog*`
-- System: `/api/health`, `/api/changelog`, `/api/uploads/editor-image`
+- 认证：`/api/auth/[...nextauth]`、`/api/auth/misskey/start`、`/api/auth/misskey/callback`
+- 服务器：`/api/servers`、`/api/servers/{id}`
+- 收藏：`/api/servers/{id}/favorite`、`/api/user/favorites*`
+- 评论：`/api/servers/{id}/comments*`
+- 私服：`settings` / `applications` / `invites` / `membership` / `members` / `api-key`
+- 同步：`/api/servers/{id}/sync/*`、`/api/sync/{syncId}/ack`
+- 通知：`/api/notifications*`
+- 举报：`/api/reports`、`/api/admin/reports*`
+- 管理员：`/api/admin/servers*`、`/api/admin/users*`、`/api/admin/moderation*`、`/api/admin/changelog*`
+- 系统：`/api/health`、`/api/changelog`、`/api/uploads/editor-image`
 
-## Naming and code style
+## 命名与代码风格
 
-- Component files / component names: PascalCase, prefer named exports; Next.js page files are the exception
-- Utility / business files: camelCase
-- Page files are always `page.tsx`, API routes are always `route.ts`
-- Type imports use `import type`
-- Path alias is `@/*`
-- `strict: true` must stay on; do not use `any`, prefer `unknown` + type guards
+- 组件文件 / 组件名：PascalCase，优先具名导出；Next.js 页面文件除外
+- 工具 / 业务文件：camelCase
+- 页面文件统一为 `page.tsx`，API 路由统一为 `route.ts`
+- Type import 用 `import type`
+- Path alias 是 `@/*`
+- `strict: true` 必须保持开启；不要使用 `any`，优先 `unknown` + 类型守卫
 
-Import order:
+Import 顺序：
 
-1. Node.js built-ins
-2. Third-party dependencies
-3. `@/` path aliases
-4. Relative paths
-5. Type imports last within each group
+1. Node.js 内置模块
+2. 第三方依赖
+3. `@/` path alias
+4. 相对路径
+5. 同组内 type import 放最后
 
-## Error handling and API conventions
+## 错误处理与 API 约定
 
-- Every API Route must have explicit parameter validation and error branches
-- Error responses use `{ error: string, details?: unknown }` uniformly
-- Common status codes: 400 / 401 / 403 / 404 / 409 / 429 / 500
-- Non-critical side-effect failures should be logged only, not blocked
-- Delete, review, and sync logic must prioritize idempotency and safe retries
+- 每个 API Route 必须显式做参数校验与错误分支
+- 错误响应统一为 `{ error: string, details?: unknown }`
+- 常见状态码：400 / 401 / 403 / 404 / 409 / 429 / 500
+- 非关键的副作用失败仅记录日志，不阻断主流程
+- 删除、审核、同步逻辑优先保证幂等与重试安全
 
-## Security rules
+## 安全规则
 
-- Secrets, object storage, Redis, etc. must come from `.env*`
-- Every write endpoint must enforce permission on the server; do not rely on a hidden front-end button
-- Server address validation must continue to reject localhost / private IPs; port range is 1–65535
-- Private server addresses and ports are visible only to owner / admin / members
-- API keys are shown once at generation; only a hash is persisted
-- The Misskey login ticket is short-lived, HMAC-signed, and one-shot consumed
-- Report targets are limited to the live set: `server`, `comment`, `user`
-- User-provided external links must use `rel="noopener noreferrer" target="_blank"`
-- Never apply `dangerouslySetInnerHTML` to unsanitized content
+- 密钥、对象存储、Redis 等必须来自 `.env*`
+- 每个写接口都必须在服务端做权限校验，**绝不**依赖前端隐藏按钮
+- 服务器地址校验必须继续拒绝 localhost / 私网 IP；端口范围 1–65535
+- 私服地址与端口仅对 owner / admin / 成员可见
+- API key 在生成时只展示一次；只持久化哈希
+- Misskey 登录 ticket 短时、HMAC 签名、一次消费
+- 举报对象限制在在线集合：`server`、`comment`、`user`
+- 用户提供的外链必须使用 `rel="noopener noreferrer" target="_blank"`
+- 任何未净化的内容**绝不**用 `dangerouslySetInnerHTML` 渲染
 
-## Performance rules
+## 性能规则
 
-- Page requests and API Routes must not ping Minecraft servers directly; status is written by the Worker asynchronously
-- Server lists and details should reuse the cached fields: `isOnline`, `playerCount`, `maxPlayers`, `favoriteCount`
-- High-frequency list endpoints must avoid N+1; favorite state and membership relations should be batched
-- Image uploads stay compressed on the client: avatar 256px, server icon 512px
-- Whitelist sync and notification counts must not block primary page rendering
+- 页面请求与 API Route **绝不**直接 ping Minecraft 服务器；状态由 Worker 异步写入
+- 服务器列表与详情应当复用缓存字段：`isOnline`、`playerCount`、`maxPlayers`、`favoriteCount`
+- 高频列表接口必须避免 N+1；收藏状态与成员关系要批量查询
+- 图片上传在客户端继续做压缩：头像 256px，服务器图标 512px
+- 白名单同步与未读通知数不能阻塞主页面渲染
 
-## Database / domain model
+## 数据模型与数据库
 
-Primary models today:
+主要模型：
 
-- `User` (keyed by upstream `misskeyId`; `name` / `image` / `bio` / `misskeyUsername` are overwritten on every login)
+- `User`（以上游 `misskeyId` 为主键来源；`name` / `image` / `bio` / `misskeyUsername` 每次登录覆盖）
 - `Server`
 - `ServerStatus`
-- `ServerComment` (table `comments`)
+- `ReservedNumericId`（PSID 等数字 ID 删除后的预留，避免回收复用）
+- `ServerComment`（数据表 `comments`）
 - `Favorite`
-- `ServerNotification` (table `notifications`)
+- `ServerNotification`（数据表 `notifications`）
 - `Modpack`
 - `ServerApplication`
 - `ServerInvite`
@@ -255,62 +261,64 @@ Primary models today:
 - `Changelog`
 - `Report`
 
-Database conventions:
+数据库约定：
 
-- Migration command: `pnpm prisma migrate dev --name <snake_case_name>`
-- Never use `db push` in production
-- Common IDs use `cuid()`
-- Time fields use `DateTime`
-- Relations must declare `onDelete` explicitly
-- `address + port` remains a composite unique
-- Cached-field updates run in the same transaction as the main write
+- 迁移命令：`pnpm prisma migrate dev --name <snake_case_name>`
+- **绝不**在生产用 `db push`
+- 一般主键用 `cuid()`
+- 时间字段用 `DateTime`
+- 关系必须显式声明 `onDelete`
+- `address + port` 保持复合唯一
+- 缓存字段更新与主写入在同一事务里完成
 
-## Worker / WebSocket rules
+申请表单文档相关模块（命中频率高）：`src/lib/applicationFormDocument.ts`（schema + content hash）与 `src/lib/applicationFormEvaluation.ts`（评分与分支）。任何对文档结构的修改都必须**同时**更新 hash 与对应 Prisma 迁移——只改 schema 不写 migration 是已记录的过去错误（见下文）。
 
-- `server-ping`: periodically refreshes cached online status, player count, latency
-- Whitelist sync uses Redis Pub/Sub bridged to the WebSocket service
-- Sync records must cover `pending / pushed / acked / failed`
-- Plugin integration follows `handshake -> realtime push -> ack`
+## Worker / WebSocket 规则
 
-## UI rules
+- `server-ping`：周期性刷新缓存的在线状态、人数、延迟
+- 白名单同步走 Redis Pub/Sub，再桥接到 WebSocket 服务
+- 同步记录必须覆盖 `pending / pushed / acked / failed` 四种状态
+- 插件集成遵循 `handshake -> realtime push -> ack` 流程
 
-- Theme: **Claude Clay** — warm cream paper + clay-orange brand. Mode-keyed earthen accents on player surfaces; the same tokens carry through to the owner console (`/console`) so the dashboard reads as cohesive with the player surfaces, not a separate visual world.
-- Primary (buttons, links, focus): `#CC7D5E` (clay). Hover: `#BC6E4F`. Active: `#A45F40`.
-- Page background: `#F4EFE6` (cream paper). Surface (cards): `#FFFEFA`. Surface variant / soft panels: `#EDE6D9`.
-- Primary text: `#1A1A18` · body: `#494842` · secondary: `#847F71` · meta: `#B5AE9A`.
-- Border: `#E2DCCC`. Strong border: `#D5CDB7`.
-- Success / online: `#5C8C4E` · Warning: `#C97C3F` · Error / danger: `#C0392B`.
-- Mode palette (server-card cover gradients + chip swatches): `--mode-survival #6B8E5B` (sage), `--mode-creative #4A7C9D` (dusty blue), `--mode-rpg #8B6FA8` (mauve), `--mode-pvp #C0392B` (terracotta), `--mode-tech #C97C3F` (burnt sienna), `--mode-sky #70A5B5` (hazy teal), `--mode-vanilla #9C8F75` (khaki), `--mode-mod #C9A93F` (mustard), `--mode-mini #B86E8E` (dusty rose).
-- Fonts: HarmonyOS Sans SC self-hosted at `/public/fonts/HarmonyOS_SansSC_Regular.woff2`, declared via `@font-face` in `globals.css`. Fallback chain: `-apple-system, BlinkMacSystemFont, system-ui, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif`. Body letter-spacing `-0.005em`.
-- Hero typography goes large (`clamp(36px, 5vw, 56px)`, weight 700, letter-spacing `-0.035em`) — only on the marketing surfaces (home `/`). Inner pages stay compact.
-- Use `.cover-{mode}` classes for server-card covers (16:9 gradient + grid pattern) and `.mode-tag` overlays for badges. Mode chips on filters carry a colored swatch.
-- Borders + warm shadows do the depth work. Avoid neumorphism, inner shadows, or gradient fills outside cover artwork and the hero card preview.
-- Mobile-first; breakpoints `sm:640 md:768 lg:1024`
-- Prefer Next.js `<Image>`; `<img>` is only acceptable for sanitized, whitelisted sources
-- Reuse the shared Toast / EmptyState / PageLoading primitives
+## UI 主题（Claude Clay）
 
-## Documentation rules
+- 主题：**Claude Clay** —— 暖奶油纸 + 黏土橙品牌色。玩家界面叠加按 mode 区分的土系点缀，相同 token 一路延伸到服主控制台（`/console`），让控制台与玩家界面在视觉上属于同一个世界。
+- 主色（按钮、链接、聚焦）：`#CC7D5E`（黏土）。Hover：`#BC6E4F`。Active：`#A45F40`。
+- 页面背景：`#F4EFE6`（奶油纸）。卡片表面：`#FFFEFA`。表面变体 / 软面板：`#EDE6D9`。
+- 主文：`#1A1A18` · 正文：`#494842` · 次要：`#847F71` · 元信息：`#B5AE9A`。
+- 边框：`#E2DCCC`。强调边框：`#D5CDB7`。
+- 成功 / 在线：`#5C8C4E` · 警告：`#C97C3F` · 错误 / 危险：`#C0392B`。
+- Mode 调色板（服务器卡封面渐变 + 筛选器色块）：`--mode-survival #6B8E5B`（鼠尾草）、`--mode-creative #4A7C9D`（雾蓝）、`--mode-rpg #8B6FA8`（紫罗兰）、`--mode-pvp #C0392B`（陶土红）、`--mode-tech #C97C3F`（焦赭）、`--mode-sky #70A5B5`（雾松）、`--mode-vanilla #9C8F75`（卡其）、`--mode-mod #C9A93F`（芥末）、`--mode-mini #B86E8E`（玫瑰）。
+- 字体：HarmonyOS Sans SC，自托管在 `/public/fonts/HarmonyOS_SansSC_Regular.woff2`，通过 `globals.css` 中的 `@font-face` 声明。回退链：`-apple-system, BlinkMacSystemFont, system-ui, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif`。正文 letter-spacing `-0.005em`。
+- Hero 排版用大字（`clamp(36px, 5vw, 56px)`，weight 700，letter-spacing `-0.035em`）—— 仅限营销页（首页 `/`）。内页保持紧凑。
+- 服务器卡封面用 `.cover-{mode}` 类（16:9 渐变 + 网格底纹），徽章用 `.mode-tag` 叠加。筛选器上的 mode chip 带颜色色块。
+- 边框 + 暖阴影承担景深；除封面图与首页 Hero 卡片预览外，避免 neumorphism / inner shadow / 渐变填充。
+- Mobile-first；断点 `sm:640 md:768 lg:1024`
+- 优先使用 Next.js `<Image>`；`<img>` 仅用于已经过净化、白名单中的来源
+- 复用共享的 Toast / EmptyState / PageLoading 原语
 
-- `AGENTS.md` and `CLAUDE.md` are kept byte-identical from the `## Read this first` section onwards. Only the opening title + intro paragraph differ. Edit both in the same change; never let them drift.
-- Whenever product scope, routes, models, or APIs change, update `AGENTS.md`, `CLAUDE.md`, `docs/API.md`, and `docs/PRD.md` **in the same commit / PR as the code change**. Doc drift is a bug, not a follow-up.
-- Before marking any task complete, run a doc pass: "what did I change that a future reader (or a future Claude session) needs to know?" If the answer is anything other than "nothing", update the docs now.
-- Changes that affect the live surface must not be reflected only in historical design notes.
-- If documentation and code disagree, code and live routes win — correct the docs immediately.
+## 文档纪律
 
-## Past mistakes — do not repeat
+- `AGENTS.md` 是规约唯一正本，`CLAUDE.md` 是通过 `@AGENTS.md` 导入它的薄包装、**不保存任何重复正文**。规约改动只落在 `AGENTS.md`，绝不回填 `CLAUDE.md` 或新建并行副本。
+- 产品范围、路由、模型、API 发生改动时，必须**与代码同一个 commit / PR**地更新 `AGENTS.md` 与 `docs/API.md`（`CLAUDE.md` 是包装，随正本自动生效，无需单独改）。文档漂移视为 bug，不是 follow-up。
+- 标记任务完成前先做一遍 doc pass：「我这次改了什么是未来读者（包括下一个 Claude 会话）需要知道的？」 如果答案不是「没有」，就现在更新文档。
+- 影响在线表面的改动**不能**只反映在历史设计文档里。
+- 文档与代码冲突时，**代码与在线路由是事实**——立刻把文档改正。
 
-Record concrete mistakes here so the same one does not happen twice. When a new mistake is caught (by review, by the user, by a CI / test failure that traces back to a missed assumption), append an entry here in **both** `CLAUDE.md` and `AGENTS.md`. Keep entries short: what went wrong, why it happened, what to do next time.
+## 过去的错误（不要重犯）
 
-- **Scope creep through documentation (PRs #55, #56).** Forum / MoltBook features were designed, partially built, and documented as live even after the product decision to stay server-only. A full rollback was required. Next time: if a capability is not in the "Product scope" block above, do not build it, do not wire routes / APIs for it, and do not describe it as current behavior. A scope change must land in `CLAUDE.md` / `AGENTS.md` / `docs/PRD.md` **before** code.
-- **Docs drifting from code.** `docs/API.md`, `docs/PRD.md`, `CLAUDE.md`, and `AGENTS.md` were not updated in the same change as code, so later readers (including Claude itself) treated stale guidance as current and kept building on top of it. Next time: any PR that changes routes / models / APIs / scope must touch these four docs in the same PR, or explicitly call out why it does not.
-- **Letting `CLAUDE.md` and `AGENTS.md` diverge.** One was updated, the other was not, producing contradictory guidance depending on which tool opened the repo. Next time: after editing either file, diff them — everything from `## Read this first` down must match byte-for-byte.
-- **Inlining UI copy after i18n landed.** Once `next-intl` was wired up, follow-up changes kept adding hard-coded Chinese strings in files that had already been migrated, silently breaking the translation contract. Next time: if a file already uses `useTranslations` / `getTranslations`, any new user-visible string goes through a new key in `messages/*.json`, not a string literal.
-- **API fields that look like display strings (e.g. `peakTime: "暂无数据"`).** Returning a user-facing rendered string in an API payload couples the backend to a single locale. It surfaced during Batch 2 and Batch 4 had to refactor `/api/servers/[id]/stats` to `string | null`. Next time: API returns machine-readable values (enums, nulls, raw data); the UI layer handles display formatting and translation.
-- **Inline error copy in lib functions that cross request boundaries (e.g. `requireAdmin` returning `{ error: "请先登录" }`).** Blocks translation because the caller doesn't know the recipient's locale. Pattern: lib returns an `errorKey`, the caller translates via `getTranslations({ locale })`. This is how `requireActiveUser` / `requireAdmin` / `resolveActiveUserResult` were refactored.
-- **Throwing user-facing Chinese from `Error.message` in domain libraries (e.g. `throw new Error("整合包缺少 modrinth.index.json")` in `src/lib/modpack.ts`).** The route handler surfaced `error.message` verbatim, which couples the library to a single locale and makes English translation impossible. Next time: custom error classes expose a machine-readable `.key` (and params), and the route handler translates via a keyed namespace. See `ModpackError` + `errors.api.modpacks.*` for the pattern; the same shape applies to `ImageValidationError.code` / `VerifyJobResult.reasonKey`.
-- **Zod inline `.min(3, "MC 用户名至少 3 个字符")` messages bypass `errorMap`.** The initial Batch 3 plan assumed `getZodErrorMap` could intercept every Zod message, but Zod's `errorMap` only fires for issues that do NOT carry an inline message. Field-specific copy must instead use the `errors.validation.<area>.<key>` key-path form and be translated at serialization time via `flattenZodErrorWithLocale`. Validate any change to `src/lib/validation.ts` with a round-trip test that asserts the serialized `details.fieldErrors` picks up the locale.
-- **Treating `isVerified` as a claim/verify flow artifact.** After the user architecture overhaul (2026-04-30), `Server.isVerified` no longer means "owner completed MOTD verification" — it is an admin-assigned official certification badge toggled via `/admin/servers`. The claim/verify flow (`/servers/{id}/verify`, `/api/servers/{id}/verify*`, `server-verify` worker job) was removed entirely. Existing `isVerified=true` records are treated as admin-granted. Next time: do not attempt to re-introduce MOTD verification or a user-initiated claim flow; that path was deliberately removed. The only way to set `isVerified` is through the admin panel.
-- **Half-migrated identity systems (Misskey MiAuth takeover).** When the project moved from local credentials to Misskey, every codepath that referenced `User.uid` / `User.email` / `User.passwordHash` / `Account` / `Session` / `VerificationToken` had to go in the same change — leaving even one stale `select: { uid: true }` or one `signIn("credentials", { email })` call would have broken the whole pipeline. Next time we replace an identity system: grep the entire `src/` tree for the old field names _before_ the rename, write down the full call graph, and treat the migration as one PR (schema + types + every call site + i18n + docs + tests) rather than a "we'll mop up later" two-step. Mobile-only API surfaces depending on the old auth (`/api/mobile/*`) were retired in the same change because they had no MiAuth path; do not resurrect them without a dedicated mobile MiAuth design.
-- **MiAuth callback that trusted unsolicited session IDs (account-takeover risk).** The first cut of `/api/auth/misskey/callback` looked up Redis state by `sessionId` for the redirect URL but still proceeded to `checkMiAuthSession(sessionId)` even when the lookup missed. An attacker could approve their own MiAuth session and send the URL to a victim, who would log into the attacker's account. Next time we wire OAuth/MiAuth-style flows: the session ID MUST be (a) shape-validated before any external call, (b) atomically consumed from Redis with `GETDEL` (so replay is impossible), (c) **fail closed** when no state exists, and (d) verified that the upstream user is local (not federated). The validation helpers belong in a pure module so a forged-session test can exercise the rejection path without booting Next.js.
-- **Schema columns left behind after a feature removal (orphaned `verify_token` etc.).** When the MOTD claim/verify flow was deleted, the routes/worker/lib/pages went but the `verify_token` / `verify_expires_at` / `verify_user_id` columns stayed on `servers`. Dead columns with auth-adjacent names are not just dead weight — they look like a still-active gating system to anyone reading the schema and represent durable attack surface. Next time we retire a feature: include a `DROP COLUMN` migration in the same PR as the code deletion, and add a "schema does not declare X" assertion to the migration test pack so a regression PR re-introducing the column fails CI.
-- **Schema-with-no-migration ("run prisma migrate dev later").** `ServerApplication.formContentHash` was added to `prisma/schema.prisma` and written to in the API, but the migration was deferred to "after merge". A production deploy on that state would 500 the first POST `/applications` because the column wouldn't exist. Next time: a schema change is not landed until its `prisma/migrations/<timestamp>_*/migration.sql` exists and `pnpm prisma generate` has been run; treat a defensive cast like `(row as { formContentHash?: string }).formContentHash ?? null` as a smell pointing at a missing migration, not as an acceptable shim.
+把具体的踩坑记录在这里，避免同一种错误发生第二次。每次有新错误被发现（review、用户反馈、CI / 测试失败追溯到一个被遗漏的假设），就在本文件（`AGENTS.md`，唯一正本）中追加一条。条目要短：发生了什么、为什么发生、下次怎么做。
+
+- **通过文档悄悄扩大范围（PR #55、#56）**。在产品决策已经定为「仅服务器」之后，论坛 / MoltBook 仍然被设计、部分实现并写进文档当作在线能力，最后必须做完整回滚。下次：如果某个能力不在上面「产品范围」一节里，就**不要**实现、不要接路由 / API、也不要把它写成当前行为。范围调整必须**先**落到 `AGENTS.md`，再写代码。
+- **文档与代码漂移**。`docs/API.md` 与 `AGENTS.md` 没有跟随代码同 PR 更新，导致后来的读者（包括 Claude 自己）把过期的指引当作现状继续叠加。下次：任何修改路由 / 模型 / API / 范围的 PR 必须在同一 PR 触及这两份文档，否则在 PR 描述里**显式**说明为什么不需要。
+- **让 `CLAUDE.md` 与 `AGENTS.md` 漂移**。曾经两份文档各存一份全文、靠手工同步，反复出现一份改了另一份没改、不同工具看到矛盾指引的问题。已通过把规约收敛到单一正本（`AGENTS.md`）、让 `CLAUDE.md` 用 `@AGENTS.md` 薄包装导入根治。下次：**绝不**再让任何 harness 提示文件保存规约副本——新增 harness 一律用导入 / 包装指向 `AGENTS.md`。
+- **i18n 落地后又内联 UI 文案**。`next-intl` 接好之后，后续改动仍然在已迁移文件里写裸中文字符串，悄悄破坏翻译契约。下次：如果一个文件已经在用 `useTranslations` / `getTranslations`，新增任意用户可见文案都必须经由 `messages/*.json` 的新 key，**不**写字符串字面量。
+- **API 字段长得像展示字符串（例如 `peakTime: "暂无数据"`）**。在 API payload 里返回已渲染的人类可读字符串，把后端绑死在单一 locale 上。这个问题在 Batch 2 浮现，Batch 4 把 `/api/servers/[id]/stats` 重构为 `string | null` 才修复。下次：API 返回机器可读值（枚举、null、原始数据），UI 层负责展示格式与翻译。
+- **跨请求边界的 lib 函数返回内联错误文案**（例如 `requireAdmin` 返回 `{ error: "请先登录" }`）。它阻断了翻译，因为调用方不知道收件人 locale。Pattern：lib 返回 `errorKey`，调用方再 `getTranslations({ locale })` 翻译。`requireActiveUser` / `requireAdmin` / `resolveActiveUserResult` 就是这样重构的。
+- **领域库通过 `Error.message` 抛出用户可见中文**（例如 `src/lib/modpack.ts` 里 `throw new Error("整合包缺少 modrinth.index.json")`）。Route handler 直接把 `error.message` 透传给客户端，把库绑在单一 locale 上，英文化变得不可能。下次：自定义错误类暴露机器可读的 `.key`（与 params），由 route handler 通过 keyed namespace 翻译。参考 `ModpackError` + `errors.api.modpacks.*`；同样的形态适用于 `ImageValidationError.code` 与 `VerifyJobResult.reasonKey`。
+- **Zod 的 `.min(3, "MC 用户名至少 3 个字符")` 内联文案绕过 `errorMap`**。Batch 3 一开始假设 `getZodErrorMap` 能拦截所有 Zod 报错——但 Zod 的 `errorMap` **只**对没有内联 message 的 issue 生效。字段级文案必须改用 `errors.validation.<area>.<key>` 的 key path，并在序列化时由 `flattenZodErrorWithLocale` 翻译。任何对 `src/lib/validation.ts` 的改动都要配上断言「序列化后的 `details.fieldErrors` 拿到了正确 locale」的回环测试。
+- **把 `isVerified` 当作 claim/verify 流程的产物**。2026-04-30 用户架构整改之后，`Server.isVerified` **不再**意味着「服主完成 MOTD 验证」——它是管理员通过 `/admin/servers` 手动切换的官方认证徽章。原先的 claim/verify 流程（`/servers/{id}/verify`、`/api/servers/{id}/verify*`、`server-verify` worker job）整体移除。已存在的 `isVerified=true` 记录视为管理员授予。下次：**不要**尝试重新引入 MOTD 验证或用户侧的认证申请流程，那条路径是被有意拆掉的。`isVerified` 只能由管理员后台设置。
+- **半迁移的身份系统（Misskey MiAuth 接管）**。从本地凭据迁移到 Misskey 时，**每一处**引用 `User.uid` / `User.email` / `User.passwordHash` / `Account` / `Session` / `VerificationToken` 的代码都必须在同一变更里处理——只要剩下一个过期的 `select: { uid: true }` 或一处 `signIn("credentials", { email })`，整条管线就会断。下次替换身份系统：**先**全树 grep 旧字段，写下完整调用图，把整个迁移当作一个 PR（schema + 类型 + 所有调用点 + i18n + 文档 + 测试），不要做「先合 一半，剩下回头扫」。依赖旧 auth 的移动端接口（`/api/mobile/*`）在同一变更里同步退役，因为它们没有 MiAuth 路径——没有专门的移动端 MiAuth 设计前不要复活它们。
+- **MiAuth 回调信任未经请求的 session ID（账号被夺风险）**。`/api/auth/misskey/callback` 第一版只用 `sessionId` 在 Redis 查重定向 URL，但即使查不到也照样调用 `checkMiAuthSession(sessionId)`。攻击者只要自己批准一个 MiAuth session，把 URL 发给受害者，受害者就会登录到攻击者的账号。下次实现 OAuth / MiAuth 类流程：session ID 必须 (a) 在任何外部调用前做 shape 校验，(b) 用 Redis `GETDEL` 原子消费（杜绝重放），(c) 找不到 state 时**直接 fail closed**，(d) 验证上游用户是 local 而不是联邦实例。校验辅助函数放在纯模块里，让 forged-session 测试不必启动 Next.js 即可覆盖拒绝路径。
+- **特性删除后遗留的 schema 列**（`verify_token` 等）。MOTD claim/verify 流程删除时，路由 / worker / lib / 页面都删掉了，但 `servers` 表上的 `verify_token` / `verify_expires_at` / `verify_user_id` 列还在。auth 相关的死列不只是死重，从 schema 看上去仍像是一个生效中的门禁系统，构成了持久攻击面。下次退役一个特性：在删代码的同一 PR 里附上 `DROP COLUMN` 迁移；并在迁移测试包里加「schema 不应声明 X」的断言，让任何回退式的 PR 在 CI 里直接失败。
+- **「下次再写 migration」式的 schema 改动**。`ServerApplication.formContentHash` 一度只加进 `prisma/schema.prisma` 并被 API 写入，但迁移被推迟到「合并之后」。这种状态下生产部署后，第一次 POST `/applications` 就会因为缺列而 500。下次：schema 改动直到 `prisma/migrations/<timestamp>_*/migration.sql` 真的生成、并跑过 `pnpm prisma generate`，才算「落地」；像 `(row as { formContentHash?: string }).formContentHash ?? null` 这样的防御性强转是缺迁移的气味，不是可接受的临时垫片。

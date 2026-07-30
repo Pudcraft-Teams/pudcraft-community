@@ -7,7 +7,6 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { Tabs } from "@/components/shared";
 import { PageLoading } from "@/components/PageLoading";
-import { isPrivateServersEnabled } from "@/lib/features";
 import type { ServerDetail } from "@/lib/types";
 
 interface ServerDetailPayload {
@@ -96,7 +95,7 @@ export default function ConsoleServerLayout({ children }: { children: React.Reac
 
   const serverAddress = resolveServerAddress(server);
   const reviewStatus = server.reviewStatus ?? "approved";
-  const isPrivate = isPrivateServersEnabled() && server.visibility !== "public";
+  const isPrivate = server.visibility !== "public";
   const isApplyMode = server.joinMode === "apply" || server.joinMode === "apply_and_invite";
   const showFormTab = isPrivate && isApplyMode;
   const base = `/console/${serverId}`;

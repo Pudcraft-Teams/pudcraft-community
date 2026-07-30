@@ -7,7 +7,6 @@ import { useCallback, useEffect, useState } from "react";
 import { ApiKeyManager } from "@/components/console/ApiKeyManager";
 import { SyncStatus } from "@/components/console/SyncStatus";
 import { PageLoading } from "@/components/PageLoading";
-import { isPrivateServersEnabled } from "@/lib/features";
 import type { ServerDetail } from "@/lib/types";
 
 interface ServerDetailPayload {
@@ -78,7 +77,7 @@ export default function ConsoleIntegrationPage() {
     return <div className="m3-alert-error p-4">{tPage("serverNotFoundOrForbidden")}</div>;
   }
 
-  if (!isPrivateServersEnabled() || server.visibility === "public") {
+  if (server.visibility === "public") {
     return null;
   }
 

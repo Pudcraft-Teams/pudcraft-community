@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { ApplicationFormEditor } from "@/components/console/ApplicationFormEditor";
 import { PageLoading } from "@/components/PageLoading";
-import { isPrivateServersEnabled } from "@/lib/features";
 import type { ServerDetail } from "@/lib/types";
 
 interface ServerDetailPayload {
@@ -64,10 +63,6 @@ export default function ConsoleFormEditorPage() {
     if (status !== "authenticated") return;
     void fetchServer();
   }, [fetchServer, status]);
-
-  if (!isPrivateServersEnabled()) {
-    return <div className="m3-alert-error p-4">{tPage("serverNotFoundOrForbidden")}</div>;
-  }
 
   if (status === "loading" || isLoading) {
     return <PageLoading text={tPage("loading")} />;

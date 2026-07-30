@@ -169,9 +169,6 @@
         "submitted": "Server submitted — awaiting review.",
         "deleted": "Server deleted.",
         "statsForbidden": "You don't have permission to view this server's stats.",
-        "membershipDisabled": "This feature is disabled.",
-        "privateDisabled": "Private servers are disabled.",
-        "privateNotEnabled": "This feature is disabled.",
         "applicationNotAccepted": "This server doesn't accept applications.",
         "applicationPending": "You've already applied — please wait for the owner to review.",
         "applicationAlreadyMember": "You're already a member of this server.",
@@ -629,8 +626,6 @@
       "loadFailedRetry": "加载服务器信息失败，请稍后重试",
       "networkError": "网络异常，无法加载页面",
       "unknownServer": "未知服务器",
-      "featureDisabledHeading": "当前未开放私有服务器申请",
-      "featureDisabledDescription": "站点当前未启用申请加入流程，详情页也不会继续展示该入口。",
       "backHome": "返回首页",
       "backToDetail": "返回服务器详情",
       "alreadyMember": "你已是该服务器成员",
@@ -665,8 +660,6 @@
       }
     },
     "join": {
-      "featureDisabledHeading": "当前未开放邀请码加入",
-      "featureDisabledDescription": "站点当前未启用私有服务器邀请流程，请从服务器详情页关注后续开放状态。",
       "backHome": "返回首页",
       "backToDetail": "返回服务器详情",
       "serverNotFound": "服务器未找到",

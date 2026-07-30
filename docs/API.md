@@ -1,20 +1,20 @@
-# Pudcraft Community API Reference
+# Pudcraft Community API 参考
 
-> Branch: server-only
-> Base path: `/api`
+> 分支：server-only
+> Base path：`/api`
 
-This document describes only the live server-only endpoints. Forum / MoltBook endpoints from earlier branches have been removed and are no longer part of the live API surface.
+本文档**只**描述当前在线、仅服务器分支下的接口。早期分支中的论坛 / MoltBook 接口已经移除，不再属于在线 API 表面。
 
-## Conventions
+## 通用约定
 
-### Authentication
+### 认证
 
-- Web: session cookie (NextAuth v5 / JWT). Sign-in is exclusively through Misskey MiAuth (single self-hosted instance configured by `MISSKEY_HOST`); the legacy local credentials, registration, password reset, and `/api/mobile/*` flows have been removed.
-- Plugin / sync: bearer API key
+- Web：session cookie（NextAuth v5 / JWT）。登录入口**只有** Misskey MiAuth（通过 `MISSKEY_HOST` 指定的单一自托管实例）；早期的本地凭据、注册、密码找回与 `/api/mobile/*` 流程已经全部下线。
+- 插件 / 同步：bearer API key
 
-### Response format
+### 响应格式
 
-Successful responses typically use one of:
+成功响应通常是以下三种之一：
 
 ```json
 { "data": {} }
@@ -36,7 +36,7 @@ Successful responses typically use one of:
 }
 ```
 
-Error responses are uniformly:
+错误响应统一为：
 
 ```json
 {
@@ -45,111 +45,109 @@ Error responses are uniformly:
 }
 ```
 
-`details` is optional; most business errors return `{ error }` alone, and only attach `details` for validation failures or when extra context is needed.
+`details` 是可选字段；多数业务错误只返回 `{ error }`，仅在校验失败或确实需要附加上下文时才挂 `details`。
 
-### Common status codes
+### 常见状态码
 
-- `200`: success
-- `201`: created
-- `400`: bad request / validation failure
-- `401`: not authenticated
-- `403`: forbidden or account unavailable
-- `404`: not found
-- `409`: conflict / duplicate submission
-- `429`: rate limited
-- `500`: internal server error
+- `200`：成功
+- `201`：创建成功
+- `400`：参数错误 / 校验失败
+- `401`：未认证
+- `403`：禁止访问或账号不可用
+- `404`：未找到
+- `409`：冲突 / 重复提交
+- `429`：触发限流
+- `500`：服务端错误
 
-### Server identifiers
+### 服务器标识符
 
-Some endpoints accept either of two identifiers:
+部分接口接受两种标识符之一：
 
-- The database `cuid`
-- The public-facing `PSID`
+- 数据库 `cuid`
+- 对外公开的 `PSID`
 
-In this document both are written as `{id}`.
+文档中两者统一写作 `{id}`。
 
-### Response localization
+### 响应本地化
 
-- API error responses (`{ error, details }`) honor the caller's locale. Resolution order: `x-locale` header → `NEXT_LOCALE` cookie → highest-q supported `Accept-Language` match → `zh` default.
-- Zod validation failures returned as `details.fieldErrors` are already localized per field — the server translates the `errors.validation.<area>.<key>` paths before serialization.
-- Successful response bodies may still contain locale-specific strings (server-name, comment body, user-provided content). Clients should not depend on any non-machine-readable value being English.
-- New client code should use `apiFetch` from `@/lib/apiFetch` to inject `x-locale` explicitly.
+- API 错误响应（`{ error, details }`）会按调用方 locale 翻译。解析顺序：`x-locale` 请求头 → `NEXT_LOCALE` cookie → `Accept-Language` 中支持的最高 q 值匹配 → 默认 `zh`。
+- Zod 校验失败放在 `details.fieldErrors` 中的字段错误已经在服务端按 locale 翻译完成 —— `errors.validation.<area>.<key>` 路径会在序列化前解析为目标语种文案。
+- 成功响应体仍可能包含 locale 相关字符串（服务器名、评论正文、用户提交内容）。客户端**不要**假设非机器可读字段一定是英文。
+- 新写的客户端代码请使用 `@/lib/apiFetch` 中的 `apiFetch`，它会自动注入 `x-locale`。
 
-## Authentication endpoints
+## 认证类接口
 
-| Method | Path | Auth | Notes |
+| Method | Path | 认证 | 说明 |
 |---|---|---|---|
-| GET / POST | `/auth/[...nextauth]` | - | Standard NextAuth routes (session, csrf, signout, internal credentials callback) |
-| GET | `/auth/misskey/start?callbackUrl=...` | - | Generates a MiAuth session, stores `callbackUrl` in Redis, redirects the browser to `https://{MISSKEY_HOST}/miauth/{session}?callback=...` |
-| GET | `/auth/misskey/callback?session=...` | - | Misskey redirects here after the user authorizes; verifies the session via `POST /api/miauth/{session}/check`, upserts the local `User` keyed by `misskeyId`, derives `role` from `isAdmin`/`isModerator`, then signs in via NextAuth using a one-shot HMAC ticket |
+| GET / POST | `/auth/[...nextauth]` | - | NextAuth 标准路由（session、csrf、signout、内部 credentials callback） |
+| GET | `/auth/misskey/start?callbackUrl=...` | - | 创建 MiAuth session，把 `callbackUrl` 存入 Redis，重定向浏览器到 `https://{MISSKEY_HOST}/miauth/{session}?callback=...` |
+| GET | `/auth/misskey/callback?session=...` | - | 用户在 Misskey 端授权后回跳到此；服务端通过 `POST /api/miauth/{session}/check` 校验 session，按 `misskeyId` upsert 本地 `User`，从 `isAdmin` / `isModerator` 推导 `role`，再用一次性 HMAC ticket 走 NextAuth 完成登录 |
 
-## Public and user endpoints
+## 公开 / 用户接口
 
-### Server discovery and detail
+### 服务器发现与详情
 
-| Method | Path | Auth | Notes |
+| Method | Path | 认证 | 说明 |
 |---|---|---|---|
-| GET | `/servers` | Optional | Server list; supports `page`, `limit/pageSize`, `tag`, `search`, `sort`, `ownerId` |
-| POST | `/servers` | Signed in | Submit a server; accepts multipart/form-data and icon upload |
-| GET | `/servers/{id}` | Optional | Server detail; unapproved or non-public servers are filtered by permission |
-| PATCH | `/servers/{id}` | Owner | Edit server info |
-| DELETE | `/servers/{id}` | Owner / admin | Delete server |
-| GET | `/servers/{id}/ping` | Optional | Lightweight latency probe; does not hit the database — validates the server ID format and returns immediately |
-| GET | `/servers/{id}/stats` | Owner | Server statistics; supports `period=24h|7d|30d` |
-| POST | `/servers/{id}/status/report` | Plugin API key | Plugin-reported online status |
+| GET | `/servers` | 可选 | 服务器列表；支持 `page`、`limit/pageSize`、`tag`、`search`、`sort`、`ownerId` |
+| POST | `/servers` | 登录 | 提交服务器；接受 multipart/form-data 与图标上传 |
+| GET | `/servers/{id}` | 可选 | 服务器详情；未通过审核或不公开的服务器会按权限过滤 |
+| PATCH | `/servers/{id}` | 服主 | 编辑服务器信息 |
+| DELETE | `/servers/{id}` | 服主 / 管理员 | 删除服务器 |
+| GET | `/servers/{id}/ping` | 可选 | 轻量延迟探测；不打数据库 —— 仅校验 ID 格式后立即返回 |
+| GET | `/servers/{id}/stats` | 服主 | 服务器统计；支持 `period=24h|7d|30d` |
+| POST | `/servers/{id}/status/report` | 插件 API key | 插件上报在线状态 |
 
-### Favorites and comments
+### 收藏与评论
 
-| Method | Path | Auth | Notes |
+| Method | Path | 认证 | 说明 |
 |---|---|---|---|
-| GET | `/servers/{id}/favorite` | Signed in | Current user's favorite state for the server |
-| POST | `/servers/{id}/favorite` | Signed in | Favorite a server |
-| DELETE | `/servers/{id}/favorite` | Signed in | Unfavorite |
-| GET | `/user/favorites` | Signed in | Current user's favorited servers |
-| GET | `/user/favorites/ids` | Signed in | IDs of the current user's favorited servers |
-| GET | `/servers/{id}/comments` | Optional | Comments |
-| POST | `/servers/{id}/comments` | Signed in | Post a comment or reply |
-| DELETE | `/servers/{id}/comments/{commentId}` | Author / admin | Delete a comment |
+| GET | `/servers/{id}/favorite` | 登录 | 当前用户对该服务器的收藏状态 |
+| POST | `/servers/{id}/favorite` | 登录 | 收藏服务器 |
+| DELETE | `/servers/{id}/favorite` | 登录 | 取消收藏 |
+| GET | `/user/favorites` | 登录 | 当前用户收藏的服务器列表 |
+| GET | `/user/favorites/ids` | 登录 | 当前用户收藏服务器的 ID 列表 |
+| GET | `/servers/{id}/comments` | 可选 | 评论列表 |
+| POST | `/servers/{id}/comments` | 登录 | 发表评论或回复 |
+| DELETE | `/servers/{id}/comments/{commentId}` | 作者 / 管理员 | 删除评论 |
 
-### User profile, notifications, reports
+### 用户资料、通知、举报
 
-| Method | Path | Auth | Notes |
+| Method | Path | 认证 | 说明 |
 |---|---|---|---|
-| GET | `/user/{id}` | Optional | Public user profile and their public servers |
-| GET | `/user/profile` | Signed in | Current user's profile |
-| PATCH | `/user/profile` | Signed in | Update current user's profile |
-| GET | `/notifications` | Signed in | Notifications list; supports pagination and `unreadOnly` |
-| PATCH | `/notifications` | Signed in | Bulk mark as read |
-| GET | `/notifications/unread-count` | Signed in | Unread notification count |
-| POST | `/reports` | Signed in | Report a server, comment, or user |
-| GET | `/changelog` | Optional | Public changelog |
-| GET | `/health` | - | Health check |
-| POST | `/uploads/editor-image` | Signed in | Editor image upload |
+| GET | `/user/{id}` | 可选 | 公开的用户资料与该用户的公开服务器 |
+| GET | `/user/profile` | 登录 | 当前用户资料 |
+| PATCH | `/user/profile` | 登录 | 更新当前用户资料 |
+| GET | `/notifications` | 登录 | 通知列表；支持分页与 `unreadOnly` |
+| PATCH | `/notifications` | 登录 | 批量标记已读 |
+| GET | `/notifications/unread-count` | 登录 | 未读通知数 |
+| POST | `/reports` | 登录 | 举报服务器、评论或用户 |
+| GET | `/changelog` | 可选 | 公开的更新日志 |
+| GET | `/health` | - | 健康检查 |
+| POST | `/uploads/editor-image` | 登录 | 编辑器图片上传 |
 
-## Server owner-management endpoints
+## 服主管理接口
 
-### Private-server settings, applications, invites, members
+### 私服设置、申请、邀请、成员
 
-> Note: these endpoints are gated by `NEXT_PUBLIC_ENABLE_PRIVATE_SERVERS`. When disabled they all return `404`, and the UI must not expose application, invite-code, or member-management entry points.
-
-| Method | Path | Auth | Notes |
+| Method | Path | 认证 | 说明 |
 |---|---|---|---|
-| PUT | `/servers/{id}/settings` | Owner | Update visibility, join mode, application form, etc. |
-| GET | `/servers/{id}/membership` | Signed in | Current user's member / application state |
-| GET | `/servers/{id}/applications` | Owner / admin / applicant | Owner & admin see every application; the applicant sees only their own; everyone else gets `403`. Applicant rows have `evaluationResult` projected via `pickPlayerEvaluationView` (see "Player evaluation projection" below). |
-| POST | `/servers/{id}/applications` | Signed in | Submit a join application. The response `evaluationResult` is projected for the applicant; the full `evaluationResult` (including `score`, `passingScore`, `offendingFieldKey`) only ever flows to owner-scoped reads. |
-| PUT | `/servers/{id}/applications/{appId}` | Owner | Review an application |
-| GET | `/servers/{id}/invites` | Owner | Invite codes |
-| POST | `/servers/{id}/invites` | Owner | Create an invite code |
-| DELETE | `/servers/{id}/invites/{code}` | Owner | Revoke an invite code |
-| POST | `/servers/{id}/join/{code}` | Signed in | Join via invite code |
-| GET | `/servers/{id}/members` | Owner | Member list |
-| DELETE | `/servers/{id}/members/{memberId}` | Owner | Remove a member |
-| POST | `/servers/{id}/api-key` | Owner | Generate or reset the plugin API key |
+| PUT | `/servers/{id}/settings` | 服主 | 更新可见性、加入方式、申请表单等 |
+| GET | `/servers/{id}/membership` | 登录 | 当前用户的成员 / 申请状态 |
+| GET | `/servers/{id}/applications` | 服主 / 管理员 / 申请人 | 服主与管理员看到全部申请；申请人只看到自己的；其余角色 `403`。申请人视图下的 `evaluationResult` 会经过 `pickPlayerEvaluationView` 投影（见下文「玩家评估投影」） |
+| POST | `/servers/{id}/applications` | 登录 | 提交私服申请。响应中的 `evaluationResult` 已按申请人视角投影；完整的 `evaluationResult`（含 `score`、`passingScore`、`offendingFieldKey`）**只**会出现在服主作用域的读接口里 |
+| PUT | `/servers/{id}/applications/{appId}` | 服主 | 审核申请 |
+| GET | `/servers/{id}/invites` | 服主 | 邀请码列表 |
+| POST | `/servers/{id}/invites` | 服主 | 创建邀请码 |
+| DELETE | `/servers/{id}/invites/{code}` | 服主 | 撤销邀请码 |
+| POST | `/servers/{id}/join/{code}` | 登录 | 通过邀请码加入 |
+| GET | `/servers/{id}/members` | 服主 | 成员列表 |
+| DELETE | `/servers/{id}/members/{memberId}` | 服主 | 移除成员 |
+| POST | `/servers/{id}/api-key` | 服主 | 生成或重置插件 API key |
 
-#### Application form payload on `PUT /settings`
+#### `PUT /settings` 中的 `applicationForm` 负载
 
-The `applicationForm` body field accepts either the legacy v0 `ApplicationFormField[]` array (no scoring) or the canonical v1 `OwnerFormConfig` document:
+`applicationForm` 字段接受两种格式：旧版 v0 的 `ApplicationFormField[]` 数组（无评分），或当前规范的 v1 `OwnerFormConfig` 文档：
 
 ```jsonc
 {
@@ -166,63 +164,63 @@ The `applicationForm` body field accepts either the legacy v0 `ApplicationFormFi
 }
 ```
 
-`settings.passingScore` is `null` to disable the threshold gate. Per-option scoring fields (`points`, `correct`, `autoReject`) live on each option inside `fields[*].options[*]` — these never reach a non-owner viewer; the runtime projects to `PlayerFormView` at every non-owner API boundary.
+`settings.passingScore` 设为 `null` 表示关闭分数门槛。每选项的评分字段（`points`、`correct`、`autoReject`）位于 `fields[*].options[*]` 上 —— 它们**永远不会**到达非服主视角；运行时会在每个非服主 API 边界投影到 `PlayerFormView`。
 
-#### Player evaluation projection
+#### 玩家评估投影
 
-Applicant-scoped responses pass `evaluationResult` through `pickPlayerEvaluationView` (`src/lib/applicationFormEvaluation.ts`) before serialization. The projection rule is:
+申请人作用域的响应在序列化前先把 `evaluationResult` 过一遍 `pickPlayerEvaluationView`（`src/lib/applicationFormEvaluation.ts`）。投影规则：
 
-- `pending_review` always returns `{ result, evaluatedAt }` only — no score / threshold leakage even when the applicant passed.
-- `hard_disqualify` keeps `offendingFieldKey` only when `OwnerFormConfig.settings.showRejectReasonToPlayerOnReject` is `true`.
-- `score_below_threshold` keeps `score` and `passingScore` only when `OwnerFormConfig.settings.showScoreToPlayerOnReject` is `true`.
-- Legacy v0 forms (no `settings` block) fall back to the minimal projection.
+- `pending_review` 永远只返回 `{ result, evaluatedAt }` —— 即便申请人已通过也不泄露分数 / 阈值。
+- `hard_disqualify` 只在 `OwnerFormConfig.settings.showRejectReasonToPlayerOnReject` 为 `true` 时保留 `offendingFieldKey`。
+- `score_below_threshold` 只在 `OwnerFormConfig.settings.showScoreToPlayerOnReject` 为 `true` 时保留 `score` 与 `passingScore`。
+- 旧版 v0 表单（没有 `settings` 块）回退到最小投影。
 
-Owners and admins receive the full `ApplicationFormEvaluationResult` shape via the owner-scoped GET. Resubmits after rejection are gated on `formContentHash` (see `errors.api.applications.formChangedSinceRejection`); a unique `(serverId, userId)` constraint translates to `errors.api.applications.duplicateActiveApplication` on race.
+服主与管理员通过服主作用域的 GET 拿到完整的 `ApplicationFormEvaluationResult` 形态。被驳回后再次提交按 `formContentHash` 闸门控制（见 `errors.api.applications.formChangedSinceRejection`）；`(serverId, userId)` 的唯一约束在并发下会翻译成 `errors.api.applications.duplicateActiveApplication`。
 
-#### Application form projection on `GET /servers/{id}`
+#### `GET /servers/{id}` 中的申请表单投影
 
-`GET /api/servers/{id}` returns the full `OwnerFormConfig` only when the caller is the actual `ownerId`. Every other caller — including admins viewing someone else's server, members, and anonymous visitors — receives the `PlayerFormView` projection (no `points` / `correct` / `autoReject` / `passingScore` / `branching`). Admins inspecting another owner's gating data go through the owner console with admin impersonation, not the public detail endpoint.
+`GET /api/servers/{id}` **只**在调用方就是 `ownerId` 时返回完整的 `OwnerFormConfig`。其他任何调用方 —— 包括看别人服务器的管理员、成员、匿名访客 —— 拿到的都是 `PlayerFormView` 投影（去掉 `points` / `correct` / `autoReject` / `passingScore` / `branching`）。管理员要审视别人的评分配置，应该走服主控制台的管理员 impersonation，而不是公开详情接口。
 
-### Modpacks
+### 整合包
 
-| Method | Path | Auth | Notes |
+| Method | Path | 认证 | 说明 |
 |---|---|---|---|
-| GET | `/servers/{id}/modpack` | Optional | Modpack list for a server; unapproved servers are visible only to owner / admin, private servers still require membership |
-| POST | `/servers/{id}/modpack` | Owner | Upload a modpack |
-| DELETE | `/modpacks/{modpackId}` | Owner | Delete a modpack |
-| GET | `/modpacks/{modpackId}/download` | Optional | Download a modpack; unapproved servers are downloadable only by owner / admin, private servers still require membership |
+| GET | `/servers/{id}/modpack` | 可选 | 服务器整合包列表；未审核服务器只对服主 / 管理员可见，私服仍需要成员身份 |
+| POST | `/servers/{id}/modpack` | 服主 | 上传整合包 |
+| DELETE | `/modpacks/{modpackId}` | 服主 | 删除整合包 |
+| GET | `/modpacks/{modpackId}/download` | 可选 | 下载整合包；未审核服务器仅服主 / 管理员可下载，私服仍需要成员身份 |
 
-## Whitelist-sync endpoints
+## 白名单同步接口
 
-| Method | Path | Auth | Notes |
+| Method | Path | 认证 | 说明 |
 |---|---|---|---|
-| POST | `/servers/{id}/sync/handshake` | Plugin API key | Initial sync handshake; returns whitelist and WS info |
-| GET | `/servers/{id}/sync/pending` | Plugin API key | Pending / failed sync items |
-| GET | `/servers/{id}/sync/status` | Owner | Sync overview for the console |
-| POST | `/sync/{syncId}/ack` | Plugin API key | Acknowledge a processed sync event |
+| POST | `/servers/{id}/sync/handshake` | 插件 API key | 同步握手；返回白名单与 WS 连接信息 |
+| GET | `/servers/{id}/sync/pending` | 插件 API key | 待处理 / 失败的同步项 |
+| GET | `/servers/{id}/sync/status` | 服主 | 控制台用的同步概览 |
+| POST | `/sync/{syncId}/ack` | 插件 API key | 上报同步事件已处理 |
 
-## Admin endpoints
+## 管理员接口
 
-### Servers / users / moderation / reports / changelog
+### 服务器 / 用户 / 审核 / 举报 / 更新日志
 
-| Method | Path | Auth | Notes |
+| Method | Path | 认证 | 说明 |
 |---|---|---|---|
-| GET | `/admin/servers` | Admin | Admin server list |
-| PATCH | `/admin/servers/{id}` | Admin | Update server status, assign `ownerId` for legacy `ownerId=null` servers, toggle `isVerified` (official certification badge; writes `ModerationLog`) |
-| DELETE | `/admin/servers/{id}` | Admin | Delete a server |
-| GET | `/admin/users` | Admin | User list |
-| PATCH | `/admin/users/{id}` | Admin | Ban, unban, role changes, etc. |
-| GET | `/admin/moderation` | Admin | Moderation logs |
-| PATCH | `/admin/moderation/{id}` | Admin | Resolve a moderation record |
-| GET | `/admin/reports` | Admin | Report list |
-| PATCH | `/admin/reports/{id}` | Admin | Resolve a report |
-| GET | `/admin/changelog` | Admin | Changelog list |
-| POST | `/admin/changelog` | Admin | Create a changelog entry |
-| PATCH | `/admin/changelog/{id}` | Admin | Edit a changelog entry |
-| DELETE | `/admin/changelog/{id}` | Admin | Delete a changelog entry |
+| GET | `/admin/servers` | 管理员 | 服务器列表（管理视角） |
+| PATCH | `/admin/servers/{id}` | 管理员 | 更新服务器状态、为遗留 `ownerId=null` 服务器指派 owner、切换 `isVerified`（官方认证徽章；写入 `ModerationLog`） |
+| DELETE | `/admin/servers/{id}` | 管理员 | 删除服务器 |
+| GET | `/admin/users` | 管理员 | 用户列表 |
+| PATCH | `/admin/users/{id}` | 管理员 | 封禁、解封、角色变更等 |
+| GET | `/admin/moderation` | 管理员 | 审核日志 |
+| PATCH | `/admin/moderation/{id}` | 管理员 | 处理审核记录 |
+| GET | `/admin/reports` | 管理员 | 举报列表 |
+| PATCH | `/admin/reports/{id}` | 管理员 | 处理举报 |
+| GET | `/admin/changelog` | 管理员 | 更新日志列表 |
+| POST | `/admin/changelog` | 管理员 | 新建一条更新日志 |
+| PATCH | `/admin/changelog/{id}` | 管理员 | 编辑更新日志 |
+| DELETE | `/admin/changelog/{id}` | 管理员 | 删除更新日志 |
 
-## Live constraints
+## 在线约束
 
-- Search, discovery, favorites, notifications, reports, and the console are all centered on the server system.
-- Forum / circles / posts / tags / bookmarks / forum-notification endpoints are no longer on this branch; any remaining external caller needs a compatibility layer or migration plan — do not re-add the old descriptions to this document.
-- If code and docs disagree, `src/app/api/**/route.ts` wins; sync this file to match immediately.
+- 搜索、发现、收藏、通知、举报、控制台都围绕服务器系统组织。
+- 论坛 / 圈子 / 帖子 / 标签 / 收藏夹 / 论坛通知接口已经不在本分支；若仍有外部调用方需要访问，必须自行提供兼容层或迁移方案 —— **不要**把旧接口描述再加回本文档。
+- 文档与代码冲突时，**`src/app/api/**/route.ts` 是事实**——立刻同步本文。

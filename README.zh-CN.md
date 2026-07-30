@@ -2,162 +2,93 @@
 
 # Pudcraft Community
 
-一个 Minecraft 服务器社区平台。玩家可以浏览、提交、认领、评论和收藏服务器，以及下载服主发布的整合包。
+一个 Minecraft 服务器社区平台。玩家浏览服务器、评论、收藏、申请加入私服；服主通过控制台提交并管理自己的服务器；账号信息**只**来源于自托管 Misskey 实例（通过 MiAuth），仓库本身不维护本地密码或邮件验证。
+
+> **状态：上线前（pre-launch）**。第一版仍在开发中。
 
 ## 技术栈
 
 - Next.js 16（App Router）+ React 19 + TypeScript 5（strict）
-- Tailwind CSS 3
-- PostgreSQL + Prisma ORM
-- NextAuth v5（Credentials + JWT session）
+- Tailwind CSS 3 + Warm Clay UI
+- PostgreSQL + Prisma ORM 6
+- NextAuth v5（JWT session），后端是 Misskey MiAuth
 - Redis + BullMQ
 - 独立 WebSocket 服务（白名单同步推送）
-- Nodemailer
+- next-intl（zh / en）
 - Zod
-- pnpm
+- pnpm 10
 
-## 本地开发
-
-### 前置依赖
-
-- Node.js 20.9+
-- pnpm 10+
-- Docker 与 Docker Compose
-
-### 1. 安装依赖
+## 快速上手
 
 ```bash
+git clone <repo-url> pudcraft-community
+cd pudcraft-community
 pnpm install
+
+# 本地起 Postgres + Redis（仓库根的 docker-compose.yml 是生产用的，本地不要直接 up）
+docker run -d --name pudcraft-pg \
+  -e POSTGRES_DB=pudcraft -e POSTGRES_USER=pudcraft -e POSTGRES_PASSWORD=pudcraft_dev \
+  -p 5432:5432 postgres:16-alpine
+docker run -d --name pudcraft-redis -p 6379:6379 redis:7-alpine
+
+cp .env.example .env       # 设置 MISSKEY_HOST、MISSKEY_TICKET_SECRET、NEXTAUTH_SECRET
+pnpm db:migrate
+
+pnpm dev          # web
+pnpm worker:dev   # 后台 worker（另开终端）
+pnpm ws:dev       # 白名单同步 WS（只在做插件集成时需要）
 ```
 
-`postinstall` 会自动执行 `prisma generate`。
-
-### 2. 启动 PostgreSQL 和 Redis
-
-```bash
-docker compose up -d
-docker compose ps
-```
-
-默认端口：
-
-- PostgreSQL：`localhost:5432`
-- Redis：`localhost:6379`
-
-### 3. 配置环境变量
-
-```bash
-cp .env.example .env
-```
-
-本地开发直接用 `.env.example` 里的默认值即可；生产环境请替换为真实的密钥与服务地址。
-
-### 4. 初始化数据库
-
-```bash
-pnpm db:migrate --name init_local
-```
-
-后续 schema 变更一律走 Prisma migration，生产环境严禁使用 `db push`。
-
-### 5. 启动应用和 Worker
-
-开发时开两个终端：
-
-```bash
-pnpm dev
-```
-
-```bash
-pnpm worker:dev
-```
-
-`web` 负责页面与 API，`worker` 负责 Minecraft 状态探测和认领校验任务。
+完整开发流程（Misskey 配置、单测执行、常见问题）见 [`docs/dev/setup.md`](./docs/dev/setup.md)。
 
 ## 常用命令
 
-| 命令                            | 说明                                   |
-| ------------------------------- | -------------------------------------- |
-| `pnpm dev`                      | 启动 Next.js 开发服务器                |
-| `pnpm build`                    | 构建生产包                             |
-| `pnpm start`                    | 运行生产服务器                         |
-| `pnpm lint`                     | 运行 ESLint                            |
-| `pnpm format`                   | 用 Prettier 格式化 `src/`              |
-| `pnpm format:check`             | 检查 `src/` 的格式                     |
-| `pnpm db:migrate --name <name>` | 创建并应用一条 Prisma migration        |
-| `pnpm db:generate`              | 重新生成 Prisma client                 |
-| `pnpm db:studio`                | 打开 Prisma Studio                     |
-| `pnpm db:push`                  | 仅开发环境使用的 schema 快速同步       |
-| `pnpm worker`                   | 启动 worker                            |
-| `pnpm worker:dev`               | 以 watch 模式启动 worker               |
-| `pnpm ws`                       | 启动白名单同步 WebSocket 服务          |
-| `pnpm ws:dev`                   | 以 watch 模式启动 WebSocket 服务       |
-| `pnpm test`                     | 运行 `tsx --test` 测试套件             |
-| `pnpm sync:favorite-counts`     | 校正收藏计数                           |
-| `pnpm storage:check`            | 检查对象存储行为                       |
+| 命令 | 说明 |
+| --- | --- |
+| `pnpm dev` | Next.js 开发服务器 |
+| `pnpm build` / `pnpm start` | 构建并运行生产包 |
+| `pnpm worker` / `pnpm worker:dev` | 后台 worker（server-ping） |
+| `pnpm ws` / `pnpm ws:dev` | 白名单同步 WebSocket 服务 |
+| `pnpm lint` | ESLint |
+| `pnpm tsc --noEmit` | 类型检查 |
+| `pnpm test` | 测试套件（`tsx --test`，env 从 `.env.example` 注入） |
+| `pnpm i18n:check` | 检查 zh / en 翻译 key 是否一致 |
+| `pnpm db:migrate` / `pnpm db:generate` / `pnpm db:studio` | Prisma 迁移 / 客户端 / GUI |
 
 ## 核心环境变量
 
-### 基础
+| 变量 | 说明 |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL 连接串 |
+| `REDIS_URL` | Redis 连接串 |
+| `NEXTAUTH_SECRET` | NextAuth JWT 签名密钥（`openssl rand -base64 32`） |
+| `NEXTAUTH_URL` | 自托管生产环境必须显式设置 |
+| `MISSKEY_HOST` | 自托管 Misskey 实例域名（不带协议、不带斜杠） |
+| `MISSKEY_TICKET_SECRET` | 跨域登录 ticket 的 HMAC 密钥（`openssl rand -hex 32`） |
+| `STORAGE_DRIVER` | `local`（默认）或 `s3`（S3 兼容对象存储） |
+| `LOG_LEVEL` | `debug` / `info` / `warn` / `error`；非法值回退到 `info` |
 
-| 变量              | 说明                                                                    |
-| ----------------- | ----------------------------------------------------------------------- |
-| `DATABASE_URL`    | PostgreSQL 连接串                                                       |
-| `NEXTAUTH_SECRET` | NextAuth 密钥                                                           |
-| `NEXTAUTH_URL`    | 自托管生产环境必须显式设置                                              |
-| `LOG_LEVEL`       | `debug` / `info` / `warn` / `error`；非法值回退到 `info`                |
-
-### Redis
-
-二选一：
-
-- `REDIS_URL`
-- `REDIS_HOST` + `REDIS_PORT`（可选 `REDIS_PASSWORD`）
-
-应用限流、验证码、BullMQ 队列共用同一个 Redis 解析器。
-
-### 邮件
-
-- `SMTP_HOST`
-- `SMTP_PORT`
-- `SMTP_USER`
-- `SMTP_PASS`
-- `SMTP_FROM`
-
-### 文件存储
-
-- `STORAGE_DRIVER=local|s3|oss`
-- 使用 S3 兼容后端时，需配置 `S3_BUCKET`、`S3_ACCESS_KEY_ID`、`S3_ACCESS_KEY_SECRET`，以及 `S3_ENDPOINT` 或 `S3_REGION` 之一
-
-### 反向代理客户端 IP
-
-| 变量                      | 说明                                                                                                                        |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `TRUSTED_PROXY_IP_HEADER` | 可选。限流时信任的客户端 IP header；未设置时依次回退到 `x-real-ip`、`cf-connecting-ip`、`x-vercel-forwarded-for`            |
-
-## 目录结构
-
-```text
-src/
-├── app/                # Next.js 页面和 API Routes
-├── components/         # 可复用 UI 组件
-├── hooks/              # 自定义 hooks
-├── lib/                # 工具函数、鉴权、队列、存储封装
-├── styles/             # 全局样式
-├── types/              # 类型声明
-├── worker/             # BullMQ worker 和调度器
-└── ws/                 # 白名单同步 WebSocket 服务
-prisma/
-├── migrations/         # Prisma migrations
-└── schema.prisma       # 数据模型
-```
+S3 / 对象存储与内容审核（阿里云 Green）相关变量见 [`.env.example`](./.env.example)。
 
 ## 运行时边界
 
-- 页面和 API 绝不直接 ping Minecraft 服务器，只读取数据库里的缓存字段
-- `server-ping` 队列每 5 分钟探测一次 approved 状态的服务器
-- `server-verify` 队列负责 MOTD 认领校验
-- 未通过审核的服务器不公开访问，仅 owner 和管理员可见
+- 页面和 API **绝不**直接 ping Minecraft 服务器，只读取数据库里 worker 异步写入的缓存字段。
+- worker 定期刷新 approved 服务器的 `isOnline` / `playerCount` / `maxPlayers`。
+- WebSocket 服务只在做插件白名单同步推送时需要；不起也不影响 web / worker 正常工作。
+- 未通过审核或非公开的服务器不公开访问，仅服主与管理员可见。
+
+## 项目文档
+
+仓库当前是纯 Markdown 文档形态（暂未上文档站点）：
+
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md)：第一次贡献者从这里开始
+- [`docs/README.md`](./docs/README.md)：完整文档索引
+- [`docs/dev/setup.md`](./docs/dev/setup.md)、[`architecture.md`](./docs/dev/architecture.md)、[`data-model.md`](./docs/dev/data-model.md)：贡献者文档
+- [`docs/API.md`](./docs/API.md)：REST API 契约
+- [`docs/i18n.md`](./docs/i18n.md)：国际化方案
+- [`docs/dependency-pins.md`](./docs/dependency-pins.md)：依赖固定政策
+
+`CLAUDE.md` 与 `AGENTS.md` 是给 AI 编码助手（Claude Code、Codex、Cursor 等）用的指引。**人类贡献者无需阅读**。
 
 ## 提交前检查
 
@@ -165,6 +96,11 @@ prisma/
 pnpm lint
 pnpm tsc --noEmit
 pnpm test
+# pnpm i18n:check   # 改了 messages/*.json 时
 ```
 
-同时确认没有 `.env*` 文件被 staged。
+并确认没有 `.env*` 被 staged。
+
+## 许可证
+
+本项目采用 [GNU Affero General Public License v3.0](./LICENSE)（AGPL-3.0）。如果你以网络服务形式运行本项目的修改版本，必须向该服务的用户提供你修改后的源码。

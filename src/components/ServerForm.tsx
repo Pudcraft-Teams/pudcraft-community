@@ -6,7 +6,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ImageUpload } from "@/components/ImageUpload";
 import { MarkdownEditor, type MarkdownEditorHandle } from "@/components/MarkdownEditor";
 import { useToast } from "@/hooks/useToast";
-import { isPrivateServersEnabled } from "@/lib/features";
 import { createServerSchema } from "@/lib/validation";
 
 // NOTE: Tag values are stored verbatim (Chinese) because they are persisted
@@ -486,7 +485,7 @@ export function ServerForm({ mode, initialData, cancelHref, onSubmit }: ServerFo
           </label>
         </div>
 
-        {mode === "create" && isPrivateServersEnabled() && (
+        {mode === "create" && (
           <div>
             <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-warm-200 bg-surface p-4 transition-colors hover:border-warm-300">
               <input

@@ -7,7 +7,6 @@ import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
 import { ApplicationForm } from "@/components/ApplicationForm";
 import { PageLoading } from "@/components/PageLoading";
-import { isPrivateServersEnabled } from "@/lib/features";
 import type { ApplicationFormField, MembershipStatus } from "@/lib/types";
 
 interface ServerInfo {
@@ -27,7 +26,6 @@ export default function ApplyPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const { status: authStatus } = useSession();
-  const privateServersEnabled = isPrivateServersEnabled();
   const t = useTranslations("servers.apply");
   const tCommon = useTranslations("servers.common");
 
@@ -38,22 +36,14 @@ export default function ApplyPage() {
 
   // Redirect to login if not authenticated
   useEffect(() => {
-    if (!privateServersEnabled) {
-      return;
-    }
-
     if (authStatus === "unauthenticated") {
       router.replace(
         `/login?callbackUrl=${encodeURIComponent(`/servers/${id}/apply`)}`,
       );
     }
-  }, [authStatus, id, privateServersEnabled, router]);
+  }, [authStatus, id, router]);
 
   const fetchData = useCallback(async () => {
-    if (!privateServersEnabled) {
-      return;
-    }
-
     setIsLoading(true);
     setPageError(null);
 
@@ -115,14 +105,9 @@ export default function ApplyPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [id, privateServersEnabled, t]);
+  }, [id, t]);
 
   useEffect(() => {
-    if (!privateServersEnabled) {
-      setIsLoading(false);
-      return;
-    }
-
     if (authStatus !== "authenticated") {
       if (authStatus !== "loading") {
         setIsLoading(false);
@@ -141,7 +126,7 @@ export default function ApplyPage() {
     return () => {
       cancelled = true;
     };
-  }, [authStatus, fetchData, privateServersEnabled]);
+  }, [authStatus, fetchData]);
 
   const serverDetailUrl = serverInfo?.psid
     ? `/servers/${serverInfo.psid}`
@@ -151,20 +136,6 @@ export default function ApplyPage() {
 
   if (authStatus === "loading" || isLoading) {
     return <PageLoading />;
-  }
-
-  if (!privateServersEnabled) {
-    return (
-      <div className="mx-auto max-w-md px-4">
-        <div className="m3-surface p-6 text-center">
-          <h1 className="text-lg font-semibold text-warm-800">{t("featureDisabledHeading")}</h1>
-          <p className="mt-2 text-sm text-warm-500">{t("featureDisabledDescription")}</p>
-          <Link href={`/servers/${id}`} className="m3-link mt-4 inline-block text-sm">
-            {t("backToDetail")}
-          </Link>
-        </div>
-      </div>
-    );
   }
 
   if (authStatus === "unauthenticated") {
